@@ -30,6 +30,9 @@ public sealed class MultispectralImage
         if (bandList.Count == 0)
             throw new ArgumentException("At least one band is required.", nameof(bands));
 
+        if (bandList.Any(b => b is null))
+            throw new ArgumentException("All bands must be non-null.", nameof(bands));
+
         Rows = bandList[0].Rows;
         Columns = bandList[0].Columns;
 

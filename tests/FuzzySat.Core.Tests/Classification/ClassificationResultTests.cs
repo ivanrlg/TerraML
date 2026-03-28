@@ -1,6 +1,6 @@
 using FluentAssertions;
 using FuzzySat.Core.Classification;
-using FuzzySat.Core.FuzzyLogic.Classification;
+using FuzzySat.Core.FuzzyLogic.Defuzzification;
 using FuzzySat.Core.FuzzyLogic.Inference;
 using FuzzySat.Core.FuzzyLogic.MembershipFunctions;
 using FuzzySat.Core.FuzzyLogic.Rules;
@@ -81,14 +81,14 @@ public class ClassificationResultTests
         ]);
 
         var engine = new FuzzyInferenceEngine(rules);
-        var classifier = new FuzzyClassifier(engine);
+        var defuzzifier = new MaxWeightDefuzzifier();
         var classes = new[]
         {
             new LandCoverClass { Name = "Urban", Code = 1 },
             new LandCoverClass { Name = "Water", Code = 2 }
         };
 
-        var result = ClassificationResult.ClassifyImage(image, classifier, engine, classes);
+        var result = ClassificationResult.ClassifyImage(image, engine, defuzzifier, classes);
 
         result.Rows.Should().Be(2);
         result.Columns.Should().Be(2);

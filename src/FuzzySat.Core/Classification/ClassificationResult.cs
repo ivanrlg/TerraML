@@ -1,3 +1,5 @@
+using FuzzySat.Core.FuzzyLogic.Defuzzification;
+using FuzzySat.Core.FuzzyLogic.Inference;
 using FuzzySat.Core.Raster;
 
 namespace FuzzySat.Core.Classification;
@@ -50,17 +52,19 @@ public sealed class ClassificationResult
     public double GetConfidence(int row, int col) => _confidenceMap[row, col];
 
     /// <summary>
-    /// Classifies an entire multispectral image using the provided classifier.
+    /// Classifies an entire multispectral image. Each pixel is inferred once
+    /// to derive both the class label and confidence from the same result.
     /// </summary>
     public static ClassificationResult ClassifyImage(
         MultispectralImage image,
-        FuzzyLogic.Classification.IClassifier classifier,
-        FuzzyLogic.Inference.IInferenceEngine engine,
+        IInferenceEngine engine,
+        IDefuzzifier defuzzifier,
         IReadOnlyList<LandCoverClass> classes)
     {
         ArgumentNullException.ThrowIfNull(image);
-        ArgumentNullException.ThrowIfNull(classifier);
         ArgumentNullException.ThrowIfNull(engine);
+        ArgumentNullException.ThrowIfNull(defuzzifier);
+        ArgumentNullException.ThrowIfNull(classes);
 
         var classMap = new string[image.Rows, image.Columns];
         var confidenceMap = new double[image.Rows, image.Columns];
@@ -70,10 +74,8 @@ public sealed class ClassificationResult
             for (var col = 0; col < image.Columns; col++)
             {
                 var pixel = image.GetPixelVector(row, col);
-                var bandValues = (IDictionary<string, double>)pixel.BandValues;
-                classMap[row, col] = classifier.ClassifyPixel(bandValues);
-
-                var result = engine.Infer(bandValues);
+                var result = engine.Infer((IDictionary<string, double>)pixel.BandValues);
+                classMap[row, col] = defuzzifier.Defuzzify(result);
                 confidenceMap[row, col] = result.WinnerStrength;
             }
         }

@@ -2,7 +2,7 @@ namespace FuzzySat.Core.Raster;
 
 /// <summary>
 /// A single pixel's spectral values across all bands.
-/// Implements IDictionary-compatible band value access for classification.
+/// Provides IDictionary-compatible band value access via the <see cref="BandValues"/> property.
 /// </summary>
 public sealed class PixelVector
 {
