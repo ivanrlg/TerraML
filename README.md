@@ -91,7 +91,7 @@ eliminates the class-ordering dependency of standard Sugeno weighted average def
 
 ```
 FuzzySat/
-├── FuzzySat.sln
+├── FuzzySat.slnx
 ├── CLAUDE.md                          # AI assistant configuration
 ├── README.md                          # This file
 ├── LICENSE                            # MIT
