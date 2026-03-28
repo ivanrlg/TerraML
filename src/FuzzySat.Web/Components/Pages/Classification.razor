@@ -1,0 +1,71 @@
+@page "/classification"
+@rendermode InteractiveServer
+
+<PageTitle>Classification - FuzzySat</PageTitle>
+
+<RadzenStack Gap="1rem" class="rz-p-4">
+    <RadzenText TextStyle="TextStyle.H4">Classification</RadzenText>
+    <RadzenText TextStyle="TextStyle.Body1" class="rz-color-secondary">
+        Run fuzzy inference to classify each pixel into a land cover class.
+    </RadzenText>
+
+    <RadzenCard>
+        <RadzenText TextStyle="TextStyle.H6">Configuration</RadzenText>
+        <RadzenStack Gap="0.5rem" class="rz-mt-2">
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
+                <RadzenText Style="width: 150px;">Membership Function:</RadzenText>
+                <RadzenDropDown @bind-Value="@_mfType" Data="@_mfTypes" Style="width: 200px;" />
+            </RadzenStack>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
+                <RadzenText Style="width: 150px;">AND Operator:</RadzenText>
+                <RadzenDropDown @bind-Value="@_andOperator" Data="@_andOperators" Style="width: 200px;" />
+            </RadzenStack>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
+                <RadzenText Style="width: 150px;">Defuzzifier:</RadzenText>
+                <RadzenDropDown @bind-Value="@_defuzzifier" Data="@_defuzzifiers" Style="width: 200px;" />
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenCard>
+
+    <RadzenCard>
+        <RadzenText TextStyle="TextStyle.H6">Progress</RadzenText>
+        <RadzenProgressBar Value="@_progress" ShowValue="true" class="rz-mt-2" />
+        <RadzenText class="rz-mt-2">@_statusMessage</RadzenText>
+    </RadzenCard>
+
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+        <RadzenButton Text="Run Classification" ButtonStyle="ButtonStyle.Primary" Click="@RunClassification" />
+        <RadzenButton Text="Export Result" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!_completed)" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    private string _mfType = "Gaussian";
+    private string _andOperator = "Minimum";
+    private string _defuzzifier = "Max Weight";
+    private double _progress = 0;
+    private string _statusMessage = "Ready to classify.";
+    private bool _completed = false;
+
+    private List<string> _mfTypes = ["Gaussian", "Triangular", "Trapezoidal", "Bell"];
+    private List<string> _andOperators = ["Minimum", "Product"];
+    private List<string> _defuzzifiers = ["Max Weight", "Weighted Average"];
+
+    private async Task RunClassification()
+    {
+        _statusMessage = "Classifying...";
+        _progress = 0;
+        _completed = false;
+
+        for (var i = 0; i <= 100; i += 10)
+        {
+            _progress = i;
+            _statusMessage = $"Processing... {i}%";
+            StateHasChanged();
+            await Task.Delay(200);
+        }
+
+        _statusMessage = "Classification complete.";
+        _completed = true;
+    }
+}
