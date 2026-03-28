@@ -1,0 +1,65 @@
+@page "/validation"
+@rendermode InteractiveServer
+
+<PageTitle>Validation - FuzzySat</PageTitle>
+
+<RadzenStack Gap="1rem" class="rz-p-4">
+    <h1><RadzenText TextStyle="TextStyle.H4">Validation Results</RadzenText></h1>
+    <RadzenText TextStyle="TextStyle.Body1" class="rz-color-secondary">
+        Evaluate classification accuracy with confusion matrix and statistical metrics.
+    </RadzenText>
+
+    <RadzenRow>
+        <RadzenColumn Size="4">
+            <RadzenCard>
+                <RadzenText TextStyle="TextStyle.H6">Overall Metrics</RadzenText>
+                <RadzenStack Gap="0.5rem" class="rz-mt-2">
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                        <RadzenText>Overall Accuracy:</RadzenText>
+                        <RadzenText TextStyle="TextStyle.H6">@($"{_overallAccuracy:P1}")</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                        <RadzenText>Kappa Coefficient:</RadzenText>
+                        <RadzenText TextStyle="TextStyle.H6">@($"{_kappa:F4}")</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                        <RadzenText>Total Samples:</RadzenText>
+                        <RadzenText TextStyle="TextStyle.H6">@_totalSamples</RadzenText>
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenCard>
+        </RadzenColumn>
+        <RadzenColumn Size="8">
+            <RadzenCard>
+                <RadzenText TextStyle="TextStyle.H6">Per-Class Accuracy</RadzenText>
+                <RadzenDataGrid Data="@_classMetrics" TItem="ClassMetricRow" class="rz-mt-2">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="ClassMetricRow" Property="ClassName" Title="Class" />
+                        <RadzenDataGridColumn TItem="ClassMetricRow" Property="ProducersAccuracy" Title="Producer's Acc." FormatString="{0:P1}" Width="140px" />
+                        <RadzenDataGridColumn TItem="ClassMetricRow" Property="UsersAccuracy" Title="User's Acc." FormatString="{0:P1}" Width="120px" />
+                        <RadzenDataGridColumn TItem="ClassMetricRow" Property="Samples" Title="Samples" Width="100px" />
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenCard>
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+
+@code {
+    private double _overallAccuracy = 0.8187;
+    private double _kappa = 0.7637;
+    private int _totalSamples = 171;
+
+    private List<ClassMetricRow> _classMetrics =
+    [
+        new("Urban", 0.88, 0.85, 24),
+        new("Water", 0.92, 0.90, 23),
+        new("Forest", 0.85, 0.82, 25),
+        new("Agriculture", 0.78, 0.80, 23),
+        new("Bare Soil", 0.75, 0.77, 22),
+        new("Cloud", 0.82, 0.84, 30),
+        new("Shadow", 0.76, 0.73, 24)
+    ];
+
+    private record ClassMetricRow(string ClassName, double ProducersAccuracy, double UsersAccuracy, int Samples);
+}

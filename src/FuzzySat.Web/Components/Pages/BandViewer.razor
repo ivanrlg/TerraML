@@ -1,0 +1,35 @@
+@page "/band-viewer"
+@rendermode InteractiveServer
+
+<PageTitle>Band Viewer - FuzzySat</PageTitle>
+
+<RadzenStack Gap="1rem" class="rz-p-4">
+    <h1><RadzenText TextStyle="TextStyle.H4">Band Viewer</RadzenText></h1>
+    <RadzenText TextStyle="TextStyle.Body1" class="rz-color-secondary">
+        Visualize spectral bands and false color composites. Requires a loaded project with raster data.
+    </RadzenText>
+
+    <RadzenCard>
+        <RadzenText TextStyle="TextStyle.H6">Band Selection</RadzenText>
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" class="rz-mt-2">
+            <RadzenDropDown @bind-Value="@_selectedBand" Data="@_bands" TextProperty="Name"
+                            ValueProperty="Name" Placeholder="Select band..." Style="width: 200px;" />
+        </RadzenStack>
+    </RadzenCard>
+
+    <RadzenCard Style="height: 500px; display: flex; align-items: center; justify-content: center;">
+        <RadzenText class="rz-color-secondary">
+            Map viewer will be integrated with Leaflet.js when raster data is loaded.
+        </RadzenText>
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    private string? _selectedBand;
+    private List<BandOption> _bands =
+    [
+        new("VNIR1"), new("VNIR2"), new("SWIR1"), new("SWIR2")
+    ];
+
+    private record BandOption(string Name);
+}

@@ -1,0 +1,57 @@
+@page "/project-setup"
+@rendermode InteractiveServer
+
+<PageTitle>Project Setup - FuzzySat</PageTitle>
+
+<RadzenStack Gap="1rem" class="rz-p-4">
+    <h1><RadzenText TextStyle="TextStyle.H4">Project Setup</RadzenText></h1>
+
+    <RadzenCard>
+        <RadzenText TextStyle="TextStyle.H6">Project Name</RadzenText>
+        <RadzenTextBox @bind-Value="@_projectName" Placeholder="e.g., ASTER Merida Classification" class="w-100 rz-mt-2" />
+    </RadzenCard>
+
+    <RadzenCard>
+        <RadzenText TextStyle="TextStyle.H6">Input Raster</RadzenText>
+        <RadzenTextBox @bind-Value="@_inputPath" Placeholder="Path to multispectral image (GeoTIFF)" class="w-100 rz-mt-2" />
+    </RadzenCard>
+
+    <RadzenCard>
+        <RadzenText TextStyle="TextStyle.H6">Band Configuration</RadzenText>
+        <RadzenDataGrid Data="@_bands" TItem="BandEntry" AllowColumnResize="true" class="rz-mt-2">
+            <Columns>
+                <RadzenDataGridColumn TItem="BandEntry" Property="Name" Title="Band Name" />
+                <RadzenDataGridColumn TItem="BandEntry" Property="Index" Title="Source Index" Width="120px" />
+                <RadzenDataGridColumn TItem="BandEntry" Property="Description" Title="Description" />
+            </Columns>
+        </RadzenDataGrid>
+        <RadzenButton Text="Add Band" Click="@AddBand" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" class="rz-mt-2" />
+    </RadzenCard>
+
+    <RadzenCard>
+        <RadzenText TextStyle="TextStyle.H6">Land Cover Classes</RadzenText>
+        <RadzenDataGrid Data="@_classes" TItem="ClassEntry" AllowColumnResize="true" class="rz-mt-2">
+            <Columns>
+                <RadzenDataGridColumn TItem="ClassEntry" Property="Name" Title="Class Name" />
+                <RadzenDataGridColumn TItem="ClassEntry" Property="Code" Title="Code" Width="80px" />
+                <RadzenDataGridColumn TItem="ClassEntry" Property="Color" Title="Color" Width="100px" />
+            </Columns>
+        </RadzenDataGrid>
+        <RadzenButton Text="Add Class" Click="@AddClass" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" class="rz-mt-2" />
+    </RadzenCard>
+
+    <RadzenButton Text="Save Configuration" ButtonStyle="ButtonStyle.Primary" class="rz-mt-4" />
+</RadzenStack>
+
+@code {
+    private string _projectName = "";
+    private string _inputPath = "";
+    private List<BandEntry> _bands = [new("VNIR1", 0, "Visible NIR 1"), new("VNIR2", 1, "Visible NIR 2")];
+    private List<ClassEntry> _classes = [new("Urban", 1, "#FF0000"), new("Water", 2, "#0000FF"), new("Forest", 3, "#006400")];
+
+    private void AddBand() => _bands.Add(new($"Band{_bands.Count + 1}", _bands.Count, ""));
+    private void AddClass() => _classes.Add(new($"Class{_classes.Count + 1}", _classes.Count + 1, "#808080"));
+
+    private record BandEntry(string Name, int Index, string Description);
+    private record ClassEntry(string Name, int Code, string Color);
+}

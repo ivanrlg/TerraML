@@ -1,0 +1,47 @@
+@page "/training"
+@rendermode InteractiveServer
+
+<PageTitle>Training - FuzzySat</PageTitle>
+
+<RadzenStack Gap="1rem" class="rz-p-4">
+    <h1><RadzenText TextStyle="TextStyle.H4">Training Editor</RadzenText></h1>
+    <RadzenText TextStyle="TextStyle.Body1" class="rz-color-secondary">
+        Draw training areas on the map and extract spectral statistics for each land cover class.
+    </RadzenText>
+
+    <RadzenRow>
+        <RadzenColumn Size="8">
+            <RadzenCard Style="height: 500px; display: flex; align-items: center; justify-content: center;">
+                <RadzenText class="rz-color-secondary">
+                    Interactive map for drawing training polygons (Leaflet.js integration pending).
+                </RadzenText>
+            </RadzenCard>
+        </RadzenColumn>
+        <RadzenColumn Size="4">
+            <RadzenCard>
+                <RadzenText TextStyle="TextStyle.H6">Training Classes</RadzenText>
+                <RadzenListBox @bind-Value="@_selectedClass" Data="@_classes" TextProperty="Name"
+                               ValueProperty="Name" Style="width: 100%; height: 200px;" class="rz-mt-2" />
+
+                <RadzenText TextStyle="TextStyle.H6" class="rz-mt-4">Statistics</RadzenText>
+                <RadzenText class="rz-mt-2 rz-color-secondary">
+                    Select a class and draw training areas to compute mean and standard deviation per band.
+                </RadzenText>
+
+                <RadzenButton Text="Extract Statistics" ButtonStyle="ButtonStyle.Primary" class="rz-mt-4 w-100" />
+                <RadzenButton Text="Export Training Session" ButtonStyle="ButtonStyle.Secondary" class="rz-mt-2 w-100" />
+            </RadzenCard>
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+
+@code {
+    private string? _selectedClass;
+    private List<ClassOption> _classes =
+    [
+        new("Urban"), new("Water"), new("Forest"),
+        new("Agriculture"), new("Bare Soil")
+    ];
+
+    private record ClassOption(string Name);
+}
