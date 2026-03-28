@@ -138,4 +138,37 @@ public class FuzzyOperatorsTests
 
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
+
+    // --- ProductAnd ---
+
+    [Theory]
+    [InlineData(0.5, 0.5, 0.25)]
+    [InlineData(1.0, 0.8, 0.8)]
+    [InlineData(0.0, 0.9, 0.0)]
+    [InlineData(1.0, 1.0, 1.0)]
+    public void ProductAnd_TwoValues_ReturnsProduct(double a, double b, double expected)
+    {
+        FuzzyOperators.ProductAnd(a, b).Should().BeApproximately(expected, Precision);
+    }
+
+    [Fact]
+    public void ProductAnd_Collection_ReturnsProductOfAll()
+    {
+        FuzzyOperators.ProductAnd([0.8, 0.5, 0.9]).Should().BeApproximately(0.36, Precision);
+    }
+
+    [Fact]
+    public void ProductAnd_LowerThanMinAnd()
+    {
+        // Product AND is always <= Min AND for values in [0,1]
+        var values = new[] { 0.8, 0.6, 0.9 };
+        FuzzyOperators.ProductAnd(values).Should().BeLessThanOrEqualTo(FuzzyOperators.And(values));
+    }
+
+    [Fact]
+    public void ProductAnd_EmptyCollection_Throws()
+    {
+        var act = () => FuzzyOperators.ProductAnd(Array.Empty<double>());
+        act.Should().Throw<ArgumentException>();
+    }
 }
