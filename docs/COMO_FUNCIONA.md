@@ -253,34 +253,197 @@ porque en la naturaleza los limites entre clases son graduales, no abruptos.
 
 ## Opcion Avanzada: Clasificador Hibrido (ML.NET)
 
-FuzzySat puede combinar logica difusa con Machine Learning:
+### El Problema que Resuelve
+
+El clasificador difuso puro tiene una limitacion: la decision final es
+simplemente "gana el que tenga el minimo mas alto". No aprende patrones
+complejos entre las clases. Por ejemplo:
+
+- Agricultura y Bosque pueden tener valores similares en 3 bandas pero
+  diferir sutilmente en la cuarta
+- El clasificador difuso puro no puede aprender que "si VNIR1 es medio-alto
+  Y SWIR1 es bajo, probablemente es Bosque y no Agricultura"
+
+La idea del hibrido es: **usar los grados de membresia difusos como entrada
+para un algoritmo de Machine Learning** que SI puede aprender esos patrones.
+
+### Como Funciona Paso a Paso
+
+**Paso H1: Extraer features difusas de cada pixel**
+
+Tomemos el mismo pixel de antes: `VNIR1=128, VNIR2=112, SWIR1=158, SWIR2=138`
+
+El `FuzzyFeatureExtractor` genera un vector con TRES tipos de informacion:
 
 ```
-                     Pixel
-                       |
-                       v
-               FuzzyFeatureExtractor
-              /         |          \
-   Valores    Grados de    Fuerzas de
-   crudos     membresia    disparo
-   (4)        (7x4=28)     (7)
-              \         |          /
-                       v
-              Vector de 39 features
-                       |
-              +--------+--------+
-              |                 |
-         Random Forest    SDCA MaxEntropy
-         (ML.NET)         (ML.NET)
-              |                 |
-              v                 v
-           Clase             Clase
-           predicha          predicha
+TIPO 1 - Valores crudos (los mismos 4 numeros del pixel):
+
+  VNIR1=128, VNIR2=112, SWIR1=158, SWIR2=138
+  [128.0, 112.0, 158.0, 138.0]
+
+
+TIPO 2 - Grados de membresia (cada curva de campana evaluada):
+  Esto es lo que calculamos en el Paso 4a, pero GUARDAMOS todos los numeros.
+
+  Urbano_VNIR1 = 0.99    Agua_VNIR1 = 0.00    Bosque_VNIR1 = 0.02
+  Urbano_VNIR2 = 0.97    Agua_VNIR2 = 0.00    Bosque_VNIR2 = 0.17
+  Urbano_SWIR1 = 0.99    Agua_SWIR1 = 0.00    Bosque_SWIR1 = 0.01
+  Urbano_SWIR2 = 0.99    Agua_SWIR2 = 0.00    Bosque_SWIR2 = 0.00
+
+  Con 7 clases x 4 bandas = 28 numeros
+  [0.99, 0.97, 0.99, 0.99, 0.00, 0.00, 0.00, 0.00, 0.02, 0.17, 0.01, 0.00, ...]
+
+
+TIPO 3 - Fuerzas de disparo (el minimo por clase, del Paso 4b):
+
+  Fuerza_Urbano = 0.97
+  Fuerza_Agua   = 0.00
+  Fuerza_Bosque = 0.00
+  ...
+  Con 7 clases = 7 numeros
+  [0.97, 0.00, 0.00, ...]
 ```
 
-Las features difusas (grados de membresia) son **mas informativas** que los
-valores crudos de pixel, porque ya contienen informacion sobre a que clase
-se parece cada valor.
+Todo junto forma **un vector de 39 numeros** (4 + 28 + 7) que describe
+al pixel de una forma mucho mas rica que los 4 valores crudos originales.
+
+**Paso H2: Entrenar un modelo ML con esos vectores**
+
+Tomamos los mismos pixeles de entrenamiento del Paso 2 (donde el experto
+dijo "este es Urbano", "este es Agua", etc.) y calculamos el vector de
+39 features para cada uno:
+
+```
+Pixel de entrenamiento 1:
+  Clase real: "Urbano"
+  Vector: [125.0, 108.0, 155.0, 135.0, 0.98, 0.96, 0.98, 0.98, 0.00, ...]
+
+Pixel de entrenamiento 2:
+  Clase real: "Agua"
+  Vector: [24.0, 13.0, 9.0, 7.0, 0.00, 0.00, 0.00, 0.00, 0.99, 0.98, ...]
+
+Pixel de entrenamiento 3:
+  Clase real: "Bosque"
+  Vector: [76.0, 94.0, 83.0, 72.0, 0.01, 0.23, 0.01, 0.00, 0.00, ...]
+
+... (50+ pixeles por clase)
+```
+
+Estos vectores + sus etiquetas se usan para entrenar un modelo ML.NET:
+
+```
+                50+ pixeles con etiqueta
+                         |
+                         v
+             +------------------------+
+             |    Random Forest       |
+             |    (100 arboles de     |
+             |     decision que       |
+             |     votan juntos)      |
+             +------------------------+
+                         |
+                         v
+                  Modelo entrenado
+                  (aprende reglas como:
+                   "si Fuerza_Urbano > 0.8
+                    Y Bosque_SWIR1 < 0.1
+                    => es Urbano")
+```
+
+**Paso H3: Clasificar pixeles nuevos**
+
+Para un pixel nuevo, el proceso es:
+
+```
+Pixel nuevo: VNIR1=128, VNIR2=112, SWIR1=158, SWIR2=138
+                         |
+                         v
+              FuzzyFeatureExtractor
+              (calcula los 39 numeros)
+                         |
+                         v
+              [128, 112, 158, 138, 0.99, 0.97, ..., 0.97, 0.00, 0.00, ...]
+                         |
+                         v
+              Modelo Random Forest
+              (los 100 arboles votan)
+                         |
+                         v
+                    "Urbano"
+```
+
+### Comparacion: Difuso Puro vs Hibrido
+
+```
+                        DIFUSO PURO              HIBRIDO (ML.NET)
+                        -----------              ----------------
+Entrada:                4 valores de pixel       39 features (crudos +
+                                                  membresias + fuerzas)
+
+Decision:               min() + argmax()         100 arboles de decision
+                        (regla fija)             (aprende del dato)
+
+Ventaja:                Simple, explicable,      Puede capturar patrones
+                        no necesita muchos       complejos entre clases
+                        datos de entrenamiento   que min/max no detecta
+
+Limitacion:             Solo mira "que tan       Necesita mas datos de
+                        cerca esta de cada       entrenamiento para
+                        clase" por separado      aprender bien
+
+Cuando usarlo:          Pocas muestras de        Muchas muestras de
+                        entrenamiento,           entrenamiento,
+                        clases bien separadas    clases que se solapan
+```
+
+### Ejemplo Real: Donde el Hibrido Gana
+
+Imagina dos clases que se confunden: **Agricultura** y **Pastizal**.
+Ambas tienen vegetacion, asi que sus valores espectrales son similares.
+
+```
+                       VNIR1   VNIR2   SWIR1   SWIR2
+Agricultura tipica:      90      80      70      60
+Pastizal tipico:         85      82      65      55
+
+Diferencia:               5       2       5       5    (muy poca!)
+```
+
+El clasificador difuso puro calcula:
+
+```
+Fuerza_Agricultura = min(0.85, 0.88, 0.82, 0.84) = 0.82
+Fuerza_Pastizal    = min(0.82, 0.90, 0.80, 0.82) = 0.80
+
+Diferencia: solo 0.02!  Muchos pixeles se clasifican mal.
+```
+
+El Random Forest, en cambio, puede aprender que:
+- "Si Fuerza_Agricultura Y Fuerza_Pastizal estan ambas arriba de 0.7,
+  mirar el grado de membresia en SWIR1: si es > 0.83 para Agricultura,
+  probablemente es Agricultura"
+
+Esa **combinacion de multiples features** es algo que min/argmax no puede hacer
+pero un arbol de decision si.
+
+### K-Means: Sugerir Areas de Entrenamiento
+
+Bonus: FuzzySat tambien incluye **K-Means clustering** que agrupa pixeles
+similares sin necesidad de etiquetas. Esto ayuda al experto a identificar
+donde hay grupos naturales en la imagen antes de etiquetar manualmente:
+
+```
+Imagen sin etiquetar          Despues de K-Means (k=5)
++---+---+---+---+             +---+---+---+---+
+| ? | ? | ? | ? |             | 1 | 1 | 3 | 3 |
+| ? | ? | ? | ? |   K-Means  | 1 | 2 | 3 | 4 |
+| ? | ? | ? | ? |   ----->>  | 2 | 2 | 5 | 4 |
+| ? | ? | ? | ? |             | 2 | 5 | 5 | 4 |
++---+---+---+---+             +---+---+---+---+
+
+"Grupo 1 parece agua, Grupo 2 parece bosque..."
+El experto luego verifica y etiqueta cada grupo.
+```
 
 ---
 
