@@ -1,0 +1,21 @@
+{
+  "projectName": "ASTER Merida Classification",
+  "bands": [
+    { "name": "VNIR1", "sourceIndex": 0, "description": "Visible Near Infrared Band 1 (0.52-0.60 μm)" },
+    { "name": "VNIR2", "sourceIndex": 1, "description": "Visible Near Infrared Band 2 (0.63-0.69 μm)" },
+    { "name": "SWIR1", "sourceIndex": 2, "description": "Shortwave Infrared Band 1 (1.60-1.70 μm)" },
+    { "name": "SWIR2", "sourceIndex": 3, "description": "Shortwave Infrared Band 2 (2.145-2.185 μm)" }
+  ],
+  "classes": [
+    { "name": "Urban", "code": 1, "color": "#FF0000" },
+    { "name": "Water", "code": 2, "color": "#0000FF" },
+    { "name": "Forest", "code": 3, "color": "#006400" },
+    { "name": "Agriculture", "code": 4, "color": "#FFFF00" },
+    { "name": "Bare Soil", "code": 5, "color": "#D2691E" },
+    { "name": "Cloud", "code": 6, "color": "#FFFFFF" },
+    { "name": "Shadow", "code": 7, "color": "#333333" }
+  ],
+  "trainingDataPath": "training/merida-samples.csv",
+  "inputRasterPath": "data/aster-merida.tif",
+  "outputRasterPath": "output/classified-merida.tif"
+}
