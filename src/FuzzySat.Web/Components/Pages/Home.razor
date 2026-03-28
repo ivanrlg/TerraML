@@ -1,7 +1,40 @@
-﻿@page "/"
+@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>FuzzySat - Fuzzy Logic Satellite Image Classifier</PageTitle>
 
-<h1>Hello, world!</h1>
+<RadzenStack Gap="1rem" class="rz-p-4">
+    <RadzenText TextStyle="TextStyle.H3">FuzzySat</RadzenText>
+    <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-color-secondary">
+        Satellite image classification using fuzzy logic inference
+    </RadzenText>
 
-Welcome to your new app.
+    <RadzenCard class="rz-mt-4">
+        <RadzenText TextStyle="TextStyle.H5">Getting Started</RadzenText>
+        <RadzenText class="rz-mt-2">
+            FuzzySat implements a fuzzy inference system for classifying multispectral satellite
+            imagery. Based on the original 2008 thesis that achieved 81.87% Overall Accuracy
+            (Kappa = 0.7637), outperforming Maximum Likelihood, Decision Tree, and Minimum Distance classifiers.
+        </RadzenText>
+    </RadzenCard>
+
+    <RadzenText TextStyle="TextStyle.H5" class="rz-mt-4">Workflow</RadzenText>
+    <RadzenSteps>
+        <Steps>
+            <RadzenStepsItem Text="Project Setup">
+                Configure bands, define land cover classes, and set input/output paths.
+            </RadzenStepsItem>
+            <RadzenStepsItem Text="Band Viewer">
+                Visualize spectral bands and false color composites on an interactive map.
+            </RadzenStepsItem>
+            <RadzenStepsItem Text="Training">
+                Draw training areas and extract spectral statistics (mean + stddev per class per band).
+            </RadzenStepsItem>
+            <RadzenStepsItem Text="Classification">
+                Run fuzzy inference to classify each pixel into a land cover class.
+            </RadzenStepsItem>
+            <RadzenStepsItem Text="Validation">
+                Evaluate accuracy with confusion matrix, Overall Accuracy, and Kappa coefficient.
+            </RadzenStepsItem>
+        </Steps>
+    </RadzenSteps>
+</RadzenStack>

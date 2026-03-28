@@ -1,8 +1,10 @@
 using FuzzySat.Web.Components;
+using Radzen;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddRadzenComponents();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
