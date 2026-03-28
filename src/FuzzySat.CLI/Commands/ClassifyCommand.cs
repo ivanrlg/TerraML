@@ -29,13 +29,14 @@ public static class ClassifyCommand
             var config = parseResult.GetValue(configOption);
 
             AnsiConsole.MarkupLine("[bold blue]FuzzySat Classify[/]");
-            AnsiConsole.MarkupLine($"  Input:  [green]{input}[/]");
-            AnsiConsole.MarkupLine($"  Model:  [green]{model}[/]");
-            AnsiConsole.MarkupLine($"  Output: [green]{output}[/]");
+            AnsiConsole.MarkupLine($"  Input:  [green]{Markup.Escape(input)}[/]");
+            AnsiConsole.MarkupLine($"  Model:  [green]{Markup.Escape(model)}[/]");
+            AnsiConsole.MarkupLine($"  Output: [green]{Markup.Escape(output)}[/]");
             if (config is not null)
-                AnsiConsole.MarkupLine($"  Config: [green]{config}[/]");
+                AnsiConsole.MarkupLine($"  Config: [green]{Markup.Escape(config)}[/]");
 
             AnsiConsole.MarkupLine("[yellow]Classification not yet implemented (requires GDAL raster I/O).[/]");
+            return 1;
         });
 
         return command;

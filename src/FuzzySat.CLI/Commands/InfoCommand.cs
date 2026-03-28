@@ -20,9 +20,10 @@ public static class InfoCommand
             var file = parseResult.GetValue(fileArgument)!;
 
             AnsiConsole.MarkupLine("[bold blue]FuzzySat Info[/]");
-            AnsiConsole.MarkupLine($"  File: [green]{file}[/]");
+            AnsiConsole.MarkupLine($"  File: [green]{Markup.Escape(file)}[/]");
 
             AnsiConsole.MarkupLine("[yellow]Info display not yet implemented (requires GDAL raster I/O).[/]");
+            return 1;
         });
 
         return command;

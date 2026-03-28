@@ -26,12 +26,13 @@ public static class ValidateCommand
             var config = parseResult.GetValue(configOption);
 
             AnsiConsole.MarkupLine("[bold blue]FuzzySat Validate[/]");
-            AnsiConsole.MarkupLine($"  Classified: [green]{classified}[/]");
-            AnsiConsole.MarkupLine($"  Truth:      [green]{truth}[/]");
+            AnsiConsole.MarkupLine($"  Classified: [green]{Markup.Escape(classified)}[/]");
+            AnsiConsole.MarkupLine($"  Truth:      [green]{Markup.Escape(truth)}[/]");
             if (config is not null)
-                AnsiConsole.MarkupLine($"  Config:     [green]{config}[/]");
+                AnsiConsole.MarkupLine($"  Config:     [green]{Markup.Escape(config)}[/]");
 
             AnsiConsole.MarkupLine("[yellow]Validation not yet implemented (requires GDAL raster I/O).[/]");
+            return 1;
         });
 
         return command;
