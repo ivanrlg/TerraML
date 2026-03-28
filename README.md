@@ -1,89 +1,498 @@
+<div align="center">
+
 # FuzzySat
 
-**Open-source satellite image classifier using Fuzzy Logic, built in C# / .NET 10**
+**Satellite image classification powered by fuzzy logic inference**
 
-[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Architecture](https://img.shields.io/badge/Architecture-Clean-blue)]()
-[![Status](https://img.shields.io/badge/Status-In%20Development-yellow)]()
+A modern C#/.NET 10 reimplementation of a 2008 thesis that outperformed
+Maximum Likelihood, Decision Tree, and Minimum Distance classifiers.
+
+
+    <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License" /></a>
+    <img src="https://img.shields.io/badge/Tests-233%20passing-brightgreen" alt="233 Tests" />
+    <img src="https://img.shields.io/badge/C%23-13-239120?logo=csharp" alt="C# 13" />
+    <img src="https://img.shields.io/badge/OA-81.87%25-blue" alt="Overall Accuracy" />
+    <img src="https://img.shields.io/badge/%CE%BA-0.7637-blue" alt="Kappa" />
+
+</div>
+
+---
+
+## Highlights
+
+| | |
+|---|---|
+| **81.87% Overall Accuracy** | Outperformed Maximum Likelihood by 7.6% on ASTER imagery |
+| **4 Membership Functions** | Gaussian, Triangular, Trapezoidal, Generalized Bell |
+| **Hybrid ML Pipeline** | ML.NET Random Forest + SDCA using fuzzy features |
+| **GDAL Raster I/O** | Read GeoTIFF with geospatial metadata; write classified rasters |
+| **233 Unit Tests** | Mathematical correctness validated against thesis data |
+| **Explainable AI** | Every membership degree and firing strength is inspectable |
 
 ---
 
 ## Table of Contents
 
-- [About](#about)
-- [Motivation](#motivation)
+- [Mathematical Foundation](#mathematical-foundation)
 - [Architecture](#architecture)
-- [Project Structure](#project-structure)
-- [Roadmap](#roadmap)
+- [Classification Pipeline](#classification-pipeline)
 - [Benchmark Results](#benchmark-results)
 - [Quick Start](#quick-start)
-- [Supported Satellite Platforms](#supported-satellite-platforms)
-- [Configuration](#configuration)
-- [Contributing](#contributing)
+- [Membership Functions](#membership-functions)
+- [Spectral Indices](#spectral-indices)
+- [Hybrid ML Pipeline](#hybrid-ml-pipeline)
+- [CLI Reference](#cli-reference)
+- [Blazor Web Application](#blazor-web-application)
+- [Tech Stack](#tech-stack)
+- [API Quick Reference](#api-quick-reference)
+- [Project Structure](#project-structure)
 - [Academic Citation](#academic-citation)
+- [Contributing](#contributing)
 - [License](#license)
 
 ---
 
-## About
+## Mathematical Foundation
 
-FuzzySat is a modern, open-source reimplementation of a satellite image classifier originally
-built in MATLAB in 2008. The classifier uses a **Fuzzy Inference System (FIS)** to categorize
-each pixel of a multispectral satellite image into land cover classes (water, urban, scrubland,
-bare soil, grassland, dense forest, medium forest, etc.) based on its spectral signature across
-multiple bands.
+### Gaussian Membership Function
 
-Unlike black-box deep learning approaches, FuzzySat provides **explainable classifications** --
-you can inspect every membership function, fuzzy rule, and firing weight that led to a
-classification decision.
+The core building block maps a crisp spectral value to a degree of membership in [0, 1]:
 
----
+$$\mu(x) = \exp\left(-\frac{1}{2}\left(\frac{x - c}{\sigma}\right)^2\right)$$
 
-## Motivation
+Where **c** = mean and **sigma** = standard deviation of training pixels for a given class and band.
 
-The original project was part of the thesis *"Desarrollo de un Clasificador de Imagenes
-Satelitales Basado en Logica Difusa"* by Ivan R. J. Labrador Gonzalez at Universidad de Los
-Andes, Merida, Venezuela (November 2008). It achieved **81.87% Overall Accuracy** against
-ground truth, outperforming traditional classifiers on the same dataset.
+### Fuzzy AND Operator (Minimum)
 
-The original stack (MATLAB + IDRISI) required expensive proprietary licenses. Today, the
-entire pipeline can be replicated with free, open-source tools:
+A pixel must satisfy **all** spectral bands to belong to a class. The firing strength is the minimum membership across bands:
 
-- Satellite imagery is freely available (Sentinel-2, Landsat 8/9)
-- GDAL has mature .NET bindings for raster I/O
-- The algorithms are well documented in the thesis
-- .NET 10 provides excellent performance for pixel-level computation
+$$\text{Strength}_{\text{class}} = \min_{b \in \text{bands}} \mu_{\text{class},b}(x_b)$$
+
+An alternative **Product AND** is also available: $\prod_{b} \mu_{\text{class},b}(x_b)$
+
+### Max Weight Defuzzification
+
+The winning class is the one with the highest firing strength:
+
+$$\text{Class}^* = \arg\max_{i} \text{Strength}_i$$
+
+This eliminates the class-ordering dependency of Sugeno weighted-average methods.
+
+### Cohen's Kappa Coefficient
+
+Classification accuracy is assessed beyond simple percent-correct using:
+
+$$\kappa = \frac{P_o - P_e}{1 - P_e}$$
+
+Where $P_o$ is observed agreement (Overall Accuracy) and $P_e$ is expected agreement by chance.
 
 ---
 
 ## Architecture
 
 ```mermaid
-graph LR
-    A[Satellite Image<br/>Multi-band GeoTIFF] --> B[Band Reader<br/>GDAL]
-    B --> C[Training Module<br/>Area Selection]
-    C --> D[Statistical Extractor<br/>Mean + StdDev per band/class]
-    D --> E[Membership Functions<br/>Gaussian per band/class]
+graph TB
+    subgraph "FuzzySat.Core"
+        subgraph "Fuzzy Logic Engine"
+            MF[Membership Functions<br/>Gaussian, Triangular,<br/>Trapezoidal, Bell]
+            OP[Operators<br/>AND=Min, AND=Product,<br/>OR=Max, NOT]
+            R[Rules & RuleSet<br/>One rule per class]
+            IE[Inference Engine<br/>Evaluates all rules]
+            DF[Defuzzifiers<br/>MaxWeight,<br/>WeightedAverage]
+            FC[FuzzyClassifier<br/>IClassifier]
+        end
 
-    B --> F[Pixel Iterator]
-    F --> G[Fuzzifier<br/>Evaluate all MFs]
-    G --> H[Inference Engine<br/>AND operator = Min]
-    H --> I[Defuzzifier<br/>Max Weight Winner]
-    I --> J[Classified Image<br/>GeoTIFF Output]
+        subgraph "Training"
+            TE[TrainingDataExtractor<br/>Mean + StdDev per band/class]
+            TS[TrainingSession<br/>Builds FuzzyRuleSet]
+        end
 
-    J --> K[Validation<br/>Confusion Matrix + Kappa]
+        subgraph "Raster I/O"
+            GR[GdalRasterReader]
+            GW[GdalRasterWriter]
+            SI[SpectralIndexCalculator<br/>NDVI, NDWI, NDBI]
+        end
+
+        subgraph "Validation"
+            CM[ConfusionMatrix]
+            AM[AccuracyMetrics<br/>OA, Kappa, Per-class]
+        end
+
+        subgraph "ML Hybrid (ML.NET)"
+            FE[FuzzyFeatureExtractor<br/>Raw + MF degrees + strengths]
+            HC[HybridClassifier<br/>IClassifier]
+            KM[KMeansClusterer<br/>Training area suggestion]
+            RF[RandomForest<br/>FastForest/OVA]
+            SD[SDCA<br/>MaximumEntropy]
+        end
+    end
+
+    subgraph "Interfaces"
+        CLI[FuzzySat.CLI<br/>System.CommandLine +<br/>Spectre.Console]
+        WEB[FuzzySat.Web<br/>Blazor Server +<br/>Radzen]
+        API[FuzzySat.Api<br/>ASP.NET Core]
+    end
+
+    %% Core fuzzy pipeline
+    GR --> MF
+    TE --> TS
+    TS --> R
+    MF --> R
+    OP --> R
+    R --> IE
+    IE --> DF
+    DF --> FC
+    FC --> GW
+    FC --> CM
+    CM --> AM
+
+    %% ML Hybrid connections
+    R -->|"RuleSet"| FE
+    FE -->|"Feature vectors"| RF
+    FE -->|"Feature vectors"| SD
+    FE -->|"Feature vectors"| KM
+    RF --> HC
+    SD --> HC
+    HC --> GW
+    HC --> CM
+    KM -->|"Cluster labels"| TE
+
+    %% Spectral indices feed into classification
+    GR --> SI
+    SI -->|"Derived bands"| MF
+
+    %% Interfaces connect to classifiers
+    CLI --> FC
+    CLI --> HC
+    WEB --> FC
+    WEB --> HC
+    API --> FC
+    API --> HC
 ```
 
-### Classification Pipeline (per pixel)
+---
 
-1. **Read** the pixel's value from each spectral band (e.g., 4 bands = 4 input values)
-2. **Fuzzify** each value using Gaussian membership functions (one per class per band)
-3. **Evaluate** all fuzzy rules (one rule per land cover class, AND = minimum operator)
-4. **Defuzzify** using the custom max weight method to assign the pixel to a class
+## Classification Pipeline
 
-The **max weight defuzzification** is the key innovation from the original thesis -- it
-eliminates the class-ordering dependency of standard Sugeno weighted average defuzzification.
+```mermaid
+flowchart LR
+    A["GeoTIFF<br/>(Multi-band)"] -->|GDAL| B["MultispectralImage"]
+    B -->|"Training Pixels"| C["TrainingDataExtractor<br/>Mean + sigma per class/band"]
+    C --> D["TrainingSession"]
+    D -->|"BuildRuleSet()"| E["FuzzyRuleSet<br/>(N rules, one per class)"]
+
+    B -->|"Each Pixel"| F["Fuzzifier<br/>Evaluate all MFs"]
+    E --> F
+    F --> G["Inference Engine<br/>AND = min across bands"]
+    G --> H["InferenceResult<br/>All firing strengths"]
+
+    H --> I["MaxWeight<br/>Defuzzifier"]
+    I --> J["ClassificationResult<br/>Class + Confidence map"]
+
+    E -->|"RuleSet"| FE["FuzzyFeatureExtractor<br/>(ML.NET)"]
+    FE -->|"Feature vectors"| ML["HybridClassifier<br/>RandomForest / SDCA"]
+    ML --> J
+
+    J -->|GDAL| K["Classified<br/>GeoTIFF"]
+    J --> L["ConfusionMatrix<br/>OA + kappa"]
+
+    style A fill:#4a90d9,color:#fff
+    style K fill:#2ecc71,color:#fff
+    style L fill:#e67e22,color:#fff
+    style FE fill:#9b59b6,color:#fff
+    style ML fill:#8e44ad,color:#fff
+```
+
+### Per-Pixel Classification (4 steps)
+
+1. **Read** the pixel's spectral values across N bands
+2. **Fuzzify** each value through Gaussian MFs (one per class per band)
+3. **Infer** by evaluating all rules (AND = minimum across bands per class)
+4. **Defuzzify** using Max Weight to assign the winning class
+
+---
+
+## Benchmark Results
+
+### Original Thesis (2008) -- ASTER Imagery, Merida, Venezuela
+
+| Classifier | Overall Accuracy | Kappa (kappa) | Improvement |
+|:---|:---:|:---:|:---:|
+| **Fuzzy Logic (FuzzySat)** | **81.87%** | **0.7637** | -- |
+| Maximum Likelihood | 74.27% | 0.6650 | +7.60% |
+| Decision Tree (CART) | 63.74% | 0.5312 | +18.13% |
+| Minimum Distance | 56.14% | 0.4233 | +25.73% |
+
+> The fuzzy classifier outperformed all traditional methods on 7 land cover classes
+> using 4 ASTER spectral bands (VNIR1, VNIR2, SWIR1, SWIR2).
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- GDAL native libraries (included via NuGet for Windows/Linux)
+
+### Build & Test
+
+```bash
+git clone https://github.com/ivanrlg/FuzzySat.git
+cd FuzzySat
+
+dotnet build
+dotnet test     # 233 tests
+```
+
+### CLI Usage
+
+> **Note**: CLI commands are currently scaffolded with argument parsing and help text.
+> Full GDAL-based implementations will be wired in a future release.
+
+```bash
+# Classify a raster image
+dotnet run --project src/FuzzySat.CLI -- classify \
+    --input data/aster-merida.tif \
+    --model training-session.json \
+    --output classified.tif
+
+# Extract training statistics
+dotnet run --project src/FuzzySat.CLI -- train \
+    --input data/aster-merida.tif \
+    --samples training-areas.csv \
+    --output training-session.json
+
+# Validate classification accuracy
+dotnet run --project src/FuzzySat.CLI -- validate \
+    --classified classified.tif \
+    --truth ground-truth.tif
+
+# Display raster metadata
+dotnet run --project src/FuzzySat.CLI -- info data/aster-merida.tif
+```
+
+### Programmatic Usage (C#)
+
+```csharp
+using FuzzySat.Core.Training;
+using FuzzySat.Core.FuzzyLogic.Inference;
+using FuzzySat.Core.FuzzyLogic.Classification;
+using FuzzySat.Core.Raster;
+
+// 1. Train from labeled samples
+var session = TrainingSession.CreateFromSamples(labeledPixels);
+
+// 2. Build inference pipeline (uses GaussianMembershipFunction by default)
+var ruleSet = session.BuildRuleSet();
+var engine  = new FuzzyInferenceEngine(ruleSet);
+var classifier = new FuzzyClassifier(engine);
+
+// 3. Classify a pixel
+string landCover = classifier.ClassifyPixel(new Dictionary<string, double>
+{
+    ["VNIR1"] = 128.0, ["VNIR2"] = 112.0,
+    ["SWIR1"] = 158.0, ["SWIR2"] = 138.0
+});
+// => "Urban"
+
+// 4. Classify an entire image
+var reader = new GdalRasterReader();
+var image  = reader.Read("aster-merida.tif", ["VNIR1", "VNIR2", "SWIR1", "SWIR2"]);
+var result = ClassificationResult.ClassifyImage(image, engine, defuzzifier, classes);
+
+// 5. Validate
+var cm = new ConfusionMatrix(actualLabels, predictedLabels);
+Console.WriteLine($"OA: {cm.OverallAccuracy:P2}, Kappa: {cm.KappaCoefficient:F4}");
+```
+
+---
+
+## Membership Functions
+
+FuzzySat implements four membership function types:
+
+| Type | Formula | Shape | Use Case |
+|:---|:---|:---:|:---|
+| **Gaussian** | $\mu(x) = e^{-\frac{1}{2}\left(\frac{x-c}{\sigma}\right)^2}$ | Bell curve | Default (thesis algorithm) |
+| **Triangular** | Linear rise/fall, peak at center | Triangle | Sharp class boundaries |
+| **Trapezoidal** | Linear slopes with flat plateau | Trapezoid | Wide acceptance ranges |
+| **Generalized Bell** | $\mu(x) = \frac{1}{1+\left\|\frac{x-c}{w}\right\|^{2s}}$ | Adjustable bell | Tunable steepness |
+
+All implement `IMembershipFunction` and can be swapped programmatically. `TrainingSession.BuildRuleSet()` uses Gaussian by default.
+
+---
+
+## Spectral Indices
+
+Derived bands using the normalized difference formula:
+
+$$\text{NDI} = \frac{A - B}{A + B}$$
+
+| Index | Formula | Detects | Typical Range |
+|:---|:---|:---|:---:|
+| **NDVI** | (NIR - Red) / (NIR + Red) | Vegetation vigor | -1 to +1 |
+| **NDWI** | (Green - NIR) / (Green + NIR) | Water bodies | -1 to +1 |
+| **NDBI** | (SWIR - NIR) / (SWIR + NIR) | Built-up areas | -1 to +1 |
+
+```csharp
+var ndvi = SpectralIndexCalculator.Ndvi(nirBand, redBand);
+// ndvi is a Band that can be added to classification
+```
+
+---
+
+## Hybrid ML Pipeline
+
+FuzzySat bridges fuzzy logic and machine learning by using membership degrees as ML features:
+
+```mermaid
+flowchart LR
+    subgraph "Fuzzy Engine"
+        RS["FuzzyRuleSet<br/>(from TrainingSession)"]
+        MFs["Membership<br/>Functions"]
+    end
+
+    P["Pixel<br/>Band Values"] --> FE["FuzzyFeatureExtractor"]
+    RS -->|"Rules + MFs"| FE
+
+    FE --> V["Feature Vector"]
+
+    subgraph "Feature Vector Components"
+        direction TB
+        R["Raw spectral values<br/>(N bands)"]
+        M["MF degrees per class/band<br/>(N_classes x N_bands)"]
+        S["Firing strengths per class<br/>(N_classes)"]
+    end
+
+    V --> RF["Random Forest<br/>(FastForest/OVA)<br/>via ML.NET"]
+    V --> SD["SDCA MaxEntropy<br/>via ML.NET"]
+    V --> KM["K-Means Clustering<br/>via ML.NET"]
+    RF --> HC["HybridClassifier<br/>(IClassifier)"]
+    SD --> HC
+    KM --> TA["Suggested<br/>Training Areas"]
+
+    HC --> CR["ClassificationResult"]
+
+    style FE fill:#9b59b6,color:#fff
+    style HC fill:#8e44ad,color:#fff
+    style CR fill:#2ecc71,color:#fff
+    style RS fill:#3498db,color:#fff
+```
+
+The `FuzzyFeatureExtractor` uses the `FuzzyRuleSet` (built from training data) to produce an enriched feature vector:
+
+| Feature Group | Count | Source |
+|:---|:---:|:---|
+| Raw spectral values | N_bands | Pixel band values |
+| Membership degrees | N_classes x N_bands | Each MF evaluated on pixel |
+| Firing strengths | N_classes | AND(min) across bands per class |
+| **Total** | **N_bands + N_classes x (N_bands + 1)** | |
+
+For 4 bands and 7 classes: 4 + 7 x 5 = **39 features** per pixel. This enriched representation bridges fuzzy logic and machine learning, often improving accuracy over raw spectral features alone.
+
+---
+
+## CLI Reference
+
+| Command | Description |
+|:---|:---|
+| `dotnet run -- classify` | Classify a raster using a trained model |
+| `dotnet run -- train` | Extract training statistics from labeled samples |
+| `dotnet run -- validate` | Validate classification against ground truth |
+| `dotnet run -- info <file>` | Display raster metadata (bands, dimensions, projection) |
+
+Run from `src/FuzzySat.CLI/`. Built with [System.CommandLine](https://github.com/dotnet/command-line-api) 3.0 + [Spectre.Console](https://spectreconsole.net/) for rich terminal output.
+
+---
+
+## Blazor Web Application
+
+FuzzySat includes a server-side Blazor web app with a wizard-flow interface:
+
+| Page | Purpose |
+|:---|:---|
+| **Home** | Project overview and workflow steps |
+| **Project Setup** | Configure bands, define land cover classes, set I/O paths |
+| **Band Viewer** | Visualize spectral bands (Leaflet.js map placeholder) |
+| **Training** | Draw training areas and extract spectral statistics |
+| **Classification** | Configure MF type, AND operator, defuzzifier; run with progress bar |
+| **Validation** | View Overall Accuracy, Kappa, per-class producer's/user's accuracy |
+
+Built with [Radzen Blazor](https://blazor.radzen.com/) components.
+
+```bash
+dotnet run --project src/FuzzySat.Web
+# Open https://localhost:5001
+```
+
+---
+
+## Tech Stack
+
+| Component | Technology | Version |
+|:---|:---|:---:|
+| **Framework** | .NET | 10.0 (LTS) |
+| **Language** | C# | 13 |
+| **Raster I/O** | GDAL via MaxRev.Gdal.Core | 3.12.2 |
+| **ML** | Microsoft.ML + FastTree | 5.0.0 |
+| **CLI** | System.CommandLine | 3.0.0-preview |
+| **Terminal UI** | Spectre.Console | 0.54.0 |
+| **Web UI** | Blazor Server + Radzen | 10.0.6 |
+| **Tests** | xUnit + FluentAssertions | 2.9.3 / 8.9.0 |
+
+---
+
+## API Quick Reference
+
+<details>
+<summary><strong>Fuzzy Logic Engine</strong></summary>
+
+| Type | Namespace | Purpose |
+|:---|:---|:---|
+| `IMembershipFunction` | `Core.FuzzyLogic.MembershipFunctions` | MF contract: `Evaluate(x) -> [0,1]` |
+| `GaussianMembershipFunction` | `Core.FuzzyLogic.MembershipFunctions` | Gaussian bell curve |
+| `TriangularMembershipFunction` | `Core.FuzzyLogic.MembershipFunctions` | Linear triangle |
+| `TrapezoidalMembershipFunction` | `Core.FuzzyLogic.MembershipFunctions` | Flat-top trapezoid |
+| `BellMembershipFunction` | `Core.FuzzyLogic.MembershipFunctions` | Generalized bell |
+| `FuzzyRule` | `Core.FuzzyLogic.Rules` | One rule per class, N band MFs |
+| `FuzzyRuleSet` | `Core.FuzzyLogic.Rules` | Collection with ordered evaluation |
+| `FuzzyInferenceEngine` | `Core.FuzzyLogic.Inference` | Rule evaluation orchestrator |
+| `InferenceResult` | `Core.FuzzyLogic.Inference` | Firing strengths + winner |
+| `MaxWeightDefuzzifier` | `Core.FuzzyLogic.Defuzzification` | Winner-takes-all |
+| `WeightedAverageDefuzzifier` | `Core.FuzzyLogic.Defuzzification` | Weighted index average |
+| `FuzzyClassifier` | `Core.FuzzyLogic.Classification` | Single-call pixel classifier |
+| `FuzzyOperators` | `Core.FuzzyLogic.Operators` | And, Or, Not, ProductAnd |
+
+</details>
+
+<details>
+<summary><strong>Training & Validation</strong></summary>
+
+| Type | Namespace | Purpose |
+|:---|:---|:---|
+| `TrainingDataExtractor` | `Core.Training` | Computes mean + stddev per class/band |
+| `TrainingSession` | `Core.Training` | Bridges training data to FuzzyRuleSet |
+| `SpectralStatistics` | `Core.Training` | Per-class statistics container |
+| `ConfusionMatrix` | `Core.Validation` | NxN matrix with OA, Kappa, per-class |
+| `AccuracyMetrics` | `Core.Validation` | Aggregated report from matrix |
+
+</details>
+
+<details>
+<summary><strong>Raster & ML</strong></summary>
+
+| Type | Namespace | Purpose |
+|:---|:---|:---|
+| `GdalRasterReader` | `Core.Raster` | Reads GeoTIFF to MultispectralImage |
+| `GdalRasterWriter` | `Core.Raster` | Writes ClassificationResult as GeoTIFF |
+| `SpectralIndexCalculator` | `Core.Raster` | NDVI, NDWI, NDBI derived bands |
+| `HybridClassifier` | `Core.ML` | ML.NET with fuzzy features |
+| `FuzzyFeatureExtractor` | `Core.ML` | Pixel to ML feature vector |
+| `KMeansClusterer` | `Core.ML` | Unsupervised training area suggestion |
+
+</details>
 
 ---
 
@@ -91,98 +500,30 @@ eliminates the class-ordering dependency of standard Sugeno weighted average def
 
 ```
 FuzzySat/
-├── FuzzySat.slnx
-├── CLAUDE.md                          # AI assistant configuration
-├── README.md                          # This file
-├── LICENSE                            # MIT
-├── .gitignore
-│
+├── FuzzySat.slnx                          # Solution file (.NET 10)
 ├── src/
-│   ├── FuzzySat.Core/                 # Core library (all algorithms)
-│   │   ├── FuzzyLogic/                # Membership functions, rules, inference
-│   │   ├── Raster/                    # GDAL-based raster I/O
-│   │   ├── Classification/            # Classifier orchestration
-│   │   ├── Training/                  # Training area extraction, statistics
-│   │   ├── Validation/                # Confusion matrix, Kappa, accuracy
-│   │   ├── Visualization/             # False color, classified rendering
-│   │   └── Configuration/             # JSON config models
-│   ├── FuzzySat.CLI/                  # Command-line tool
-│   ├── FuzzySat.Api/                  # REST API
-│   └── FuzzySat.Web/                  # Blazor Server web application
-│
+│   ├── FuzzySat.Core/                     # Core library (all algorithms)
+│   │   ├── FuzzyLogic/
+│   │   │   ├── MembershipFunctions/       # Gaussian, Triangular, Trapezoidal, Bell
+│   │   │   ├── Rules/                     # FuzzyRule, FuzzyRuleSet
+│   │   │   ├── Inference/                 # FuzzyInferenceEngine, InferenceResult
+│   │   │   ├── Defuzzification/           # MaxWeight, WeightedAverage
+│   │   │   ├── Classification/            # FuzzyClassifier (IClassifier)
+│   │   │   └── Operators/                 # And, Or, Not, ProductAnd
+│   │   ├── Training/                      # TrainingSession, SpectralStatistics
+│   │   ├── Raster/                        # GDAL reader/writer, Band, SpectralIndices
+│   │   ├── Classification/                # ClassificationResult, ConfidenceMap
+│   │   ├── Validation/                    # ConfusionMatrix, AccuracyMetrics, Kappa
+│   │   ├── ML/                            # HybridClassifier, KMeans, FeatureExtractor
+│   │   └── Configuration/                 # BandConfig, ClassifierConfig (JSON)
+│   ├── FuzzySat.CLI/                      # Command-line tool (4 commands)
+│   ├── FuzzySat.Api/                      # REST API (ASP.NET Core)
+│   └── FuzzySat.Web/                      # Blazor Server (6 pages, Radzen UI)
 ├── tests/
-│   └── FuzzySat.Core.Tests/           # Unit tests (xUnit + FluentAssertions)
-│
-├── samples/                           # Sample configurations
-├── docs/                              # Documentation
-│   ├── claude/                        # AI assistant rules
-│   ├── epics/                         # Epic planning & tracking
-│   ├── architecture/                  # Architecture decisions
-│   ├── development/                   # Development guides
-│   └── troubleshooting/               # Known issues & solutions
-│
-├── task/                              # Progress tracking
-│   └── todo.md                        # Central status file
-│
-└── .github/
-    └── workflows/
-        └── build.yml                  # CI/CD pipeline
-```
-
----
-
-## Roadmap
-
-| Phase | Epic | Description | Status |
-|-------|------|-------------|--------|
-| 1 | Core Engine MVP | Fuzzy logic engine, membership functions, inference, defuzzifier, validation | Planned |
-| 2 | I/O & CLI | GDAL raster reader/writer, CLI commands, JSON config persistence | Planned |
-| 3 | Advanced Features | Additional MF types, spectral indices (NDVI, NDWI), PCA | Planned |
-| 4 | ML Hybrid | ML.NET integration, hybrid fuzzy-ML classification | Planned |
-| 5 | Blazor Web App | Interactive web UI with Leaflet.js maps, real-time classification | Planned |
-
-**Priority**: Core engine (math) first, then GDAL I/O, CLI, and finally Blazor. The fuzzy
-logic engine is the intellectual core and must work correctly before building any UI.
-
----
-
-## Benchmark Results
-
-### Original Thesis (2008) - ASTER Imagery, Merida, Venezuela
-
-| Classifier | Overall Accuracy (%) | Kappa (%) |
-|------------|---------------------|-----------|
-| **Fuzzy Logic (ours)** | **81.87** | **76.37** |
-| Maximum Likelihood | 74.27 | 66.50 |
-| Decision Tree | 63.74 | 53.12 |
-| Minimum Distance | 56.14 | 42.33 |
-
-The goal of this reimplementation is to match or exceed these results on modern imagery
-(Sentinel-2, Landsat 8/9).
-
----
-
-## Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/ivanrlg/FuzzySat.git
-cd FuzzySat
-
-# Build
-dotnet build
-
-# Run tests
-dotnet test
-
-# Classify an image (CLI)
-dotnet run --project src/FuzzySat.CLI -- classify \
-    --config samples/sample_config.json \
-    --session training_session.json \
-    --output classified.tif
-
-# Run the web application
-dotnet run --project src/FuzzySat.Web
+│   └── FuzzySat.Core.Tests/               # 233 unit tests (xUnit + FluentAssertions)
+├── samples/
+│   └── sample-project.json                # ASTER Merida configuration example
+└── docs/                                  # Epic planning, architecture, troubleshooting
 ```
 
 ---
@@ -190,54 +531,11 @@ dotnet run --project src/FuzzySat.Web
 ## Supported Satellite Platforms
 
 | Platform | Bands | Resolution | Availability |
-|----------|-------|-----------|-------------|
-| ASTER | 14 (VNIR, SWIR, TIR) | 15-90m | NASA EarthData |
-| Sentinel-2 | 13 (VNIR, Red Edge, SWIR) | 10-60m | Copernicus Open Access Hub |
-| Landsat 8/9 | 11 (Coastal, VNIR, SWIR, TIR) | 15-100m | USGS EarthExplorer |
-| Custom | Any number of bands | Any | User-provided GeoTIFF |
-
----
-
-## Configuration
-
-Classification is configured via JSON. See [samples/sample_config.json](samples/) for a
-complete example.
-
-```json
-{
-  "project": {
-    "name": "Merida Classification",
-    "description": "Land cover classification using ASTER imagery"
-  },
-  "bands": [
-    { "index": 0, "name": "VNIR_Green", "wavelengthMin": 0.52, "wavelengthMax": 0.60 },
-    { "index": 1, "name": "VNIR_Red", "wavelengthMin": 0.63, "wavelengthMax": 0.69 },
-    { "index": 2, "name": "NIR", "wavelengthMin": 0.78, "wavelengthMax": 0.86 },
-    { "index": 3, "name": "SWIR", "wavelengthMin": 1.60, "wavelengthMax": 1.70 }
-  ],
-  "classes": [
-    { "id": 0, "name": "Water", "color": "#0000FF" },
-    { "id": 1, "name": "Urban", "color": "#FF0000" }
-  ],
-  "classification": {
-    "membershipFunction": "gaussian",
-    "andOperator": "min",
-    "defuzzificationMethod": "maxWeight"
-  }
-}
-```
-
----
-
-## Contributing
-
-This project follows a structured development methodology documented in [CLAUDE.md](CLAUDE.md).
-
-Key principles:
-- **Micro-commits**: Each commit has a single objective, under 200 lines
-- **PR review**: All PRs go through automated bot review before merge
-- **Phase-based development**: Work is organized into Epics with defined scope
-- **Test-driven**: Core algorithms must have unit tests with known values from the thesis
+|:---|:---:|:---:|:---|
+| **ASTER** | 14 (VNIR, SWIR, TIR) | 15-90m | NASA EarthData |
+| **Sentinel-2** | 13 (VNIR, Red Edge, SWIR) | 10-60m | Copernicus Open Access Hub |
+| **Landsat 8/9** | 11 (Coastal, VNIR, SWIR, TIR) | 15-100m | USGS EarthExplorer |
+| **Custom** | Any | Any | User-provided GeoTIFF |
 
 ---
 
@@ -245,25 +543,46 @@ Key principles:
 
 ```bibtex
 @thesis{labrador2008fuzzy,
-  title     = {Desarrollo de un Clasificador de Imagenes Satelitales Basado en Logica Difusa},
-  author    = {Labrador Gonzalez, Ivan Ramon Jose},
-  year      = {2008},
-  month     = {November},
-  school    = {Universidad de Los Andes},
-  address   = {Merida, Venezuela},
-  type      = {Bachelor's Thesis},
-  department= {Investigacion de Operaciones}
+  title      = {Desarrollo de un Clasificador de Imagenes Satelitales
+                Basado en Logica Difusa},
+  author     = {Labrador Gonzalez, Ivan Ramon Jose},
+  year       = {2008},
+  month      = {November},
+  school     = {Universidad de Los Andes},
+  address    = {Merida, Venezuela},
+  type       = {Bachelor's Thesis},
+  department = {Investigacion de Operaciones},
+  pages      = {105}
 }
 ```
+
+If you use FuzzySat in your research, please cite the original thesis and this repository.
+
+---
+
+## Contributing
+
+FuzzySat follows a structured development methodology:
+
+- **Micro-commits**: Each commit has a single objective, under 200 lines
+- **PR review**: All PRs reviewed by automated bots (Copilot + Codex) before merge
+- **Epic-based**: Work organized into 5 Epics with defined scope and acceptance criteria
+- **Test-driven**: Core algorithms validated against known thesis values
+
+See [CLAUDE.md](CLAUDE.md) for the complete development workflow.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** -- see [LICENSE](LICENSE) for details.
 
 ---
 
-*Based on the original thesis (105 pages, November 2008). This reimplementation is designed
-to bring fuzzy logic satellite classification to the open-source community with modern tools
-and free data sources.*
+<p align="center">
+  <em>
+    Based on the original thesis (105 pages, November 2008).<br/>
+    Reimplemented to bring fuzzy logic satellite classification<br/>
+    to the open-source community with modern tools and free data.
+  </em>
+</p>
