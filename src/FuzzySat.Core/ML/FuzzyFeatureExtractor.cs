@@ -24,18 +24,18 @@ public sealed class FuzzyFeatureExtractor
         ArgumentNullException.ThrowIfNull(bandNames);
 
         _ruleSet = ruleSet;
-        _bandNames = bandNames;
+        _bandNames = bandNames.ToList().AsReadOnly();
 
         // Feature names: raw bands + membership degrees per class per band + firing strengths
         var names = new List<string>();
 
         // Raw spectral values
-        foreach (var band in bandNames)
+        foreach (var band in _bandNames)
             names.Add($"Raw_{band}");
 
         // Membership degrees per class per band
         foreach (var rule in ruleSet.Rules)
-            foreach (var band in bandNames)
+            foreach (var band in _bandNames)
                 names.Add($"MF_{rule.ClassName}_{band}");
 
         // Firing strengths per class
