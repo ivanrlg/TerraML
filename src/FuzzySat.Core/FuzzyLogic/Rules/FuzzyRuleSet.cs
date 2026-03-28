@@ -24,6 +24,9 @@ public sealed class FuzzyRuleSet
         if (ruleList.Count == 0)
             throw new ArgumentException("At least one rule is required.", nameof(rules));
 
+        if (ruleList.Any(r => r is null))
+            throw new ArgumentException("All rules must be non-null.", nameof(rules));
+
         var duplicates = ruleList.GroupBy(r => r.ClassName).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
         if (duplicates.Count > 0)
             throw new ArgumentException($"Duplicate class names: {string.Join(", ", duplicates)}", nameof(rules));

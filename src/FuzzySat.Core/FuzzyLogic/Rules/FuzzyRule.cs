@@ -27,11 +27,19 @@ public sealed class FuzzyRule
     /// <param name="bandMembershipFunctions">Mapping of band names to their membership functions.</param>
     public FuzzyRule(string className, IDictionary<string, IMembershipFunction> bandMembershipFunctions)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(className);
+        ArgumentException.ThrowIfNullOrWhiteSpace(className, nameof(className));
         ArgumentNullException.ThrowIfNull(bandMembershipFunctions);
 
         if (bandMembershipFunctions.Count == 0)
             throw new ArgumentException("At least one band membership function is required.", nameof(bandMembershipFunctions));
+
+        foreach (var kvp in bandMembershipFunctions)
+        {
+            if (string.IsNullOrWhiteSpace(kvp.Key))
+                throw new ArgumentException("Band name keys must be non-null and non-whitespace.", nameof(bandMembershipFunctions));
+            if (kvp.Value is null)
+                throw new ArgumentException($"Membership function for band '{kvp.Key}' cannot be null.", nameof(bandMembershipFunctions));
+        }
 
         ClassName = className;
         BandMembershipFunctions = new Dictionary<string, IMembershipFunction>(bandMembershipFunctions).AsReadOnly();

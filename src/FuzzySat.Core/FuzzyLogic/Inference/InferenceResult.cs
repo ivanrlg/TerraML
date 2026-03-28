@@ -33,14 +33,16 @@ public sealed class InferenceResult
         if (strengths.Count == 0)
             throw new ArgumentException("At least one class strength is required.", nameof(strengths));
 
-        AllStrengths = strengths;
+        // Defensive copy to prevent post-construction drift
+        var copy = new List<KeyValuePair<string, double>>(strengths);
+        AllStrengths = copy.AsReadOnly();
 
         // Determine winner: highest strength, first-in-order wins ties
-        var winner = strengths[0];
-        for (var i = 1; i < strengths.Count; i++)
+        var winner = copy[0];
+        for (var i = 1; i < copy.Count; i++)
         {
-            if (strengths[i].Value > winner.Value)
-                winner = strengths[i];
+            if (copy[i].Value > winner.Value)
+                winner = copy[i];
         }
 
         WinnerClass = winner.Key;

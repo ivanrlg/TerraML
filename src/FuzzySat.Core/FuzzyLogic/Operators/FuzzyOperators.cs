@@ -58,12 +58,14 @@ public static class FuzzyOperators
     {
         var hasValues = false;
         var result = seed;
+        var index = 0;
 
         foreach (var value in values)
         {
-            ValidateMembershipValue(value, "value");
+            ValidateMembershipValue(value, $"values[{index}]");
             result = func(result, value);
             hasValues = true;
+            index++;
         }
 
         if (!hasValues)
