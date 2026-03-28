@@ -37,7 +37,13 @@ public static class ConfidenceMapGenerator
         var data = new double[result.Rows, result.Columns];
         for (var row = 0; row < result.Rows; row++)
             for (var col = 0; col < result.Columns; col++)
-                data[row, col] = classCodeMap.TryGetValue(result.GetClass(row, col), out var code) ? code : 0;
+            {
+                var className = result.GetClass(row, col);
+                if (!classCodeMap.TryGetValue(className, out var code))
+                    throw new InvalidOperationException(
+                        $"Unknown class '{className}' at row {row}, column {col}.");
+                data[row, col] = code;
+            }
 
         return new Band("ClassCode", data);
     }

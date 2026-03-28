@@ -8,7 +8,7 @@ public static class SpectralIndexCalculator
 {
     /// <summary>
     /// Calculates a normalized difference index: (bandA - bandB) / (bandA + bandB).
-    /// Returns 0 when both bands are 0 at a pixel.
+    /// Returns 0 when both bands are 0 at a pixel. Allows division when a+b=0 but a,b != 0.
     /// </summary>
     public static Band NormalizedDifference(Band bandA, Band bandB, string outputName)
     {
@@ -27,7 +27,7 @@ public static class SpectralIndexCalculator
                 var a = bandA[row, col];
                 var b = bandB[row, col];
                 var sum = a + b;
-                data[row, col] = sum == 0.0 ? 0.0 : (a - b) / sum;
+                data[row, col] = (a == 0.0 && b == 0.0) ? 0.0 : (a - b) / sum;
             }
         }
 

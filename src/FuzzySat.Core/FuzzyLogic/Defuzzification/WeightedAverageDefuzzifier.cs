@@ -27,7 +27,7 @@ public sealed class WeightedAverageDefuzzifier : IDefuzzifier
         if (totalWeight == 0.0)
             return result.WinnerClass; // Fallback: all zero → first class
 
-        var index = (int)Math.Round(weightedSum / totalWeight);
+        var index = (int)Math.Round(weightedSum / totalWeight, MidpointRounding.AwayFromZero);
         index = Math.Clamp(index, 0, result.AllStrengths.Count - 1);
 
         return result.AllStrengths[index].Key;
