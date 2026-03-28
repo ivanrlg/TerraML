@@ -54,6 +54,26 @@ public static class FuzzyOperators
         return Aggregate(values, double.MinValue, Math.Max);
     }
 
+    /// <summary>
+    /// Fuzzy AND using algebraic product of two membership degrees.
+    /// Alternative to minimum AND — more sensitive to low membership values.
+    /// </summary>
+    public static double ProductAnd(double a, double b)
+    {
+        ValidateMembershipValue(a, nameof(a));
+        ValidateMembershipValue(b, nameof(b));
+        return a * b;
+    }
+
+    /// <summary>
+    /// Fuzzy AND using algebraic product across a collection.
+    /// </summary>
+    public static double ProductAnd(IEnumerable<double> values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        return Aggregate(values, 1.0, (a, b) => a * b);
+    }
+
     private static double Aggregate(IEnumerable<double> values, double seed, Func<double, double, double> func)
     {
         var hasValues = false;
