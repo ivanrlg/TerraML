@@ -29,18 +29,7 @@ public sealed class GdalRasterReader : IRasterReader
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
         EnsureInitialized();
 
-        Dataset dataset;
-        try
-        {
-            dataset = Gdal.Open(filePath, Access.GA_ReadOnly)
-                ?? throw new FileNotFoundException($"Cannot open raster file: '{filePath}'.", filePath);
-        }
-        catch (Exception ex) when (ex is not FileNotFoundException)
-        {
-            throw new FileNotFoundException($"Cannot open raster file: '{filePath}'.", filePath, ex);
-        }
-
-        using var _ = dataset;
+        using var dataset = OpenDataset(filePath);
         var bandCount = dataset.RasterCount;
         var rows = dataset.RasterYSize;
         var cols = dataset.RasterXSize;
@@ -74,18 +63,7 @@ public sealed class GdalRasterReader : IRasterReader
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
         EnsureInitialized();
 
-        Dataset dataset;
-        try
-        {
-            dataset = Gdal.Open(filePath, Access.GA_ReadOnly)
-                ?? throw new FileNotFoundException($"Cannot open raster file: '{filePath}'.", filePath);
-        }
-        catch (Exception ex) when (ex is not FileNotFoundException)
-        {
-            throw new FileNotFoundException($"Cannot open raster file: '{filePath}'.", filePath, ex);
-        }
-
-        using var __ = dataset;
+        using var dataset = OpenDataset(filePath);
         using var firstBand = dataset.GetRasterBand(1);
         var dataType = Gdal.GetDataTypeName(firstBand.DataType);
 
@@ -97,5 +75,26 @@ public sealed class GdalRasterReader : IRasterReader
             dataType: dataType,
             driverName: dataset.GetDriver().ShortName,
             projection: dataset.GetProjection());
+    }
+
+    private static Dataset OpenDataset(string filePath)
+    {
+        try
+        {
+            var dataset = Gdal.Open(filePath, Access.GA_ReadOnly);
+            if (dataset is not null) return dataset;
+        }
+        catch (Exception ex)
+        {
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException($"Raster file not found: '{filePath}'.", filePath, ex);
+
+            throw new IOException($"Failed to open raster file: '{filePath}'.", ex);
+        }
+
+        if (!File.Exists(filePath))
+            throw new FileNotFoundException($"Raster file not found: '{filePath}'.", filePath);
+
+        throw new IOException($"Failed to open raster file: '{filePath}'.");
     }
 }

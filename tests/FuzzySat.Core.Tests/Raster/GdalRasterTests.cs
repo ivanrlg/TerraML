@@ -26,7 +26,8 @@ public class GdalRasterTests : IDisposable
     [Fact]
     public void GdalRasterReader_Read_ReturnsCorrectImage()
     {
-        var filePath = CreateTestGeoTiff(2, 3, 4, new double[] { 10, 20, 30, 40, 50, 60 });
+        var filePath = CreateTestGeoTiff(2, 3, 4,
+            new double[] { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120 });
         var reader = new GdalRasterReader();
 
         var image = reader.Read(filePath, ["B1", "B2"]);
@@ -111,6 +112,14 @@ public class GdalRasterTests : IDisposable
 
     private string CreateTestGeoTiff(int bandCount, int rows, int cols, double[] band1Data)
     {
+        var expectedSize = rows * cols;
+        if (band1Data.Length < expectedSize)
+        {
+            var padded = new double[expectedSize];
+            Array.Copy(band1Data, padded, band1Data.Length);
+            band1Data = padded;
+        }
+
         var filePath = Path.Combine(_tempDir, $"test_{Guid.NewGuid():N}.tif");
         using var driver = Gdal.GetDriverByName("GTiff");
         using var dataset = driver.Create(filePath, cols, rows, bandCount, DataType.GDT_Float64, null);
@@ -118,7 +127,7 @@ public class GdalRasterTests : IDisposable
         for (var b = 1; b <= bandCount; b++)
         {
             using var band = dataset.GetRasterBand(b);
-            var data = b == 1 ? band1Data : new double[rows * cols];
+            var data = b == 1 ? band1Data : new double[expectedSize];
             band.WriteRaster(0, 0, cols, rows, data, cols, rows, 0, 0);
         }
 

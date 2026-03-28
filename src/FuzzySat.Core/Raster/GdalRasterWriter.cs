@@ -39,8 +39,10 @@ public sealed class GdalRasterWriter : IRasterWriter
         var rows = result.Rows;
         var cols = result.Columns;
 
-        using var driver = Gdal.GetDriverByName("GTiff");
-        using var dataset = driver.Create(filePath, cols, rows, 1, DataType.GDT_Int32, null);
+        using var driver = Gdal.GetDriverByName("GTiff")
+            ?? throw new InvalidOperationException("GTiff driver is not available. Ensure GDAL is properly initialized.");
+        using var dataset = driver.Create(filePath, cols, rows, 1, DataType.GDT_Int32, null)
+            ?? throw new IOException($"Failed to create output raster: '{filePath}'.");
 
         var buffer = new int[rows * cols];
         for (var row = 0; row < rows; row++)
@@ -48,7 +50,10 @@ public sealed class GdalRasterWriter : IRasterWriter
             for (var col = 0; col < cols; col++)
             {
                 var className = result.GetClass(row, col);
-                buffer[row * cols + col] = classCodeMap.TryGetValue(className, out var code) ? code : 0;
+                if (!classCodeMap.TryGetValue(className, out var code))
+                    throw new InvalidOperationException(
+                        $"Unknown land cover class '{className}' at row {row}, column {col}.");
+                buffer[row * cols + col] = code;
             }
         }
 
