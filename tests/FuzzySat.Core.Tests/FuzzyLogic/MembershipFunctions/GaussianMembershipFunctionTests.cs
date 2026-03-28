@@ -130,6 +130,18 @@ public class GaussianMembershipFunctionTests
     }
 
     [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    public void Constructor_WithNonFiniteSpread_ThrowsArgumentOutOfRangeException(double spread)
+    {
+        var act = () => new GaussianMembershipFunction("Test", center: 100.0, spread: spread);
+
+        act.Should().Throw<ArgumentOutOfRangeException>()
+            .WithParameterName("spread");
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]

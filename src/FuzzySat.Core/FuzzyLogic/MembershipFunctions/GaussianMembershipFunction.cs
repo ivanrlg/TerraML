@@ -26,14 +26,14 @@ public sealed class GaussianMembershipFunction : IMembershipFunction
     /// <param name="name">Human-readable name (e.g., "Urban_Band1").</param>
     /// <param name="center">The mean (peak) of the Gaussian curve.</param>
     /// <param name="spread">The standard deviation. Must be greater than zero.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is null or empty.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="spread"/> is not positive.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is null or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="spread"/> is not a finite positive number.</exception>
     public GaussianMembershipFunction(string name, double center, double spread)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        if (spread <= 0)
-            throw new ArgumentOutOfRangeException(nameof(spread), spread, "Spread must be greater than zero.");
+        if (!double.IsFinite(spread) || spread <= 0)
+            throw new ArgumentOutOfRangeException(nameof(spread), spread, "Spread must be a finite number greater than zero.");
 
         Name = name;
         Center = center;
