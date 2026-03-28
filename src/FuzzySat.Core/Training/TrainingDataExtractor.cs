@@ -21,6 +21,17 @@ public static class TrainingDataExtractor
         if (sampleList.Count == 0)
             throw new ArgumentException("At least one sample is required.", nameof(samples));
 
+        // Validate all samples are well-formed
+        for (var i = 0; i < sampleList.Count; i++)
+        {
+            if (sampleList[i] is null)
+                throw new ArgumentException($"Sample at index {i} is null.", nameof(samples));
+            if (string.IsNullOrWhiteSpace(sampleList[i].ClassName))
+                throw new ArgumentException($"Sample at index {i} has a null or whitespace ClassName.", nameof(samples));
+            if (sampleList[i].BandValues is null || sampleList[i].BandValues.Count == 0)
+                throw new ArgumentException($"Sample at index {i} has no band values.", nameof(samples));
+        }
+
         // Verify all samples have the same band names
         var bandNames = sampleList[0].BandValues.Keys.OrderBy(k => k).ToList();
         for (var i = 1; i < sampleList.Count; i++)

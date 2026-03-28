@@ -70,13 +70,35 @@ public sealed class TrainingSession
         if (statistics.Count == 0)
             throw new ArgumentException("At least one class is required.", nameof(statistics));
 
-        var classNameList = classNames.ToList().AsReadOnly();
-        var bandNameList = bandNames.ToList().AsReadOnly();
+        // Defensive copy of statistics dictionary
+        var statsCopy = new Dictionary<string, SpectralStatistics>(statistics);
+
+        var classNameList = classNames.ToList();
+        var bandNameList = bandNames.ToList();
+
+        if (classNameList.Count == 0)
+            throw new ArgumentException("At least one class name is required.", nameof(classNames));
+        if (bandNameList.Count == 0)
+            throw new ArgumentException("At least one band name is required.", nameof(bandNames));
+
+        // Validate classNames match statistics keys
+        var statsKeySet = new HashSet<string>(statsCopy.Keys);
+        if (!statsKeySet.SetEquals(classNameList))
+            throw new ArgumentException("classNames must match statistics keys exactly.", nameof(classNames));
+
+        // Validate bandNames match each class's band keys
+        var bandNameSet = new HashSet<string>(bandNameList);
+        foreach (var (classKey, classStats) in statsCopy)
+        {
+            if (!bandNameSet.SetEquals(classStats.MeanPerBand.Keys))
+                throw new ArgumentException(
+                    $"Band names do not match statistics bands for class '{classKey}'.", nameof(bandNames));
+        }
 
         return new TrainingSession(
-            statistics.AsReadOnly(),
-            classNameList,
-            bandNameList,
+            statsCopy.AsReadOnly(),
+            classNameList.AsReadOnly(),
+            bandNameList.AsReadOnly(),
             id,
             createdAt);
     }
