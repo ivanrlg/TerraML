@@ -1,0 +1,58 @@
+## .NET
+bin/
+obj/
+artifacts/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+*.nupkg
+*.binlog
+publish/
+
+## IDE
+.vs/
+.vscode/
+*.sln.docstates
+.idea/
+*.DotSettings.user
+
+## OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## Test Results
+TestResults/
+*.trx
+coverage/
+
+## Satellite Imagery (large binary files - never commit)
+*.tif
+*.tiff
+*.geotiff
+*.img
+*.hdf
+*.hdf5
+*.nc
+*.jp2
+data/rasters/
+data/samples/
+
+## Keep sample configs but not sample data
+!samples/*.json
+!samples/*.md
+
+## Secrets
+appsettings.Development.json
+.env
+.env.*
+
+## Uploads and outputs (runtime)
+**/wwwroot/uploads/
+**/wwwroot/outputs/
+
+## Claude Code temp
+tmpclaude-*-cwd/

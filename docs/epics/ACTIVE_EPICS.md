@@ -1,0 +1,87 @@
+# EPICs Activos - FuzzySat
+
+> **Ultima actualizacion**: 2026-03-28
+> **Proposito**: Punto central de informacion de EPICs en desarrollo.
+> Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
+
+---
+
+## Resumen por Estado
+
+| Estado | Cantidad | EPICs |
+|--------|----------|-------|
+| En Progreso | 0 | - |
+| Planificado | 5 | #1 Core Engine, #2 I/O & CLI, #3 Advanced, #4 ML Hybrid, #5 Blazor Web |
+| Completado | 0 | - |
+
+---
+
+## Epic #1 - Core Engine MVP
+
+- **Status**: Planificado
+- **Priority**: P0-CRITICAL (fundamento de todo el proyecto)
+- **Folder**: [epic-001-core-engine/](epic-001-core-engine/)
+- **Depends on**: Scaffolding (este PR)
+- **Estimado**: TBD
+- **PRs**: Ninguno aun
+
+**Scope**: Motor de logica difusa completo: membership functions (Gaussian), fuzzy rules,
+inference engine (AND=Min), defuzzifier (Max Weight), training data extractor, confusion
+matrix, Kappa statistic. Unit tests con valores de la tesis original.
+
+---
+
+## Epic #2 - I/O & CLI
+
+- **Status**: Planificado
+- **Priority**: P1
+- **Folder**: [epic-002-io-cli/](epic-002-io-cli/)
+- **Depends on**: Epic #1
+- **Estimado**: TBD
+- **PRs**: Ninguno aun
+
+**Scope**: GDAL raster reader/writer (GeoTIFF), CLI commands (train, classify, validate,
+visualize, info), JSON config persistence, sample configuration.
+
+---
+
+## Epic #3 - Advanced Features
+
+- **Status**: Planificado
+- **Priority**: P2
+- **Folder**: [epic-003-advanced-features/](epic-003-advanced-features/)
+- **Depends on**: Epic #2
+- **Estimado**: TBD
+- **PRs**: Ninguno aun
+
+**Scope**: MFs adicionales (triangular, trapezoidal, bell), operador producto como
+alternativa a min, indices espectrales (NDVI, NDWI, NDBI), PCA, confidence maps.
+
+---
+
+## Epic #4 - ML Hybrid
+
+- **Status**: Planificado
+- **Priority**: P3
+- **Folder**: [epic-004-ml-hybrid/](epic-004-ml-hybrid/)
+- **Depends on**: Epic #3
+- **Estimado**: TBD
+- **PRs**: Ninguno aun
+
+**Scope**: ML.NET integration, membership degrees como features para neural network
+o random forest, automated training area suggestion (K-Means).
+
+---
+
+## Epic #5 - Blazor Web App
+
+- **Status**: Planificado
+- **Priority**: P3
+- **Folder**: [epic-005-blazor-web/](epic-005-blazor-web/)
+- **Depends on**: Epic #2 (minimo), Epic #3 (ideal)
+- **Estimado**: TBD
+- **PRs**: Ninguno aun
+
+**Scope**: Blazor Server web app con Leaflet.js maps, upload de imagery, training area
+drawing, clasificacion con progreso en tiempo real, confusion matrix interactiva,
+export GeoTIFF/JSON/PDF.
