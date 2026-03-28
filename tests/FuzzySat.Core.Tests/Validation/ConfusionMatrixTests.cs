@@ -194,9 +194,22 @@ public class ConfusionMatrixTests
         cm.TotalSamples.Should().Be(171);
         cm.CorrectCount.Should().Be(140);
         cm.OverallAccuracy.Should().BeApproximately(0.8187, 0.001);
-        // Kappa depends on marginal distributions — exact thesis matrix unavailable.
-        // Verify Kappa is in a reasonable range for ~82% OA with 7 classes.
-        cm.KappaCoefficient.Should().BeInRange(0.75, 0.80);
+        // Exact Kappa for this synthetic matrix (pre-computed)
+        cm.KappaCoefficient.Should().BeApproximately(0.7885, 0.001);
+    }
+
+    // --- Single Class / Degenerate ---
+
+    [Fact]
+    public void SingleClass_PerfectAgreement_KappaIsOne()
+    {
+        var actual = new[] { "A", "A", "A" };
+        var predicted = new[] { "A", "A", "A" };
+
+        var cm = new ConfusionMatrix(actual, predicted);
+
+        cm.OverallAccuracy.Should().BeApproximately(1.0, Precision);
+        cm.KappaCoefficient.Should().BeApproximately(1.0, Precision);
     }
 
     // --- Constructor Validation ---
