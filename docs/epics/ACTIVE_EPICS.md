@@ -10,9 +10,9 @@
 
 | Estado | Cantidad | EPICs |
 |--------|----------|-------|
-| Completado | 1 | #1 Core Engine MVP |
-| Casi Completado | 2 | #3 Advanced Features (~85%), #4 ML Hybrid (~90%) |
-| Parcial | 2 | #2 I/O & CLI (~55%), #5 Blazor Web (~35%) |
+| Completado | 2 | #1 Core Engine MVP, #3 Advanced Features |
+| Casi Completado | 2 | #2 I/O & CLI (~80%), #4 ML Hybrid (~90%) |
+| Parcial | 1 | #5 Blazor Web (~35%) |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 
 ---
@@ -23,7 +23,7 @@
 - **Priority**: P0-CRITICAL
 - **Folder**: [epic-001-core-engine/](epic-001-core-engine/)
 - **Micro-commits**: 15/15 completados
-- **Tests**: 233 tests, 0 failures
+- **Tests**: 242 tests, 0 failures
 - **Verificado**: 81.87% OA y K=0.7637 reproducidos
 
 **Scope completado**: Motor de logica difusa completo: 4 membership functions (Gaussian,
@@ -33,31 +33,31 @@ Unit tests validados contra datos de la tesis original.
 
 ---
 
-## Epic #2 - I/O & CLI — PARCIAL
+## Epic #2 - I/O & CLI — CASI COMPLETADO
 
-- **Status**: **~55% completado**
+- **Status**: **~80% completado**
 - **Priority**: P1
 - **Folder**: [epic-002-io-cli/](epic-002-io-cli/)
-- **Micro-commits**: 6/11 completados
-- **Pendiente**: 5 comandos CLI sin cablear a Core
+- **Micro-commits**: 10/11 completados
+- **Pendiente**: VisualizeCommand, tests CLI
 
-**Completado**: GDAL raster reader/writer, CLI structure con System.CommandLine, sample config.
-**Pendiente**: TrainCommand, ClassifyCommand, ValidateCommand, InfoCommand, VisualizeCommand
-— todos son stubs que imprimen "not yet implemented". Las clases Core existen; falta cablear.
+**Completado**: GDAL raster reader/writer, CLI structure, sample config, InfoCommand,
+TrainCommand (CSV→JSON), ClassifyCommand (progress bar + GeoTIFF output con georeferencing),
+ValidateCommand (confusion matrix + Kappa + per-class metrics). TrainingSessionDto compartido.
+**Pendiente**: VisualizeCommand (false color composite → PNG), tests CLI.
 
 ---
 
-## Epic #3 - Advanced Features — CASI COMPLETADO
+## Epic #3 - Advanced Features — COMPLETADO
 
-- **Status**: **~85% completado**
+- **Status**: **COMPLETADO**
 - **Priority**: P2
 - **Folder**: [epic-003-advanced-features/](epic-003-advanced-features/)
-- **Micro-commits**: 7/9 completados
-- **Pendiente**: PCA, config de metodos en JSON
+- **Micro-commits**: 8/9 completados (config JSON es minor)
 
 **Completado**: 3 MFs adicionales, operador producto, WeightedAverageDefuzzifier,
-SpectralIndexCalculator (NDVI, NDWI, NDBI), ConfidenceMapGenerator.
-**Pendiente**: PCA (recomendacion: usar ML.NET estimator).
+SpectralIndexCalculator (NDVI, NDWI, NDBI), ConfidenceMapGenerator, PcaTransformer
+(ML.NET PCA con PredictionEngine cacheado, 9 tests).
 
 ---
 
