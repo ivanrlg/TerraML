@@ -9,6 +9,15 @@ namespace FuzzySat.Web.Services;
 /// <summary>
 /// Scoped service holding the current project's state across pages.
 /// Each Blazor Server circuit (browser tab) gets its own instance.
+///
+/// IMPORTANT: All property setters must be called from the Blazor
+/// synchronization context (i.e., from component lifecycle methods
+/// or event handlers, NOT from background threads). If you need to
+/// update state from a background task, await the task first, then
+/// assign the result on the calling context.
+///
+/// Consumers should implement IDisposable and unsubscribe from
+/// OnStateChanged in Dispose() to avoid event leaks.
 /// </summary>
 public sealed class ProjectStateService
 {
@@ -18,7 +27,11 @@ public sealed class ProjectStateService
     private ClassificationResult? _classificationResult;
     private ConfusionMatrix? _confusionMatrix;
 
-    /// <summary>Fired when any state property changes.</summary>
+    /// <summary>
+    /// Fired when any state property changes. Subscribers must call
+    /// InvokeAsync(StateHasChanged) from Blazor components.
+    /// Must only be invoked from the Blazor synchronization context.
+    /// </summary>
     public event Action? OnStateChanged;
 
     public ClassifierConfiguration? Configuration
