@@ -3,7 +3,12 @@
 @using System.Text.Json
 @using FuzzySat.Core.Configuration
 @using FuzzySat.Core.Classification
+@using FuzzySat.Web.Services
 @inject NotificationService NotificationService
+@inject ILogger<ProjectSetup> Logger
+@inject ProjectStateService ProjectState
+@inject RasterService RasterService
+@inject ProjectLoaderService ProjectLoader
 
 <PageTitle>Project Setup - FuzzySat</PageTitle>
 
@@ -19,6 +24,20 @@
     <div class="setup-layout">
         @* Main Form *@
         <div class="form-col">
+            @* Load Existing *@
+            @if (_existingProjects.Count > 0)
+            {
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="material-icons section-icon" style="color: var(--fs-accent-violet);">history</span>
+                        <span>Load Existing Project</span>
+                    </div>
+                    <RadzenDropDown @bind-Value="@_selectedProject" Data="@_existingProjects"
+                        Placeholder="Select a saved project..." Style="width: 100%;"
+                        Change="@(_ => LoadSelectedProject())" />
+                </div>
+            }
+
             @* Project Info *@
             <div class="form-section">
                 <div class="form-section-header">
@@ -32,7 +51,7 @@
                 <div class="field-group">
                     <label class="field-label">Input Raster</label>
                     <div class="path-input">
-                        <RadzenTextBox @bind-Value="@_inputPath" Placeholder="Path to multispectral image (GeoTIFF)" Style="width: 100%;" />
+                        <RadzenTextBox Value="@_inputPath" Change="@OnInputPathChanged" Placeholder="Path to multispectral image (GeoTIFF)" Style="width: 100%;" />
                         <button type="button" class="browse-btn" aria-label="Browse for input raster" @onclick="BrowseRaster" title="Browse for input raster">
                             <span class="material-icons">folder_open</span>
                         </button>
@@ -139,6 +158,30 @@
                     <span class="summary-label">Feature Vector</span>
                     <span class="summary-value mono-text">@(_bands.Count + _classes.Count * (_bands.Count + 1))D</span>
                 </div>
+                @if (_rasterInfo is not null)
+                {
+                    <hr class="fs-divider" />
+                    <div class="summary-item">
+                        <span class="summary-label">Raster Size</span>
+                        <span class="summary-value mono-text">@_rasterInfo.Columns x @_rasterInfo.Rows px</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Raster Bands</span>
+                        <span class="summary-value mono-text">@_rasterInfo.BandCount</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Data Type</span>
+                        <span class="summary-value mono-text">@_rasterInfo.DataType</span>
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(_inputPath) && _rasterError is not null)
+                {
+                    <hr class="fs-divider" />
+                    <div class="summary-item">
+                        <span class="summary-label" style="color: var(--fs-accent-red);">Raster</span>
+                        <span class="summary-value" style="color: var(--fs-accent-red);">@_rasterError</span>
+                    </div>
+                }
                 <hr class="fs-divider" />
                 <RadzenButton Text="Save Configuration" Icon="save" ButtonStyle="ButtonStyle.Primary" Style="width: 100%;" Click="@SaveConfiguration" Disabled="@_isSaving" />
                 <RadzenButton Text="Reset" Icon="restart_alt" ButtonStyle="ButtonStyle.Secondary" Style="width: 100%;" class="rz-mt-2" Click="@ResetConfiguration" />
@@ -152,6 +195,10 @@
     private string _inputPath = "";
     private string? _selectedPreset = "ASTER";
     private bool _isSaving = false;
+    private RasterInfo? _rasterInfo;
+    private string? _rasterError;
+    private List<string> _existingProjects = [];
+    private string? _selectedProject;
     private List<BandEntry> _bands = [new("VNIR1", 0, "Visible NIR 1"), new("VNIR2", 1, "Visible NIR 2"), new("SWIR1", 2, "Shortwave IR 1"), new("SWIR2", 3, "Shortwave IR 2")];
     private List<ClassEntry> _classes =
     [
@@ -167,6 +214,71 @@
         new("Landsat 8", 11, "30m"),
         new("Custom", 0, "-")
     ];
+
+    private static readonly HashSet<string> ReservedFileNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL",
+        "COM1","COM2","COM3","COM4","COM5","COM6","COM7","COM8","COM9",
+        "LPT1","LPT2","LPT3","LPT4","LPT5","LPT6","LPT7","LPT8","LPT9"
+    };
+
+    protected override void OnInitialized()
+    {
+        _existingProjects = ProjectLoader.ListProjects().ToList();
+    }
+
+    private async Task OnInputPathChanged(string newPath)
+    {
+        _inputPath = newPath;
+        _rasterInfo = null;
+        _rasterError = null;
+
+        if (string.IsNullOrWhiteSpace(newPath)) return;
+
+        try
+        {
+            var info = await Task.Run(() => RasterService.GetInfo(newPath));
+            _rasterInfo = info;
+        }
+        catch (FileNotFoundException)
+        {
+            _rasterError = "File not found";
+        }
+        catch (Exception ex)
+        {
+            _rasterError = "Cannot read raster";
+            Logger.LogWarning(ex, "Failed to read raster info for '{Path}'", newPath);
+        }
+    }
+
+    private async Task LoadSelectedProject()
+    {
+        if (_selectedProject is null) return;
+
+        var config = ProjectLoader.LoadProject(_selectedProject);
+        if (config is null)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Load Failed",
+                "Could not load the selected project.", duration: 4000);
+            return;
+        }
+
+        _projectName = config.ProjectName ?? "";
+        _inputPath = config.InputRasterPath ?? "";
+        _bands = config.Bands?.Select(b => new BandEntry(b.Name, b.SourceIndex, b.Description ?? "")).ToList() ?? [];
+        _classes = config.Classes?.Select(c => new ClassEntry(c.Name, c.Code, c.Color ?? "#808080")).ToList() ?? [];
+        _selectedPreset = null;
+
+        ProjectState.Configuration = config;
+
+        _rasterInfo = null;
+        _rasterError = null;
+        if (!string.IsNullOrWhiteSpace(_inputPath))
+            await OnInputPathChanged(_inputPath);
+
+        NotificationService.Notify(NotificationSeverity.Success, "Project Loaded",
+            $"Loaded '{_projectName}'.", duration: 3000);
+    }
 
     private async Task SaveConfiguration()
     {
@@ -214,26 +326,34 @@
                 }).ToList()
             };
 
-            var safeName = string.Join("_", _projectName.Trim().Split(Path.GetInvalidFileNameChars()));
-            var projectDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "FuzzySat", "projects");
-            Directory.CreateDirectory(projectDir);
-            var filePath = Path.Combine(projectDir, $"{safeName}.json");
+            var safeName = string.Join("_", _projectName.Trim().Split(Path.GetInvalidFileNameChars()))
+                .Trim('_').Trim('.');
 
-            var json = JsonSerializer.Serialize(config, new JsonSerializerOptions
+            var nameWithoutExt = safeName.Contains('.') ? safeName[..safeName.IndexOf('.')] : safeName;
+            if (string.IsNullOrWhiteSpace(safeName) || safeName.Length > 100
+                || ReservedFileNames.Contains(safeName) || ReservedFileNames.Contains(nameWithoutExt))
             {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
+                NotificationService.Notify(NotificationSeverity.Warning, "Invalid Project Name",
+                    "Please use a valid project name (avoid special characters and reserved names).", duration: 4000);
+                return;
+            }
 
-            await File.WriteAllTextAsync(filePath, json);
+            await ProjectLoader.SaveProjectAsync(safeName, config);
+
+            ProjectState.Configuration = config;
+            if (_rasterInfo is not null)
+                ProjectState.RasterInfo = _rasterInfo;
+
+            _existingProjects = ProjectLoader.ListProjects().ToList();
 
             NotificationService.Notify(NotificationSeverity.Success, "Configuration Saved",
-                $"Saved to {filePath}", duration: 5000);
+                $"Configuration saved for project '{_projectName.Trim()}'.", duration: 5000);
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Failed to save project '{ProjectName}'", _projectName);
             NotificationService.Notify(NotificationSeverity.Error, "Save Failed",
-                ex.Message, duration: 6000);
+                "An error occurred while saving the configuration. Please try again.", duration: 6000);
         }
         finally
         {
@@ -252,6 +372,8 @@
         _projectName = "";
         _inputPath = "";
         _selectedPreset = "ASTER";
+        _rasterInfo = null;
+        _rasterError = null;
         _bands = [new("VNIR1", 0, "Visible NIR 1"), new("VNIR2", 1, "Visible NIR 2"), new("SWIR1", 2, "Shortwave IR 1"), new("SWIR2", 3, "Shortwave IR 2")];
         _classes =
         [
@@ -260,6 +382,7 @@
             new("Cloud", 6, "#E8ECF4"), new("Shadow", 7, "#6B7280")
         ];
 
+        ProjectState.Reset();
         NotificationService.Notify(NotificationSeverity.Info, "Reset",
             "Configuration reset to defaults.", duration: 3000);
     }
