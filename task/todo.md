@@ -8,12 +8,13 @@
 
 ## Estado Actual
 
-> **Proyecto al ~55% global** (subio de 45% tras Fases 1-2)
-> - Core Engine: **100%** (PCA implementado, 242 tests passing)
+> **Proyecto al ~58% global** (subio de 55% tras Fase 3A)
+> - Core Engine: **100%** (PCA implementado, 242 Core tests)
 > - CLI: **80%** funcional (4 comandos wired, falta VisualizeCommand)
 > - API: 0% (template default)
-> - Web: 35% (UI mock, no conectada a Core)
+> - Web: **42%** (DI services, security fixes, 18 Web tests, falta wiring pages)
 > - CI/CD: 30% (solo build+test)
+> - Tests totales: **260** (242 Core + 18 Web)
 
 ---
 
@@ -114,19 +115,37 @@
 - [ ] Crear VisualizeCommand (false color composite → PNG)
 - [ ] Tests CLI
 
-### Fase 3 — Web Real (P1)
+### Fase 3A — Web Infrastructure (PR #17) — COMPLETADA
+- [x] ProjectStateService (scoped, cross-page state bus)
+- [x] RasterService (singleton, GDAL wrapper, band statistics, path validation)
+- [x] ProjectLoaderService (save/load/list, path traversal defense)
+- [x] ProjectStorageOptions (configurable via appsettings.json)
+- [x] BandStatistics record (IReadOnlyList<long> histogram)
+- [x] Fix #12: Path configurable (IOptions, defaults to ApplicationData)
+- [x] Fix #13: Filename sanitization (reserved names, extensions, length)
+- [x] Fix #14: Info leak en toasts (ILogger server-side)
+- [x] Security: path traversal defense (ResolveSafePath + directory separator rejection)
+- [x] Security: raster extension whitelist (.tif, .tiff, .img, .hdf, .nc, .jp2, .vrt)
+- [x] 18 Web tests (ProjectLoaderServiceTests + RasterServiceTests)
+
+### Fase 3B — BandViewer + Training (Siguiente)
+- [ ] Wire Program.cs, _Imports.razor, appsettings.json con DI services
+- [ ] Wire ProjectSetup.razor con ProjectStateService + RasterInfo display
+- [ ] SkiaSharp band preview rendering (server-side PNG)
+- [ ] BandViewer con bandas reales (stats, histogram, preview image)
+- [ ] TrainingService + CSV upload para training samples
+- [ ] Training page con datos reales (spectral chart, extract stats, export)
+
+### Fase 3C — Classification + Validation (Pendiente)
+- [ ] ClassificationService (async, IProgress, CancellationToken)
+- [ ] Classification conectada a FuzzyClassifier con progreso real
+- [ ] Classification result preview (colored PNG) + export GeoTIFF
+- [ ] Validation con ConfusionMatrix real + ground truth CSV upload
+- [ ] Export CSV real
+
+### Fase 3D — Leaflet Maps (Deferred)
 - [ ] leaflet-interop.js + LeafletMap.razor
-- [ ] TileService (server-side raster tile rendering)
-- [ ] File upload/browse (InputFile)
-- [ ] SignalR progress hub
-- [ ] BandViewer con bandas reales
-- [ ] Training con drawing tools reales
-- [ ] Classification conectada a FuzzyClassifier
-- [ ] Validation con datos reales
-- [ ] Export CSV, GeoTIFF
-- [ ] Fix: ProjectSetup path configurable (IOptions)
-- [ ] Fix: Filename sanitization (reserved names)
-- [ ] Fix: Info leak en toasts (ILogger)
+- [ ] Drawing tools para training areas
 - [ ] History page
 
 ### Fase 4 — API (P2)
