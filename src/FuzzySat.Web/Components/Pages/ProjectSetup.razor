@@ -3,7 +3,11 @@
 @using System.Text.Json
 @using FuzzySat.Core.Configuration
 @using FuzzySat.Core.Classification
+@using FuzzySat.Web.Services
+@using Microsoft.Extensions.Options
 @inject NotificationService NotificationService
+@inject IOptions<ProjectStorageOptions> StorageOptions
+@inject ILogger<ProjectSetup> Logger
 
 <PageTitle>Project Setup - FuzzySat</PageTitle>
 
@@ -214,8 +218,17 @@
                 }).ToList()
             };
 
-            var safeName = string.Join("_", _projectName.Trim().Split(Path.GetInvalidFileNameChars()));
-            var projectDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "FuzzySat", "projects");
+            var safeName = string.Join("_", _projectName.Trim().Split(Path.GetInvalidFileNameChars()))
+                .Trim('_').Trim('.');
+
+            if (string.IsNullOrWhiteSpace(safeName) || safeName.Length > 100 || ReservedFileNames.Contains(safeName))
+            {
+                NotificationService.Notify(NotificationSeverity.Warning, "Invalid Project Name",
+                    "Please use a valid project name (avoid special characters and reserved names).", duration: 4000);
+                return;
+            }
+
+            var projectDir = StorageOptions.Value.GetEffectivePath();
             Directory.CreateDirectory(projectDir);
             var filePath = Path.Combine(projectDir, $"{safeName}.json");
 
@@ -228,12 +241,13 @@
             await File.WriteAllTextAsync(filePath, json);
 
             NotificationService.Notify(NotificationSeverity.Success, "Configuration Saved",
-                $"Saved to {filePath}", duration: 5000);
+                $"Configuration saved for project '{_projectName.Trim()}'.", duration: 5000);
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Failed to save project '{ProjectName}'", _projectName);
             NotificationService.Notify(NotificationSeverity.Error, "Save Failed",
-                ex.Message, duration: 6000);
+                "An error occurred while saving the configuration. Please try again.", duration: 6000);
         }
         finally
         {
@@ -298,6 +312,13 @@
 
     private void AddBand() => _bands.Add(new($"Band{_bands.Count + 1}", _bands.Count, ""));
     private void AddClass() => _classes.Add(new($"Class{_classes.Count + 1}", _classes.Count + 1, "#808080"));
+
+    private static readonly HashSet<string> ReservedFileNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL",
+        "COM1","COM2","COM3","COM4","COM5","COM6","COM7","COM8","COM9",
+        "LPT1","LPT2","LPT3","LPT4","LPT5","LPT6","LPT7","LPT8","LPT9"
+    };
 
     private record BandEntry(string Name, int Index, string Description);
     private record ClassEntry(string Name, int Code, string Color);
