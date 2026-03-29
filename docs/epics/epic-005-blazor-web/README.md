@@ -1,9 +1,9 @@
 # Epic #5 - Blazor Web Application
 
-**Status**: Planificado
+**Status**: PARCIAL (~35% — UI scaffolding listo, funcionalidad real minima)
 **Priority**: P3
 **Depends on**: Epic #2 (minimo), Epic #3 (ideal)
-**Estimated effort**: TBD
+**Estimated effort**: Muy alto (Leaflet integration, tile service, SignalR, wiring completo)
 
 ---
 
@@ -32,23 +32,52 @@ Home --> Project Setup --> Band Viewer --> Training Editor --> Classification --
                                                                                   History
 ```
 
-## Micro-Commits Planificados
+## Micro-Commits — Estado Real
 
-- [ ] MC#1: Blazor Server project setup + dependencies (Leaflet, Radzen)
-- [ ] MC#2: MainLayout + NavMenu
-- [ ] MC#3: Home page
-- [ ] MC#4: ProjectSetup page (upload, band config, class definition)
-- [ ] MC#5: TileService + TileController
-- [ ] MC#6: BandViewer page con Leaflet map
-- [ ] MC#7: leaflet-interop.js (map init, overlays, drawing)
-- [ ] MC#8: TrainingEditor page (map + panel split)
-- [ ] MC#9: SpectralChart + MembershipFunctionChart components
-- [ ] MC#10: ClassificationService (async + SignalR progress)
-- [ ] MC#11: Classification page (progress bar + result overlay)
-- [ ] MC#12: ConfusionMatrixTable component
-- [ ] MC#13: ValidationResults page
-- [ ] MC#14: History page
-- [ ] MC#15: Program.cs service registration
+### Completado (UI scaffolding)
+- [x] MC#1: Blazor Server project setup + dependencies (Radzen 10.0.6)
+- [x] MC#2: MainLayout + NavMenu (sidebar, breadcrumbs, responsive)
+- [x] MC#3: Home page (hero, stats thesis, workflow cards, comparisons)
+- [x] MC#4: ProjectSetup page — **FUNCIONAL**: save JSON, reset, sensor presets, Radzen toasts
+- [x] MC#12: ConfusionMatrixHeatmap component — **REAL**: reusable, color-coded, tooltips
+
+### Parcial (UI existe, datos hardcodeados/mock)
+- [ ] MC#6: BandViewer page — **MOCK**: dropdown funciona pero stats/histogram hardcodeados
+- [ ] MC#8: TrainingEditor page — **MOCK**: clases hardcodeadas, spectral chart inventado
+- [ ] MC#9: SpectralChart + MembershipFunctionChart — **PARCIAL**: usa RadzenChart inline, no componentes reusables
+- [ ] MC#11: Classification page — **MOCK**: `Task.Delay` simula progreso, no clasifica
+- [ ] MC#13: ValidationResults page — **MOCK**: metricas de tesis hardcodeadas
+- [ ] MC#15: Program.cs service registration — **PARCIAL**: solo Radzen registrado, no Core services
+
+### No Implementado
+- [ ] MC#5: TileService + TileController — **NO EXISTE**: necesario para servir bandas como tiles
+- [ ] MC#7: leaflet-interop.js — **NO EXISTE**: JS interop para Leaflet, solo MapPlaceholder
+- [ ] MC#10: ClassificationService (async + SignalR progress) — **NO EXISTE**
+- [ ] MC#14: History page — **NO EXISTE**
+
+## Issues Conocidos (de PR review y auditoria)
+
+### Botones muertos (0 feedback al usuario):
+1. ProjectSetup: Browse folder icon disabled
+2. Validation: Export CSV sin click handler
+3. Classification: Export Result sin click handler
+4. Training: Extract Statistics permanentemente disabled
+5. Training: Export Session permanentemente disabled
+
+### Controles disabled sin contexto:
+6. Training: 5 drawing tools disabled
+7. MapPlaceholder: Zoom/fit disabled
+
+### Mocks que parecen reales:
+8. BandViewer: Dropdowns cambian variable pero no actualizan nada
+9. BandViewer: Metadata/stats/histogram 100% hardcodeados
+10. Training: Spectral chart con datos inventados
+11. Classification: Run es simulacion con Task.Delay
+
+### Seguridad/Robustez (PR #12 review):
+12. ProjectSetup: Save usa UserProfile hardcodeado (server-side en Blazor Server)
+13. ProjectSetup: Sanitizacion de filename incompleta (nombres reservados Windows)
+14. ProjectSetup: Info leak — toast expone ruta del servidor y exception cruda
 
 ## Acceptance Criteria
 
@@ -56,5 +85,5 @@ Home --> Project Setup --> Band Viewer --> Training Editor --> Classification --
 - [ ] Map interactivo muestra bandas y overlay clasificado
 - [ ] Training areas se dibujan y estadisticas se calculan
 - [ ] Progreso de clasificacion se muestra en tiempo real
-- [ ] Confusion matrix es color-coded e interactiva
+- [ ] Confusion matrix es color-coded e interactiva (parcial: ConfusionMatrixHeatmap existe)
 - [ ] Responsive: funciona en 1024x768
