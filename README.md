@@ -32,12 +32,38 @@ Maximum Likelihood, Decision Tree, and Minimum Distance classifiers.
 
 ---
 
+## About & Motivation
+
+In 2008, a thesis at Universidad de Los Andes (Merida, Venezuela) proposed a fuzzy logic
+classifier for satellite imagery. It achieved **81.87% Overall Accuracy**, outperforming
+Maximum Likelihood, Decision Tree, and Minimum Distance classifiers on ASTER multispectral
+data. But the implementation required MATLAB and IDRISI -- proprietary software costing
+thousands of dollars. The thesis was archived. 105 pages of algorithms that nobody could
+replicate without paying for licenses.
+
+**18 years later**, everything that was expensive is now free:
+
+| | 2008 | 2026 |
+|:---|:---|:---|
+| **Imagery** | ASTER (4 bands, 15m, restricted access) | Sentinel-2 (13 bands, 10m, free via [Copernicus](https://dataspace.copernicus.eu/)) |
+| **Software** | MATLAB + IDRISI (proprietary) | C# / .NET 10 + GDAL (open source) |
+| **ML** | Not integrated | ML.NET Random Forest + SDCA (free) |
+| **Sharing** | Not possible | GitHub, MIT license, anyone can use it |
+
+FuzzySat is a modern reimplementation of that thesis -- open, honest, and extensible.
+The fuzzy logic engine is faithful to the original algorithm, and the hybrid ML pipeline
+extends it with modern machine learning for improved accuracy.
+
+---
+
 ## Table of Contents
 
+- [About & Motivation](#about--motivation)
 - [Mathematical Foundation](#mathematical-foundation)
 - [Architecture](#architecture)
 - [Classification Pipeline](#classification-pipeline)
 - [Benchmark Results](#benchmark-results)
+- [Limitations & Why Hybrid](#limitations--why-hybrid)
 - [Quick Start](#quick-start)
 - [Membership Functions](#membership-functions)
 - [Spectral Indices](#spectral-indices)
@@ -226,6 +252,54 @@ flowchart LR
 
 > The fuzzy classifier outperformed all traditional methods on 7 land cover classes
 > using 4 ASTER spectral bands (VNIR1, VNIR2, SWIR1, SWIR2).
+
+**Context**: These results were state-of-the-art for the methods compared in 2008.
+Modern approaches like Convolutional Neural Networks (CNN) and Support Vector Machines (SVM)
+can achieve 90-95% on similar tasks. FuzzySat addresses this gap through its
+[hybrid ML pipeline](#hybrid-ml-pipeline), which uses fuzzy membership degrees as enriched
+features for ML.NET classifiers.
+
+---
+
+## Limitations & Why Hybrid
+
+### The Limitation of Pure Fuzzy Logic
+
+The fuzzy classifier works well, but its decision mechanism is rigid: for each class,
+take the **minimum** membership across all bands, then pick the class with the **highest
+minimum**. This is a fixed rule -- it cannot learn complex inter-class patterns.
+
+When two classes have similar spectral signatures (e.g., Agriculture vs. Grassland),
+the firing strengths may differ by only 0.02. At that margin, noise in the data easily
+flips the classification. Pure fuzzy logic has no way to learn that "when both classes
+score above 0.7, look more carefully at SWIR1" -- it just picks the higher number.
+
+### Why Fuzzy Logic Feeds ML (Not the Other Way Around)
+
+A common question: if we're using Machine Learning anyway, why not skip fuzzy logic
+and feed raw pixel values directly to a Random Forest?
+
+You *can* do that. But the result is worse. Here's why:
+
+A pixel with 4 spectral bands gives ML **4 numbers without context**. The algorithm
+must discover on its own that 130 in VNIR1 is "typical Urban" and 75 is "typical Forest".
+
+But if that pixel first passes through the fuzzy engine, you get **39 numbers with
+context** (for 4 bands, 7 classes):
+
+| Feature Group | Count | What it tells ML |
+|:---|:---:|:---|
+| Raw spectral values | 4 | The original measurements |
+| Membership degrees (per class, per band) | 28 | "How much does this pixel look like Urban in VNIR1?" |
+| Firing strengths (per class) | 7 | "Overall, how much does this pixel look like Urban?" |
+
+It's the difference between giving a doctor just the numbers from a blood test,
+versus giving the numbers **plus** an interpretation of each value (high, normal, low,
+critical). With the interpretation included, better decisions follow.
+
+**Fuzzy logic becomes an intelligent preprocessor** that enriches the data before
+ML sees it. Two systems working together: one understands the physics of spectral
+reflectance (fuzzy logic), the other finds complex statistical patterns (Random Forest).
 
 ---
 
