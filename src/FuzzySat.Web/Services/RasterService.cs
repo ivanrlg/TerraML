@@ -1,4 +1,5 @@
 using FuzzySat.Core.Raster;
+using SkiaSharp;
 
 namespace FuzzySat.Web.Services;
 
@@ -98,6 +99,63 @@ public sealed class RasterService
         }
 
         return new BandStatistics(min, max, mean, stdDev, histogram);
+    }
+
+    /// <summary>
+    /// Renders a grayscale PNG preview of a single band, normalized to 0-255.
+    /// Returns the PNG as a byte array suitable for base64 embedding.
+    /// </summary>
+    public byte[] RenderBandPreview(Band band, int maxWidth = 800, int maxHeight = 600)
+    {
+        ArgumentNullException.ThrowIfNull(band);
+
+        var rows = band.Rows;
+        var cols = band.Columns;
+
+        // Scale down if needed to fit within maxWidth x maxHeight
+        var scale = Math.Min(1.0, Math.Min((double)maxWidth / cols, (double)maxHeight / rows));
+        var outW = Math.Max(1, (int)(cols * scale));
+        var outH = Math.Max(1, (int)(rows * scale));
+
+        // Compute min/max for normalization
+        var min = double.MaxValue;
+        var max = double.MinValue;
+        for (var r = 0; r < rows; r++)
+            for (var c = 0; c < cols; c++)
+            {
+                var v = band[r, c];
+                if (v < min) min = v;
+                if (v > max) max = v;
+            }
+
+        var range = max - min;
+
+        using var bitmap = new SKBitmap(outW, outH, SKColorType.Gray8, SKAlphaType.Opaque);
+        var pixels = bitmap.GetPixelSpan();
+
+        for (var y = 0; y < outH; y++)
+        {
+            var srcRow = (int)(y / scale);
+            if (srcRow >= rows) srcRow = rows - 1;
+
+            for (var x = 0; x < outW; x++)
+            {
+                var srcCol = (int)(x / scale);
+                if (srcCol >= cols) srcCol = cols - 1;
+
+                byte gray;
+                if (range > 0)
+                    gray = (byte)Math.Clamp((band[srcRow, srcCol] - min) / range * 255, 0, 255);
+                else
+                    gray = 128;
+
+                pixels[y * outW + x] = gray;
+            }
+        }
+
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 90);
+        return data.ToArray();
     }
 
     /// <summary>
