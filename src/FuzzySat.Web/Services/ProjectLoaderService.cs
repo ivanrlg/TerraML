@@ -78,6 +78,7 @@ public sealed class ProjectLoaderService
     /// </summary>
     public async Task SaveProjectAsync(string safeName, ClassifierConfiguration config)
     {
+        ArgumentNullException.ThrowIfNull(config);
         var filePath = ResolveSafePath(safeName);
 
         Directory.CreateDirectory(_projectDir);
@@ -93,12 +94,19 @@ public sealed class ProjectLoaderService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
 
-        var filePath = Path.GetFullPath(Path.Combine(_projectDir, $"{name}.json"));
-        var normalizedDir = _projectDir.EndsWith(Path.DirectorySeparatorChar)
-            ? _projectDir
-            : _projectDir + Path.DirectorySeparatorChar;
+        // Reject directory separators to prevent nested paths
+        if (name.IndexOf(Path.DirectorySeparatorChar) >= 0 ||
+            (Path.AltDirectorySeparatorChar != Path.DirectorySeparatorChar &&
+             name.IndexOf(Path.AltDirectorySeparatorChar) >= 0))
+        {
+            throw new ArgumentException("Invalid project name: directory separators are not allowed.", nameof(name));
+        }
 
-        if (!filePath.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase))
+        var filePath = Path.GetFullPath(Path.Combine(_projectDir, $"{name}.json"));
+
+        // Use GetRelativePath for OS-appropriate path containment check
+        var relativePath = Path.GetRelativePath(_projectDir, filePath);
+        if (relativePath.StartsWith("..", StringComparison.Ordinal))
             throw new ArgumentException("Invalid project name: path traversal detected.", nameof(name));
 
         return filePath;

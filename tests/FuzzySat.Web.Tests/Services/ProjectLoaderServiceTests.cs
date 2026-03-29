@@ -35,7 +35,7 @@ public class ProjectLoaderServiceTests : IDisposable
     public void LoadProject_PathTraversal_Throws(string name)
     {
         var act = () => _service.LoadProject(name);
-        act.Should().Throw<ArgumentException>().WithMessage("*path traversal*");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -46,7 +46,7 @@ public class ProjectLoaderServiceTests : IDisposable
     {
         var config = CreateTestConfig("test");
         var act = async () => await _service.SaveProjectAsync(name, config);
-        act.Should().ThrowAsync<ArgumentException>().WithMessage("*path traversal*");
+        act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]

@@ -1,5 +1,4 @@
 using FuzzySat.Web.Components;
-using FuzzySat.Web.Services;
 using Radzen;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,13 +7,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRadzenComponents();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-
-// FuzzySat services
-builder.Services.Configure<ProjectStorageOptions>(
-    builder.Configuration.GetSection("ProjectStorage"));
-builder.Services.AddSingleton<RasterService>();
-builder.Services.AddSingleton<ProjectLoaderService>();
-builder.Services.AddScoped<ProjectStateService>();
 
 var app = builder.Build();
 
