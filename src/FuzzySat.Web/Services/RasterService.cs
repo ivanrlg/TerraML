@@ -61,8 +61,8 @@ public sealed class RasterService
         }
         var stdDev = Math.Sqrt(sumSqDiff / count);
 
-        // Histogram (256 bins)
-        var histogram = new int[256];
+        // Histogram (256 bins, long to avoid overflow on large rasters)
+        var histogram = new long[256];
         var range = max - min;
         if (range > 0)
         {
@@ -79,7 +79,7 @@ public sealed class RasterService
         }
         else
         {
-            histogram[128] = (int)count;
+            histogram[128] = count;
         }
 
         return new BandStatistics(min, max, mean, stdDev, histogram);

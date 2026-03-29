@@ -4,9 +4,7 @@
 @using FuzzySat.Core.Configuration
 @using FuzzySat.Core.Classification
 @using FuzzySat.Web.Services
-@using Microsoft.Extensions.Options
 @inject NotificationService NotificationService
-@inject IOptions<ProjectStorageOptions> StorageOptions
 @inject ILogger<ProjectSetup> Logger
 @inject ProjectStateService ProjectState
 @inject RasterService RasterService
@@ -233,6 +231,9 @@
 
         ProjectState.Configuration = config;
 
+        // Clear or refresh raster info based on loaded path
+        _rasterInfo = null;
+        _rasterError = null;
         if (!string.IsNullOrWhiteSpace(_inputPath))
             await OnInputPathChanged(_inputPath);
 
@@ -250,7 +251,8 @@
 
         try
         {
-            await Task.Run(() => _rasterInfo = RasterService.GetInfo(newPath));
+            var info = await Task.Run(() => RasterService.GetInfo(newPath));
+            _rasterInfo = info;
         }
         catch (FileNotFoundException)
         {
@@ -327,7 +329,9 @@
             var safeName = string.Join("_", _projectName.Trim().Split(Path.GetInvalidFileNameChars()))
                 .Trim('_').Trim('.');
 
-            if (string.IsNullOrWhiteSpace(safeName) || safeName.Length > 100 || ReservedFileNames.Contains(safeName))
+            var nameWithoutExt = safeName.Contains('.') ? safeName[..safeName.IndexOf('.')] : safeName;
+            if (string.IsNullOrWhiteSpace(safeName) || safeName.Length > 100
+                || ReservedFileNames.Contains(safeName) || ReservedFileNames.Contains(nameWithoutExt))
             {
                 NotificationService.Notify(NotificationSeverity.Warning, "Invalid Project Name",
                     "Please use a valid project name (avoid special characters and reserved names).", duration: 4000);

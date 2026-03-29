@@ -8,4 +8,4 @@ public sealed record BandStatistics(
     double Max,
     double Mean,
     double StdDev,
-    int[] Histogram);
+    IReadOnlyList<long> Histogram);
