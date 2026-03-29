@@ -1,6 +1,6 @@
 # EPICs Activos - FuzzySat
 
-> **Ultima actualizacion**: 2026-03-28
+> **Ultima actualizacion**: 2026-03-29
 > **Proposito**: Punto central de informacion de EPICs en desarrollo.
 > Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
 
@@ -10,78 +10,98 @@
 
 | Estado | Cantidad | EPICs |
 |--------|----------|-------|
-| En Progreso | 0 | - |
-| Planificado | 5 | #1 Core Engine, #2 I/O & CLI, #3 Advanced, #4 ML Hybrid, #5 Blazor Web |
-| Completado | 0 | - |
+| Completado | 1 | #1 Core Engine MVP |
+| Casi Completado | 2 | #3 Advanced Features (~85%), #4 ML Hybrid (~90%) |
+| Parcial | 2 | #2 I/O & CLI (~55%), #5 Blazor Web (~35%) |
+| Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 
 ---
 
-## Epic #1 - Core Engine MVP
+## Epic #1 - Core Engine MVP — COMPLETADO
 
-- **Status**: Planificado
-- **Priority**: P0-CRITICAL (fundamento de todo el proyecto)
+- **Status**: **COMPLETADO**
+- **Priority**: P0-CRITICAL
 - **Folder**: [epic-001-core-engine/](epic-001-core-engine/)
-- **Depends on**: Scaffolding (este PR)
-- **Estimado**: TBD
-- **PRs**: Ninguno aun
+- **Micro-commits**: 15/15 completados
+- **Tests**: 233 tests, 0 failures
+- **Verificado**: 81.87% OA y K=0.7637 reproducidos
 
-**Scope**: Motor de logica difusa completo: membership functions (Gaussian), fuzzy rules,
-inference engine (AND=Min), defuzzifier (Max Weight), training data extractor, confusion
-matrix, Kappa statistic. Unit tests con valores de la tesis original.
+**Scope completado**: Motor de logica difusa completo: 4 membership functions (Gaussian,
+Triangular, Trapezoidal, Bell), fuzzy rules, inference engine (AND=Min), defuzzifiers
+(MaxWeight + WeightedAverage), training data extractor, confusion matrix, Kappa statistic.
+Unit tests validados contra datos de la tesis original.
 
 ---
 
-## Epic #2 - I/O & CLI
+## Epic #2 - I/O & CLI — PARCIAL
 
-- **Status**: Planificado
+- **Status**: **~55% completado**
 - **Priority**: P1
 - **Folder**: [epic-002-io-cli/](epic-002-io-cli/)
-- **Depends on**: Epic #1
-- **Estimado**: TBD
-- **PRs**: Ninguno aun
+- **Micro-commits**: 6/11 completados
+- **Pendiente**: 5 comandos CLI sin cablear a Core
 
-**Scope**: GDAL raster reader/writer (GeoTIFF), CLI commands (train, classify, validate,
-visualize, info), JSON config persistence, sample configuration.
+**Completado**: GDAL raster reader/writer, CLI structure con System.CommandLine, sample config.
+**Pendiente**: TrainCommand, ClassifyCommand, ValidateCommand, InfoCommand, VisualizeCommand
+— todos son stubs que imprimen "not yet implemented". Las clases Core existen; falta cablear.
 
 ---
 
-## Epic #3 - Advanced Features
+## Epic #3 - Advanced Features — CASI COMPLETADO
 
-- **Status**: Planificado
+- **Status**: **~85% completado**
 - **Priority**: P2
 - **Folder**: [epic-003-advanced-features/](epic-003-advanced-features/)
-- **Depends on**: Epic #2
-- **Estimado**: TBD
-- **PRs**: Ninguno aun
+- **Micro-commits**: 7/9 completados
+- **Pendiente**: PCA, config de metodos en JSON
 
-**Scope**: MFs adicionales (triangular, trapezoidal, bell), operador producto como
-alternativa a min, indices espectrales (NDVI, NDWI, NDBI), PCA, confidence maps.
+**Completado**: 3 MFs adicionales, operador producto, WeightedAverageDefuzzifier,
+SpectralIndexCalculator (NDVI, NDWI, NDBI), ConfidenceMapGenerator.
+**Pendiente**: PCA (recomendacion: usar ML.NET estimator).
 
 ---
 
-## Epic #4 - ML Hybrid
+## Epic #4 - ML Hybrid — CASI COMPLETADO
 
-- **Status**: Planificado
+- **Status**: **~90% completado**
 - **Priority**: P3
 - **Folder**: [epic-004-ml-hybrid/](epic-004-ml-hybrid/)
-- **Depends on**: Epic #3
-- **Estimado**: TBD
-- **PRs**: Ninguno aun
+- **Micro-commits**: 5/6 completados
+- **Pendiente**: Benchmark orchestrator (fuzzy vs hybrid)
 
-**Scope**: ML.NET integration, membership degrees como features para neural network
-o random forest, automated training area suggestion (K-Means).
+**Completado**: FuzzyFeatureExtractor (39-111 features), HybridClassifier (Random Forest +
+SDCA MaximumEntropy), KMeansClusterer, 13 tests ML.
+**Pendiente**: ClassifierBenchmark orchestrator (las piezas existen, falta el pegamento).
 
 ---
 
-## Epic #5 - Blazor Web App
+## Epic #5 - Blazor Web App — PARCIAL
 
-- **Status**: Planificado
+- **Status**: **~35% completado**
 - **Priority**: P3
 - **Folder**: [epic-005-blazor-web/](epic-005-blazor-web/)
-- **Depends on**: Epic #2 (minimo), Epic #3 (ideal)
-- **Estimado**: TBD
-- **PRs**: Ninguno aun
+- **Micro-commits**: 5/15 completados, 6 parciales, 4 no implementados
+- **Issues conocidos**: 14 (botones muertos, mocks, seguridad)
 
-**Scope**: Blazor Server web app con Leaflet.js maps, upload de imagery, training area
-drawing, clasificacion con progreso en tiempo real, confusion matrix interactiva,
-export GeoTIFF/JSON/PDF.
+**Completado**: Blazor setup, Layout, Home, ProjectSetup (funcional con save),
+ConfusionMatrixHeatmap (reusable).
+**Parcial**: BandViewer, Training, Classification, Validation — UI existe pero con datos
+hardcodeados/mock, no conectada a Core.
+**No existe**: TileService, leaflet-interop.js, ClassificationService, History page.
+
+---
+
+## Epic #6 - Gap Analysis: Road to 100%
+
+- **Status**: Documentacion (solo analisis, no codigo)
+- **Priority**: P0 — Prerequisito para planificar trabajo restante
+- **Folder**: [epic-006-gap-to-100/](epic-006-gap-to-100/)
+- **Creado**: 2026-03-28
+
+**Scope**: Auditoria exhaustiva del estado real del proyecto. Identifica 72 tareas en 7 fases
+para llegar al 100%. Proyecto esta al ~45% global. Documenta decisiones tecnicas criticas.
+
+**Documentos**:
+- [00-overview.md](epic-006-gap-to-100/00-overview.md) — Inventario completo de gaps (14 issues Web)
+- [01-plan.md](epic-006-gap-to-100/01-plan.md) — Roadmap priorizado por fases
+- [02-technical-design.md](epic-006-gap-to-100/02-technical-design.md) — Decisiones tecnicas y riesgos

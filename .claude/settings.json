@@ -1,0 +1,44 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.\\(cs|csproj|sln|json\\)$\")",
+      "Bash(find /c/Users/ivanr/source/repos/ivanrlg/FuzzySat -maxdepth 3 -type d ! -path */.git/* -not -path */bin/* -not -path */obj/*)",
+      "Bash(dotnet --list-sdks)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet test:*)",
+      "Bash(git rm:*)",
+      "Bash(git push:*)",
+      "Bash(gh workflow:*)",
+      "Bash(gh pr:*)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(dotnet list:*)",
+      "Bash(dotnet run:*)",
+      "Bash(find ~/.nuget/packages/system.commandline/3.0.0-preview.2.26159.112/lib -name *.xml -exec head -50 {})",
+      "Bash(2)",
+      "Bash(python scripts/search.py \"satellite geospatial dashboard scientific dark mode data-dense\" --design-system -p \"FuzzySat\")",
+      "Bash(tr '}' '\\\\n')",
+      "Bash(tr ';' '\\\\n')",
+      "Bash(xargs grep:*)",
+      "Read(//docs/epics/**)",
+      "Read(//task/**)",
+      "Read(//docs/claude/**)",
+      "Read(//c//**)",
+      "Bash(git -C /c/Users/ivanr/source/repos/ivanrlg/FuzzySat log --oneline -10)",
+      "Bash(find /c/Users/ivanr/source/repos/ivanrlg/FuzzySat/src/FuzzySat.Web -type f -name *.razor -o -name *.cs -o -name *.js)",
+      "Bash(ls -la /c/Users/ivanr/source/repos/ivanrlg/FuzzySat/*.sln)",
+      "Bash(find /c/Users/ivanr/source/repos/ivanrlg/FuzzySat -type f -name *Test*.cs -o -name *Tests.cs)",
+      "Bash(grep -E \"\\\\.cs$\")",
+      "Bash(find /c/Users/ivanr/source/repos/ivanrlg/FuzzySat/src/FuzzySat.Web -type f \\\\\\(-name *.js -o -name *.ts \\\\\\))",
+      "Bash(ls -la *.sln)",
+      "Bash(find /c/Users/ivanr/source/repos/ivanrlg/FuzzySat/src/FuzzySat.Web -type f -name *.cs)",
+      "Bash(find /c/Users/ivanr/source/repos/ivanrlg/FuzzySat/docs -name *.md)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\ivanr\\.claude\\plans"
+    ]
+  }
+}
