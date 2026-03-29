@@ -3,55 +3,202 @@
 
 <PageTitle>Project Setup - FuzzySat</PageTitle>
 
-<RadzenStack Gap="1rem" class="rz-p-4">
-    <h1><RadzenText TextStyle="TextStyle.H4">Project Setup</RadzenText></h1>
+<div class="setup-page fs-fade-in">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Project Setup</h1>
+            <p class="page-subtitle">Configure your classification project: define bands, land cover classes, and input paths.</p>
+        </div>
+        <span class="fs-badge fs-badge-blue">Step 1 of 5</span>
+    </div>
 
-    <RadzenCard>
-        <RadzenText TextStyle="TextStyle.H6">Project Name</RadzenText>
-        <RadzenTextBox @bind-Value="@_projectName" Placeholder="e.g., ASTER Merida Classification" class="w-100 rz-mt-2" />
-    </RadzenCard>
+    <div class="setup-layout">
+        @* Main Form *@
+        <div class="form-col">
+            @* Project Info *@
+            <div class="form-section">
+                <div class="form-section-header">
+                    <span class="material-icons section-icon" style="color: var(--fs-accent-blue);">folder_open</span>
+                    <span>Project Information</span>
+                </div>
+                <div class="field-group">
+                    <label class="field-label">Project Name</label>
+                    <RadzenTextBox @bind-Value="@_projectName" Placeholder="e.g., ASTER Merida Classification" Style="width: 100%;" />
+                </div>
+                <div class="field-group">
+                    <label class="field-label">Input Raster</label>
+                    <div class="path-input">
+                        <RadzenTextBox @bind-Value="@_inputPath" Placeholder="Path to multispectral image (GeoTIFF)" Style="width: 100%;" />
+                        <button type="button" class="browse-btn" aria-label="Browse for input raster" disabled title="File browser not yet available">
+                            <span class="material-icons">folder_open</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-    <RadzenCard>
-        <RadzenText TextStyle="TextStyle.H6">Input Raster</RadzenText>
-        <RadzenTextBox @bind-Value="@_inputPath" Placeholder="Path to multispectral image (GeoTIFF)" class="w-100 rz-mt-2" />
-    </RadzenCard>
+            @* Sensor Preset *@
+            <div class="form-section">
+                <div class="form-section-header">
+                    <span class="material-icons section-icon" style="color: var(--fs-accent-cyan);">satellite_alt</span>
+                    <span>Sensor Preset</span>
+                </div>
+                <div class="preset-grid">
+                    @foreach (var preset in _presets)
+                    {
+                        <button type="button" class="preset-btn @(_selectedPreset == preset.Name ? "preset-active" : "")"
+                                @onclick="() => ApplyPreset(preset)">
+                            <span class="preset-name">@preset.Name</span>
+                            <span class="preset-detail">@preset.Bands bands @@ @preset.Resolution</span>
+                        </button>
+                    }
+                </div>
+            </div>
 
-    <RadzenCard>
-        <RadzenText TextStyle="TextStyle.H6">Band Configuration</RadzenText>
-        <RadzenDataGrid Data="@_bands" TItem="BandEntry" AllowColumnResize="true" class="rz-mt-2">
-            <Columns>
-                <RadzenDataGridColumn TItem="BandEntry" Property="Name" Title="Band Name" />
-                <RadzenDataGridColumn TItem="BandEntry" Property="Index" Title="Source Index" Width="120px" />
-                <RadzenDataGridColumn TItem="BandEntry" Property="Description" Title="Description" />
-            </Columns>
-        </RadzenDataGrid>
-        <RadzenButton Text="Add Band" Click="@AddBand" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" class="rz-mt-2" />
-    </RadzenCard>
+            @* Bands *@
+            <div class="form-section">
+                <div class="form-section-header">
+                    <span class="material-icons section-icon" style="color: var(--fs-accent-emerald);">layers</span>
+                    <span>Band Configuration</span>
+                    <span class="count-badge mono-text">@_bands.Count bands</span>
+                </div>
+                <RadzenDataGrid Data="@_bands" TItem="BandEntry" AllowColumnResize="true" Density="Density.Compact">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="BandEntry" Property="Name" Title="Band Name" />
+                        <RadzenDataGridColumn TItem="BandEntry" Property="Index" Title="Index" Width="80px">
+                            <Template Context="item">
+                                <span class="mono-text">@item.Index</span>
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="BandEntry" Property="Description" Title="Description" />
+                    </Columns>
+                </RadzenDataGrid>
+                <RadzenButton Text="Add Band" Icon="add" Click="@AddBand" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" class="rz-mt-2" />
+            </div>
 
-    <RadzenCard>
-        <RadzenText TextStyle="TextStyle.H6">Land Cover Classes</RadzenText>
-        <RadzenDataGrid Data="@_classes" TItem="ClassEntry" AllowColumnResize="true" class="rz-mt-2">
-            <Columns>
-                <RadzenDataGridColumn TItem="ClassEntry" Property="Name" Title="Class Name" />
-                <RadzenDataGridColumn TItem="ClassEntry" Property="Code" Title="Code" Width="80px" />
-                <RadzenDataGridColumn TItem="ClassEntry" Property="Color" Title="Color" Width="100px" />
-            </Columns>
-        </RadzenDataGrid>
-        <RadzenButton Text="Add Class" Click="@AddClass" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" class="rz-mt-2" />
-    </RadzenCard>
+            @* Classes *@
+            <div class="form-section">
+                <div class="form-section-header">
+                    <span class="material-icons section-icon" style="color: var(--fs-accent-amber);">palette</span>
+                    <span>Land Cover Classes</span>
+                    <span class="count-badge mono-text">@_classes.Count classes</span>
+                </div>
+                <RadzenDataGrid Data="@_classes" TItem="ClassEntry" AllowColumnResize="true" Density="Density.Compact">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="ClassEntry" Property="Name" Title="Class Name">
+                            <Template Context="item">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="width: 12px; height: 12px; border-radius: 50%; background: @item.Color; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1);"></span>
+                                    @item.Name
+                                </div>
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="ClassEntry" Property="Code" Title="Code" Width="80px">
+                            <Template Context="item">
+                                <span class="mono-text">@item.Code</span>
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="ClassEntry" Property="Color" Title="Color" Width="120px">
+                            <Template Context="item">
+                                <span class="mono-text" style="color: @item.Color;">@item.Color</span>
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+                <RadzenButton Text="Add Class" Icon="add" Click="@AddClass" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" class="rz-mt-2" />
+            </div>
+        </div>
 
-    <RadzenButton Text="Save Configuration" ButtonStyle="ButtonStyle.Primary" class="rz-mt-4" />
-</RadzenStack>
+        @* Summary Panel *@
+        <div class="summary-col">
+            <div class="summary-card">
+                <div class="summary-header">
+                    <span class="material-icons" style="color: var(--fs-accent-blue);">summarize</span>
+                    <span>Configuration Summary</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Project</span>
+                    <span class="summary-value">@(string.IsNullOrEmpty(_projectName) ? "Not set" : _projectName)</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Sensor</span>
+                    <span class="summary-value">@(_selectedPreset ?? "Custom")</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Bands</span>
+                    <span class="summary-value mono-text">@_bands.Count</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Classes</span>
+                    <span class="summary-value mono-text">@_classes.Count</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Feature Vector</span>
+                    <span class="summary-value mono-text">@(_bands.Count + _classes.Count * (_bands.Count + 1))D</span>
+                </div>
+                <hr class="fs-divider" />
+                <RadzenButton Text="Save Configuration" Icon="save" ButtonStyle="ButtonStyle.Primary" Style="width: 100%;" />
+                <RadzenButton Text="Reset" Icon="restart_alt" ButtonStyle="ButtonStyle.Secondary" Style="width: 100%;" class="rz-mt-2" />
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     private string _projectName = "";
     private string _inputPath = "";
-    private List<BandEntry> _bands = [new("VNIR1", 0, "Visible NIR 1"), new("VNIR2", 1, "Visible NIR 2")];
-    private List<ClassEntry> _classes = [new("Urban", 1, "#FF0000"), new("Water", 2, "#0000FF"), new("Forest", 3, "#006400")];
+    private string? _selectedPreset = "ASTER";
+    private List<BandEntry> _bands = [new("VNIR1", 0, "Visible NIR 1"), new("VNIR2", 1, "Visible NIR 2"), new("SWIR1", 2, "Shortwave IR 1"), new("SWIR2", 3, "Shortwave IR 2")];
+    private List<ClassEntry> _classes =
+    [
+        new("Urban", 1, "#EF4444"), new("Water", 2, "#3B82F6"), new("Forest", 3, "#10B981"),
+        new("Agriculture", 4, "#F59E0B"), new("Bare Soil", 5, "#D97706"),
+        new("Cloud", 6, "#E8ECF4"), new("Shadow", 7, "#6B7280")
+    ];
+
+    private List<SensorPreset> _presets =
+    [
+        new("ASTER", 4, "15m"),
+        new("Sentinel-2", 13, "10m"),
+        new("Landsat 8", 11, "30m"),
+        new("Custom", 0, "-")
+    ];
+
+    private void ApplyPreset(SensorPreset preset)
+    {
+        _selectedPreset = preset.Name;
+        if (preset.Name == "ASTER")
+        {
+            _bands = [new("VNIR1", 0, "Visible NIR 1"), new("VNIR2", 1, "Visible NIR 2"), new("SWIR1", 2, "Shortwave IR 1"), new("SWIR2", 3, "Shortwave IR 2")];
+        }
+        else if (preset.Name == "Sentinel-2")
+        {
+            _bands =
+            [
+                new("B1", 0, "Coastal Aerosol"), new("B2", 1, "Blue"), new("B3", 2, "Green"), new("B4", 3, "Red"),
+                new("B5", 4, "Red Edge 1"), new("B6", 5, "Red Edge 2"), new("B7", 6, "Red Edge 3"),
+                new("B8", 7, "NIR"), new("B8A", 8, "NIR Narrow"), new("B9", 9, "Water Vapour"),
+                new("B10", 10, "Cirrus"), new("B11", 11, "SWIR 1"), new("B12", 12, "SWIR 2")
+            ];
+        }
+        else if (preset.Name == "Landsat 8")
+        {
+            _bands =
+            [
+                new("B1", 0, "Coastal/Aerosol"), new("B2", 1, "Blue"), new("B3", 2, "Green"), new("B4", 3, "Red"),
+                new("B5", 4, "NIR"), new("B6", 5, "SWIR 1"), new("B7", 6, "SWIR 2"),
+                new("B8", 7, "Panchromatic"), new("B9", 8, "Cirrus"), new("B10", 9, "TIR 1"), new("B11", 10, "TIR 2")
+            ];
+        }
+        else if (preset.Name == "Custom")
+        {
+            _bands = [];
+        }
+    }
 
     private void AddBand() => _bands.Add(new($"Band{_bands.Count + 1}", _bands.Count, ""));
     private void AddClass() => _classes.Add(new($"Class{_classes.Count + 1}", _classes.Count + 1, "#808080"));
 
     private record BandEntry(string Name, int Index, string Description);
     private record ClassEntry(string Name, int Code, string Color);
+    private record SensorPreset(string Name, int Bands, string Resolution);
 }

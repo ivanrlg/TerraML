@@ -1,0 +1,133 @@
+.map-placeholder {
+    position: relative;
+    background: var(--fs-bg-input);
+    border: 1px solid var(--fs-border);
+    border-radius: var(--fs-radius-md);
+    overflow: hidden;
+}
+
+.map-grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(42, 53, 88, 0.3) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(42, 53, 88, 0.3) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.5;
+}
+
+.map-crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.crosshair-h, .crosshair-v {
+    position: absolute;
+    background: rgba(59, 130, 246, 0.3);
+}
+
+.crosshair-h {
+    width: 40px;
+    height: 1px;
+    top: 0;
+    left: -20px;
+}
+
+.crosshair-v {
+    width: 1px;
+    height: 40px;
+    top: -20px;
+    left: 0;
+}
+
+.map-controls {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.map-ctrl-btn {
+    width: 32px;
+    height: 32px;
+    background: var(--fs-bg-elevated);
+    border: 1px solid var(--fs-border);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.map-ctrl-btn .material-icons {
+    font-size: 1rem;
+    color: var(--fs-text-secondary);
+}
+
+.map-coords {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    color: var(--fs-text-tertiary);
+    background: rgba(11, 17, 32, 0.8);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    border: 1px solid var(--fs-border);
+}
+
+.map-overlay-msg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--fs-text-tertiary);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 1rem;
+}
+
+.map-scale {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.65rem;
+    color: var(--fs-text-tertiary);
+}
+
+.scale-bar {
+    width: 60px;
+    height: 3px;
+    background: var(--fs-text-tertiary);
+    border-left: 1px solid var(--fs-text-tertiary);
+    border-right: 1px solid var(--fs-text-tertiary);
+    position: relative;
+}
+
+.scale-bar::before, .scale-bar::after {
+    content: '';
+    position: absolute;
+    width: 1px;
+    height: 6px;
+    background: var(--fs-text-tertiary);
+    bottom: -1px;
+}
+
+.scale-bar::before { left: 0; }
+.scale-bar::after { right: 0; }

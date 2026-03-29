@@ -1,0 +1,170 @@
+.training-page {
+    padding: 1.5rem 0;
+}
+
+.page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.page-subtitle {
+    font-size: 0.85rem;
+    color: var(--fs-text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* Drawing Toolbar */
+.drawing-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--fs-bg-surface);
+    border: 1px solid var(--fs-border);
+    border-radius: var(--fs-radius-md);
+    margin-bottom: 1rem;
+}
+
+.toolbar-group {
+    display: flex;
+    gap: 2px;
+}
+
+.tool-btn {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--fs-border);
+    background: var(--fs-bg-elevated);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: not-allowed;
+    opacity: 0.4;
+    color: var(--fs-text-secondary);
+    transition: all 150ms ease;
+}
+
+.tool-btn .material-icons {
+    font-size: 1.1rem;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--fs-border);
+}
+
+.toolbar-spacer {
+    flex: 1;
+}
+
+.toolbar-hint {
+    font-size: 0.7rem;
+    color: var(--fs-text-tertiary);
+}
+
+/* Main Layout */
+.main-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1rem;
+}
+
+.map-col {
+    min-width: 0;
+}
+
+.panel-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Panel Sections */
+.panel-section {
+    background: var(--fs-bg-surface);
+    border: 1px solid var(--fs-border);
+    border-radius: var(--fs-radius-md);
+    padding: 1rem;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--fs-text-primary);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Class Cards */
+.class-card {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 150ms ease;
+    margin-bottom: 2px;
+    width: 100%;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
+.class-card:hover {
+    background: var(--fs-bg-hover);
+}
+
+.class-selected {
+    background: rgba(59, 130, 246, 0.1);
+    border-left: 3px solid var(--fs-accent-blue);
+    padding-left: calc(0.65rem - 3px);
+}
+
+.class-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.class-name {
+    flex: 1;
+    font-size: 0.85rem;
+    color: var(--fs-text-primary);
+}
+
+.class-samples {
+    font-size: 0.7rem;
+    color: var(--fs-text-tertiary);
+}
+
+/* Panel Actions */
+.panel-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .main-layout {
+        grid-template-columns: 1fr;
+    }
+}

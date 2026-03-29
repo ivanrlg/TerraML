@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
 <div class="page">
     <div class="sidebar">
@@ -7,11 +7,24 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <div class="top-row-left">
+                <span class="breadcrumb-text">FuzzySat</span>
+                <span class="breadcrumb-separator">/</span>
+                <span class="breadcrumb-current">Dashboard</span>
+            </div>
+            <div class="top-row-right">
+                <span class="fs-badge fs-badge-blue">v0.1.0-alpha</span>
+                <a href="https://github.com/ivanrlg/FuzzySat" target="_blank" rel="noopener noreferrer" class="top-link">
+                    <span class="material-icons" style="font-size: 1.1rem;">code</span>
+                    GitHub
+                </a>
+            </div>
         </div>
 
         <article class="content px-4">
-            @Body
+            <div class="content-inner fs-fade-in">
+                @Body
+            </div>
         </article>
     </main>
 </div>
@@ -19,5 +32,5 @@
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    <span class="dismiss">X</span>
 </div>
