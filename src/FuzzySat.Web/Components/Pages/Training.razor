@@ -155,8 +155,14 @@
             _samples = samples;
             _bandNames = bandNames;
 
-            foreach (var w in warnings)
-                NotificationService.Notify(NotificationSeverity.Warning, "CSV Warning", w, duration: 5000);
+            if (warnings.Count > 0)
+            {
+                var shown = warnings.Take(5).ToList();
+                var msg = string.Join("\n", shown);
+                if (warnings.Count > 5)
+                    msg += $"\n...and {warnings.Count - 5} more warning(s).";
+                NotificationService.Notify(NotificationSeverity.Warning, "CSV Warnings", msg, duration: 8000);
+            }
 
             if (samples.Count == 0)
             {
@@ -254,7 +260,9 @@
         {
             var json = TrainingService.ExportSessionJson(ProjectState.TrainingSession!);
             var projectName = ProjectState.Configuration?.ProjectName ?? "session";
-            var fileName = $"{projectName}_training.json";
+            var safeName = string.Join("_", projectName.Split(Path.GetInvalidFileNameChars())).Trim('_');
+            if (string.IsNullOrWhiteSpace(safeName)) safeName = "session";
+            var fileName = $"{safeName}_training.json";
 
             await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "application/json", json);
 

@@ -109,15 +109,9 @@ public sealed class RasterService
     {
         ArgumentNullException.ThrowIfNull(band);
 
+        // Compute min/max (needed when no BandStatistics available)
         var rows = band.Rows;
         var cols = band.Columns;
-
-        // Scale down if needed to fit within maxWidth x maxHeight
-        var scale = Math.Min(1.0, Math.Min((double)maxWidth / cols, (double)maxHeight / rows));
-        var outW = Math.Max(1, (int)(cols * scale));
-        var outH = Math.Max(1, (int)(rows * scale));
-
-        // Compute min/max for normalization
         var min = double.MaxValue;
         var max = double.MinValue;
         for (var r = 0; r < rows; r++)
@@ -128,6 +122,32 @@ public sealed class RasterService
                 if (v > max) max = v;
             }
 
+        return RenderBandPreviewInternal(band, min, max, maxWidth, maxHeight);
+    }
+
+    /// <summary>
+    /// Validates that a raster file path points to an existing file
+    /// with a supported raster extension.
+    /// </summary>
+    /// <summary>
+    /// Renders a grayscale PNG preview reusing pre-computed min/max from BandStatistics.
+    /// Avoids redundant full-band scan.
+    /// </summary>
+    public byte[] RenderBandPreview(Band band, BandStatistics stats, int maxWidth = 800, int maxHeight = 600)
+    {
+        ArgumentNullException.ThrowIfNull(band);
+        ArgumentNullException.ThrowIfNull(stats);
+        return RenderBandPreviewInternal(band, stats.Min, stats.Max, maxWidth, maxHeight);
+    }
+
+    private byte[] RenderBandPreviewInternal(Band band, double min, double max, int maxWidth, int maxHeight)
+    {
+        var rows = band.Rows;
+        var cols = band.Columns;
+
+        var scale = Math.Min(1.0, Math.Min((double)maxWidth / cols, (double)maxHeight / rows));
+        var outW = Math.Max(1, (int)(cols * scale));
+        var outH = Math.Max(1, (int)(rows * scale));
         var range = max - min;
 
         using var bitmap = new SKBitmap(outW, outH, SKColorType.Gray8, SKAlphaType.Opaque);
@@ -135,20 +155,13 @@ public sealed class RasterService
 
         for (var y = 0; y < outH; y++)
         {
-            var srcRow = (int)(y / scale);
-            if (srcRow >= rows) srcRow = rows - 1;
-
+            var srcRow = Math.Min((int)(y / scale), rows - 1);
             for (var x = 0; x < outW; x++)
             {
-                var srcCol = (int)(x / scale);
-                if (srcCol >= cols) srcCol = cols - 1;
-
-                byte gray;
-                if (range > 0)
-                    gray = (byte)Math.Clamp((band[srcRow, srcCol] - min) / range * 255, 0, 255);
-                else
-                    gray = 128;
-
+                var srcCol = Math.Min((int)(x / scale), cols - 1);
+                byte gray = range > 0
+                    ? (byte)Math.Clamp((band[srcRow, srcCol] - min) / range * 255, 0, 255)
+                    : (byte)128;
                 pixels[y * outW + x] = gray;
             }
         }
@@ -158,15 +171,16 @@ public sealed class RasterService
         return data.ToArray();
     }
 
-    /// <summary>
-    /// Validates that a raster file path points to an existing file
-    /// with a supported raster extension.
-    /// </summary>
     private static void ValidateRasterPath(string filePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
 
         var fullPath = Path.GetFullPath(filePath);
+
+        // Reject UNC paths to prevent network file access
+        if (fullPath.StartsWith(@"\\", StringComparison.Ordinal))
+            throw new ArgumentException("UNC/network paths are not allowed.", nameof(filePath));
+
         if (!File.Exists(fullPath))
             throw new FileNotFoundException("Raster file not found.", fullPath);
 

@@ -32,6 +32,15 @@ public sealed class TrainingService
             throw new InvalidOperationException($"First CSV column must be 'class', got '{header[0]}'.");
 
         var bandNames = header[1..].ToList();
+
+        // Validate band names: non-empty and unique (match CLI validation)
+        if (bandNames.Any(string.IsNullOrWhiteSpace))
+            throw new InvalidOperationException("CSV header contains empty band name.");
+
+        var duplicates = bandNames.GroupBy(n => n).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+        if (duplicates.Count > 0)
+            throw new InvalidOperationException($"Duplicate band name(s) in header: {string.Join(", ", duplicates)}.");
+
         var samples = new List<LabeledPixelSample>();
         var warnings = new List<string>();
 

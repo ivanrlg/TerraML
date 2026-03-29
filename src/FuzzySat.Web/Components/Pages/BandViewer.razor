@@ -3,6 +3,7 @@
 @inject ProjectStateService ProjectState
 @inject RasterService RasterService
 @inject NotificationService NotificationService
+@inject ILogger<BandViewer> Logger
 
 <PageTitle>Band Viewer - FuzzySat</PageTitle>
 
@@ -10,7 +11,7 @@
     <div class="page-header">
         <div>
             <h1 class="page-title">Band Viewer</h1>
-            <p class="page-subtitle">Visualize spectral bands and false color composites on an interactive map.</p>
+            <p class="page-subtitle">Visualize spectral bands with real statistics, histograms, and grayscale previews.</p>
         </div>
         <span class="fs-badge fs-badge-blue">Step 2 of 5</span>
     </div>
@@ -35,7 +36,7 @@
             </div>
             <div class="toolbar-section">
                 <span class="toolbar-label">Stretch</span>
-                <RadzenDropDown @bind-Value="@_stretch" Data="@_stretches" Style="width: 140px;" />
+                <RadzenDropDown @bind-Value="@_stretch" Data="@_stretches" Style="width: 140px;" Disabled="true" />
             </div>
             <div class="toolbar-spacer"></div>
             <div class="toolbar-section">
@@ -164,7 +165,10 @@
                         var info = await Task.Run(() => RasterService.GetInfo(ProjectState.Configuration.InputRasterPath));
                         ProjectState.RasterInfo = info;
                     }
-                    catch { /* handled in UI */ }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Failed to load raster info for BandViewer");
+                    }
                 }
 
                 await LoadBandData();
@@ -172,9 +176,11 @@
         }
     }
 
+    private const long MaxPixels = 50_000_000; // ~50 megapixels safety limit
+
     private async Task OnBandChanged()
     {
-        if (_selectedBand is not null)
+        if (_selectedBand is not null && !_isLoading)
             await LoadBandData();
     }
 
@@ -187,6 +193,16 @@
 
         try
         {
+            // Size guard: check raster dimensions before loading into memory
+            var info = ProjectState.RasterInfo;
+            if (info is not null && (long)info.Rows * info.Columns * info.BandCount > MaxPixels)
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Raster Too Large",
+                    $"Raster ({info.Columns}x{info.Rows}, {info.BandCount} bands) exceeds the {MaxPixels / 1_000_000}M pixel limit for web preview.",
+                    duration: 6000);
+                return;
+            }
+
             // Load image if not cached
             if (_loadedImage is null)
             {
@@ -210,14 +226,15 @@
                 _histogramData.Add(new HistBin(i.ToString(), sum));
             }
 
-            // Render preview
-            var png = await Task.Run(() => RasterService.RenderBandPreview(band));
+            // Render preview (reuse min/max from stats to avoid redundant scan)
+            var png = await Task.Run(() => RasterService.RenderBandPreview(band, stats));
             _bandPreviewBase64 = Convert.ToBase64String(png);
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Failed to load band data for '{Band}'", _selectedBand);
             NotificationService.Notify(NotificationSeverity.Error, "Load Error",
-                $"Failed to load band data: {ex.Message}", duration: 5000);
+                "Failed to load band data. Check logs for details.", duration: 5000);
         }
         finally
         {
