@@ -67,6 +67,10 @@ public sealed class GdalRasterReader : IRasterReader
         using var firstBand = dataset.GetRasterBand(1);
         var dataType = Gdal.GetDataTypeName(firstBand.DataType);
 
+        var gt = new double[6];
+        dataset.GetGeoTransform(gt);
+        var hasGeoTransform = gt[0] != 0 || gt[1] != 0 || gt[3] != 0 || gt[5] != 0;
+
         return new RasterInfo(
             filePath: filePath,
             rows: dataset.RasterYSize,
@@ -74,7 +78,8 @@ public sealed class GdalRasterReader : IRasterReader
             bandCount: dataset.RasterCount,
             dataType: dataType,
             driverName: dataset.GetDriver().ShortName,
-            projection: dataset.GetProjection());
+            projection: dataset.GetProjection(),
+            geoTransform: hasGeoTransform ? gt : null);
     }
 
     private static Dataset OpenDataset(string filePath)

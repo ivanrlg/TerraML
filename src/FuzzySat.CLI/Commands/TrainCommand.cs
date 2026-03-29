@@ -46,14 +46,37 @@ public static class TrainCommand
                     return 1;
                 }
 
-                var header = lines[0].Split(',');
+                var header = lines[0].Split(',').Select(h => h.Trim()).ToArray();
                 if (header.Length < 2)
                 {
                     AnsiConsole.MarkupLine("[red]Error:[/] CSV header must have at least 2 columns (class,band1,...).");
                     return 1;
                 }
 
-                var bandNames = header[1..]; // skip "class" column
+                if (!header[0].Equals("class", StringComparison.OrdinalIgnoreCase))
+                {
+                    AnsiConsole.MarkupLine($"[red]Error:[/] First CSV column must be 'class', got '{Markup.Escape(header[0])}'.");
+                    return 1;
+                }
+
+                var bandNames = header[1..];
+
+                // Validate band names are non-empty and unique
+                var bandNameSet = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var band in bandNames)
+                {
+                    if (string.IsNullOrWhiteSpace(band))
+                    {
+                        AnsiConsole.MarkupLine("[red]Error:[/] CSV header contains empty band name.");
+                        return 1;
+                    }
+                    if (!bandNameSet.Add(band))
+                    {
+                        AnsiConsole.MarkupLine($"[red]Error:[/] Duplicate band name in header: '{Markup.Escape(band)}'.");
+                        return 1;
+                    }
+                }
+
                 var samples = new List<LabeledPixelSample>();
 
                 for (var i = 1; i < lines.Length; i++)
@@ -100,22 +123,9 @@ public static class TrainCommand
                 // Create training session
                 var session = TrainingSession.CreateFromSamples(samples);
 
-                // Serialize to JSON
-                var json = JsonSerializer.Serialize(new
-                {
-                    session.Id,
-                    session.CreatedAt,
-                    ClassNames = session.ClassNames.ToList(),
-                    BandNames = session.BandNames.ToList(),
-                    Statistics = session.Statistics.ToDictionary(
-                        kvp => kvp.Key,
-                        kvp => new
-                        {
-                            kvp.Value.ClassName,
-                            MeanPerBand = kvp.Value.MeanPerBand.ToDictionary(b => b.Key, b => b.Value),
-                            StdDevPerBand = kvp.Value.StdDevPerBand.ToDictionary(b => b.Key, b => b.Value)
-                        })
-                }, new JsonSerializerOptions { WriteIndented = true });
+                // Serialize to JSON via shared DTO
+                var dto = TrainingSessionDto.FromSession(session);
+                var json = JsonSerializer.Serialize(dto, new JsonSerializerOptions { WriteIndented = true });
 
                 var outputDir = Path.GetDirectoryName(outputPath);
                 if (!string.IsNullOrEmpty(outputDir))

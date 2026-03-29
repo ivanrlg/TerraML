@@ -9,8 +9,8 @@ namespace FuzzySat.Core.ML;
 /// </summary>
 public sealed class PcaTransformer
 {
-    private readonly MLContext _mlContext;
-    private readonly ITransformer _model;
+    private readonly object _lock = new();
+    private readonly PredictionEngine<PcaInput, PcaOutput> _predictionEngine;
     private readonly int _rank;
     private readonly int _originalDimension;
 
@@ -20,18 +20,18 @@ public sealed class PcaTransformer
     /// <summary>Gets the original feature dimension before PCA.</summary>
     public int OriginalDimension => _originalDimension;
 
-    private PcaTransformer(MLContext mlContext, ITransformer model, int rank, int originalDimension)
+    private PcaTransformer(MLContext mlContext, ITransformer model, SchemaDefinition inputSchema, int rank, int originalDimension)
     {
-        _mlContext = mlContext;
-        _model = model;
         _rank = rank;
         _originalDimension = originalDimension;
+        _predictionEngine = mlContext.Model.CreatePredictionEngine<PcaInput, PcaOutput>(
+            model, inputSchemaDefinition: inputSchema);
     }
 
     /// <summary>
     /// Fits a PCA model to the given feature vectors.
     /// </summary>
-    /// <param name="featureVectors">Training feature vectors (all must have the same length).</param>
+    /// <param name="featureVectors">Training feature vectors (all must have the same length and be non-null).</param>
     /// <param name="rank">Number of principal components to keep. Must be at least 1.</param>
     /// <param name="seed">Random seed for reproducibility.</param>
     public static PcaTransformer Fit(IReadOnlyList<float[]> featureVectors, int rank, int? seed = 42)
@@ -42,19 +42,23 @@ public sealed class PcaTransformer
         if (rank < 1)
             throw new ArgumentOutOfRangeException(nameof(rank), "Rank must be at least 1.");
 
-        var dimension = featureVectors[0].Length;
+        var firstVector = featureVectors[0]
+            ?? throw new ArgumentException("Feature vector at index 0 is null.", nameof(featureVectors));
+        var dimension = firstVector.Length;
         if (dimension < 1)
             throw new ArgumentException("Feature vectors must have at least one element.", nameof(featureVectors));
         if (rank > dimension)
             throw new ArgumentOutOfRangeException(nameof(rank),
                 $"Rank ({rank}) cannot exceed feature dimension ({dimension}).");
 
-        // Validate all vectors have the same length
+        // Validate all vectors are non-null and have the same length
         for (var i = 1; i < featureVectors.Count; i++)
         {
-            if (featureVectors[i].Length != dimension)
+            var vector = featureVectors[i]
+                ?? throw new ArgumentException($"Feature vector at index {i} is null.", nameof(featureVectors));
+            if (vector.Length != dimension)
                 throw new ArgumentException(
-                    $"Feature vector at index {i} has length {featureVectors[i].Length}, expected {dimension}.",
+                    $"Feature vector at index {i} has length {vector.Length}, expected {dimension}.",
                     nameof(featureVectors));
         }
 
@@ -73,11 +77,12 @@ public sealed class PcaTransformer
 
         var model = pipeline.Fit(dataView);
 
-        return new PcaTransformer(mlContext, model, rank, dimension);
+        return new PcaTransformer(mlContext, model, schemaDef, rank, dimension);
     }
 
     /// <summary>
     /// Transforms a single feature vector using the fitted PCA model.
+    /// Uses a cached PredictionEngine for performance (thread-safe via lock).
     /// </summary>
     /// <param name="features">Input feature vector (must match original dimension).</param>
     /// <returns>Reduced feature vector with <see cref="Rank"/> dimensions.</returns>
@@ -90,13 +95,10 @@ public sealed class PcaTransformer
 
         var input = new PcaInput { Features = features };
 
-        var schemaDef = SchemaDefinition.Create(typeof(PcaInput));
-        schemaDef["Features"].ColumnType = new VectorDataViewType(NumberDataViewType.Single, _originalDimension);
-        var dataView = _mlContext.Data.LoadFromEnumerable(new[] { input }, schemaDef);
-
-        var transformed = _model.Transform(dataView);
-        var column = transformed.GetColumn<float[]>("PcaFeatures").First();
-        return column;
+        lock (_lock)
+        {
+            return _predictionEngine.Predict(input).PcaFeatures;
+        }
     }
 
     /// <summary>
@@ -107,25 +109,31 @@ public sealed class PcaTransformer
         ArgumentNullException.ThrowIfNull(featureVectors);
         if (featureVectors.Count == 0) return [];
 
-        var data = featureVectors.Select(f =>
+        var results = new List<float[]>(featureVectors.Count);
+        for (var i = 0; i < featureVectors.Count; i++)
         {
+            var f = featureVectors[i]
+                ?? throw new ArgumentException($"Feature vector at index {i} is null.", nameof(featureVectors));
             if (f.Length != _originalDimension)
                 throw new ArgumentException(
-                    $"Expected {_originalDimension} features, got {f.Length}.");
-            return new PcaInput { Features = f };
-        }).ToList();
+                    $"Feature vector at index {i}: expected {_originalDimension} features, got {f.Length}.",
+                    nameof(featureVectors));
 
-        var schemaDef = SchemaDefinition.Create(typeof(PcaInput));
-        schemaDef["Features"].ColumnType = new VectorDataViewType(NumberDataViewType.Single, _originalDimension);
-        var dataView = _mlContext.Data.LoadFromEnumerable(data, schemaDef);
+            results.Add(Transform(f));
+        }
 
-        var transformed = _model.Transform(dataView);
-        return transformed.GetColumn<float[]>("PcaFeatures").ToList();
+        return results;
     }
 
     private sealed class PcaInput
     {
         [VectorType]
         public float[] Features { get; set; } = [];
+    }
+
+    private sealed class PcaOutput
+    {
+        [VectorType]
+        public float[] PcaFeatures { get; set; } = [];
     }
 }

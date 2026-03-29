@@ -13,5 +13,6 @@ public interface IRasterWriter
     /// </summary>
     /// <param name="filePath">Output file path.</param>
     /// <param name="result">The classification result to write.</param>
-    void Write(string filePath, ClassificationResult result);
+    /// <param name="sourceInfo">Optional source raster info to copy projection and geotransform from.</param>
+    void Write(string filePath, ClassificationResult result, RasterInfo? sourceInfo = null);
 }

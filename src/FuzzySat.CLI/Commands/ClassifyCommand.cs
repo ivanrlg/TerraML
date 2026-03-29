@@ -51,25 +51,12 @@ public static class ClassifyCommand
                     return 1;
                 }
 
-                // Load training session
+                // Load training session via shared DTO
                 var sessionJson = File.ReadAllText(modelPath);
-                var sessionData = JsonSerializer.Deserialize<TrainingSessionDto>(sessionJson,
+                var dto = JsonSerializer.Deserialize<TrainingSessionDto>(sessionJson,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                     ?? throw new InvalidOperationException("Failed to deserialize training session.");
-
-                // Reconstruct TrainingSession
-                var statistics = new Dictionary<string, SpectralStatistics>();
-                foreach (var (className, statsDto) in sessionData.Statistics)
-                {
-                    statistics[className] = new SpectralStatistics(
-                        className,
-                        statsDto.MeanPerBand,
-                        statsDto.StdDevPerBand);
-                }
-
-                var session = TrainingSession.CreateFromStatistics(
-                    statistics, sessionData.ClassNames, sessionData.BandNames,
-                    sessionData.Id, sessionData.CreatedAt);
+                var session = dto.ToSession();
 
                 var ruleSet = session.BuildRuleSet();
 
@@ -81,6 +68,7 @@ public static class ClassifyCommand
                 // Read raster
                 AnsiConsole.MarkupLine("[dim]Reading raster...[/]");
                 var reader = new GdalRasterReader();
+                var sourceInfo = reader.ReadInfo(inputPath);
                 var image = reader.Read(inputPath, session.BandNames.ToList());
 
                 // Classify with progress
@@ -121,7 +109,7 @@ public static class ClassifyCommand
                 // Write output
                 AnsiConsole.MarkupLine("[dim]Writing classified raster...[/]");
                 var writer = new GdalRasterWriter();
-                writer.Write(outputPath, result);
+                writer.Write(outputPath, result, sourceInfo);
 
                 // Summary
                 AnsiConsole.WriteLine();
@@ -159,22 +147,5 @@ public static class ClassifyCommand
         });
 
         return command;
-    }
-
-    // DTO for deserializing training session JSON
-    private sealed class TrainingSessionDto
-    {
-        public string Id { get; set; } = "";
-        public DateTime CreatedAt { get; set; }
-        public List<string> ClassNames { get; set; } = [];
-        public List<string> BandNames { get; set; } = [];
-        public Dictionary<string, StatsDto> Statistics { get; set; } = [];
-    }
-
-    private sealed class StatsDto
-    {
-        public string ClassName { get; set; } = "";
-        public Dictionary<string, double> MeanPerBand { get; set; } = [];
-        public Dictionary<string, double> StdDevPerBand { get; set; } = [];
     }
 }

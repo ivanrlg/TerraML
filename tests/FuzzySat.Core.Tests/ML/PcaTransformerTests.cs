@@ -51,7 +51,7 @@ public class PcaTransformerTests
     }
 
     [Fact]
-    public void Fit_WithRankEqualToDimension_PreservesAllInfo()
+    public void Fit_WithRankEqualToDimension_ReturnsCorrectDimension()
     {
         var data = GenerateSyntheticData(dimension: 3, count: 20);
         var pca = PcaTransformer.Fit(data, rank: 3);

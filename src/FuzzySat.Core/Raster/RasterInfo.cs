@@ -27,6 +27,12 @@ public sealed class RasterInfo
     public string DriverName { get; }
 
     /// <summary>
+    /// Gets the GDAL GeoTransform (6 coefficients: originX, pixelWidth, rotationX, originY, rotationY, pixelHeight).
+    /// Null if the raster has no spatial reference.
+    /// </summary>
+    public double[]? GeoTransform { get; }
+
+    /// <summary>
     /// Creates raster metadata.
     /// </summary>
     public RasterInfo(
@@ -36,7 +42,8 @@ public sealed class RasterInfo
         int bandCount,
         string dataType,
         string driverName,
-        string? projection = null)
+        string? projection = null,
+        double[]? geoTransform = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
         ArgumentException.ThrowIfNullOrWhiteSpace(dataType, nameof(dataType));
@@ -53,5 +60,6 @@ public sealed class RasterInfo
         DataType = dataType;
         DriverName = driverName;
         Projection = projection;
+        GeoTransform = geoTransform is { Length: 6 } ? (double[])geoTransform.Clone() : null;
     }
 }
