@@ -77,18 +77,18 @@ SDCA MaximumEntropy), KMeansClusterer, 13 tests ML.
 
 ## Epic #5 - Blazor Web App — EN PROGRESO
 
-- **Status**: **~42% completado** (subio de 35% tras Fase 3A)
+- **Status**: **~60% completado** (subio de 42% tras Fase 3B)
 - **Priority**: P3
 - **Folder**: [epic-005-blazor-web/](epic-005-blazor-web/)
-- **Issues de seguridad**: 3/3 resueltos (#12 path, #13 filename, #14 info leak)
+- **Security**: UNC rejection, OOM guard (50M px), path traversal, raster whitelist
 - **Tests Web**: 18 tests (ProjectLoaderService + RasterService)
 
-**Completado**: Blazor setup, Layout, Home, ProjectSetup (save funcional),
-ConfusionMatrixHeatmap, DI service layer (ProjectStateService, RasterService,
-ProjectLoaderService), security fixes, path traversal defense, raster validation.
-**Parcial**: BandViewer, Training, Classification, Validation — UI existe con datos
-mock, pendiente wiring a Core via services.
-**No existe**: ClassificationService, TrainingService, leaflet-interop.js, History page.
+**Completado**: Blazor setup, Layout, Home, ProjectSetup (save/load/RasterInfo),
+ConfusionMatrixHeatmap, DI services, BandViewer (real stats/histogram/preview via
+SkiaSharp), Training (CSV upload, spectral chart, extract/export session),
+TrainingService, file-download.js interop.
+**Parcial**: Classification, Validation — UI existe con datos mock.
+**No existe**: ClassificationService, leaflet-interop.js, History page.
 
 ---
 

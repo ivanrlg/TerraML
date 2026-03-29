@@ -8,12 +8,13 @@
 
 ## Estado Actual
 
-> **Proyecto al ~58% global** (subio de 55% tras Fase 3A)
+> **Proyecto al ~65% global** (subio de 58% tras Fase 3B)
 > - Core Engine: **100%** (PCA implementado, 242 Core tests)
 > - CLI: **80%** funcional (4 comandos wired, falta VisualizeCommand)
 > - API: 0% (template default)
-> - Web: **42%** (DI services, security fixes, 18 Web tests, falta wiring pages)
+> - Web: **60%** (ProjectSetup, BandViewer, Training funcionales con datos reales)
 > - CI/CD: 30% (solo build+test)
+> - Tests totales: **260** (242 Core + 18 Web)
 > - Tests totales: **260** (242 Core + 18 Web)
 
 ---
@@ -128,15 +129,17 @@
 - [x] Security: raster extension whitelist (.tif, .tiff, .img, .hdf, .nc, .jp2, .vrt)
 - [x] 18 Web tests (ProjectLoaderServiceTests + RasterServiceTests)
 
-### Fase 3B — BandViewer + Training (Siguiente)
-- [ ] Wire Program.cs, _Imports.razor, appsettings.json con DI services
-- [ ] Wire ProjectSetup.razor con ProjectStateService + RasterInfo display
-- [ ] SkiaSharp band preview rendering (server-side PNG)
-- [ ] BandViewer con bandas reales (stats, histogram, preview image)
-- [ ] TrainingService + CSV upload para training samples
-- [ ] Training page con datos reales (spectral chart, extract stats, export)
+### Fase 3B — BandViewer + Training (PR #19) — COMPLETADA
+- [x] Wire Program.cs + _Imports.razor + appsettings.json con DI services
+- [x] Wire ProjectSetup.razor con ProjectStateService + RasterInfo + Load Existing
+- [x] Security fixes: UNC rejection, 50M pixel OOM guard, ILogger (no silent catch)
+- [x] SkiaSharp band preview rendering (server-side PNG, with stats reuse overload)
+- [x] BandViewer con bandas reales (stats, histogram, grayscale preview)
+- [x] TrainingService (CSV parsing, band validation, session creation, JSON export)
+- [x] Training page con datos reales (CSV upload, spectral chart, extract/export)
+- [x] file-download.js interop + SkiaSharp.NativeAssets.Linux
 
-### Fase 3C — Classification + Validation (Pendiente)
+### Fase 3C — Classification + Validation (Siguiente)
 - [ ] ClassificationService (async, IProgress, CancellationToken)
 - [ ] Classification conectada a FuzzyClassifier con progreso real
 - [ ] Classification result preview (colored PNG) + export GeoTIFF
