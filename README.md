@@ -32,6 +32,21 @@ Maximum Likelihood, Decision Tree, and Minimum Distance classifiers.
 
 ---
 
+## Listen: FuzzySat — La Resurreccion
+
+> The full story of this project in a podcast-style narrative (generated with Google NotebookLM).
+
+https://github.com/user-attachments/assets/51e3a3ac-a0b2-44da-9ecf-b1ce59cf2c48
+
+From a 2008 thesis archived in a Venezuelan university to a modern open-source tool --
+this episode covers the fuzzy logic engine, why pure fuzzy isn't enough in 2026,
+how the hybrid ML.NET pipeline uses membership degrees as enriched features,
+and the jump from ASTER (4 bands, 15m) to Sentinel-2 (13 bands, 10m).
+
+*Script: [docs/SCRIPT_NOTEBOOKLM.md](docs/SCRIPT_NOTEBOOKLM.md)*
+
+---
+
 ## About & Motivation
 
 In 2008, a thesis at Universidad de Los Andes (Merida, Venezuela) proposed a fuzzy logic
@@ -58,6 +73,7 @@ extends it with modern machine learning for improved accuracy.
 
 ## Table of Contents
 
+- [Listen: FuzzySat — La Resurreccion](#listen-fuzzysat--la-resurreccion)
 - [About & Motivation](#about--motivation)
 - [Mathematical Foundation](#mathematical-foundation)
 - [Architecture](#architecture)
