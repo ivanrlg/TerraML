@@ -10,6 +10,7 @@
 @inject ILogger<ProjectSetup> Logger
 @inject ProjectStateService ProjectState
 @inject RasterService RasterService
+@inject ProjectLoaderService ProjectLoader
 
 <PageTitle>Project Setup - FuzzySat</PageTitle>
 
@@ -25,6 +26,20 @@
     <div class="setup-layout">
         @* Main Form *@
         <div class="form-col">
+            @* Load Existing *@
+            @if (_existingProjects.Count > 0)
+            {
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="material-icons section-icon" style="color: var(--fs-accent-violet);">history</span>
+                        <span>Load Existing Project</span>
+                    </div>
+                    <RadzenDropDown @bind-Value="@_selectedProject" Data="@_existingProjects"
+                        Placeholder="Select a saved project..." Style="width: 100%;"
+                        Change="@(_ => LoadSelectedProject())" />
+                </div>
+            }
+
             @* Project Info *@
             <div class="form-section">
                 <div class="form-section-header">
@@ -188,6 +203,42 @@
     private bool _isSaving = false;
     private FuzzySat.Core.Raster.RasterInfo? _rasterInfo;
     private string? _rasterError;
+    private List<string> _existingProjects = [];
+    private string? _selectedProject;
+
+    protected override void OnInitialized()
+    {
+        _existingProjects = ProjectLoader.ListProjects().ToList();
+    }
+
+    private async Task LoadSelectedProject()
+    {
+        if (_selectedProject is null) return;
+
+        var config = ProjectLoader.LoadProject(_selectedProject);
+        if (config is null)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Load Failed",
+                "Could not load the selected project.", duration: 4000);
+            return;
+        }
+
+        _projectName = config.ProjectName ?? "";
+        _inputPath = config.InputRasterPath ?? "";
+        _bands = config.Bands?.Select(b => new BandEntry(b.Name, b.SourceIndex, b.Description ?? "")).ToList()
+            ?? [];
+        _classes = config.Classes?.Select(c => new ClassEntry(c.Name, c.Code, c.Color ?? "#808080")).ToList()
+            ?? [];
+        _selectedPreset = null;
+
+        ProjectState.Configuration = config;
+
+        if (!string.IsNullOrWhiteSpace(_inputPath))
+            await OnInputPathChanged(_inputPath);
+
+        NotificationService.Notify(NotificationSeverity.Success, "Project Loaded",
+            $"Loaded '{_projectName}'.", duration: 3000);
+    }
 
     private async Task OnInputPathChanged(string newPath)
     {
@@ -283,22 +334,15 @@
                 return;
             }
 
-            var projectDir = StorageOptions.Value.GetEffectivePath();
-            Directory.CreateDirectory(projectDir);
-            var filePath = Path.Combine(projectDir, $"{safeName}.json");
-
-            var json = JsonSerializer.Serialize(config, new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-
-            await File.WriteAllTextAsync(filePath, json);
+            await ProjectLoader.SaveProjectAsync(safeName, config);
 
             // Update project state for cross-page access
             ProjectState.Configuration = config;
             if (_rasterInfo is not null)
                 ProjectState.RasterInfo = _rasterInfo;
+
+            // Refresh project list
+            _existingProjects = ProjectLoader.ListProjects().ToList();
 
             NotificationService.Notify(NotificationSeverity.Success, "Configuration Saved",
                 $"Configuration saved for project '{_projectName.Trim()}'.", duration: 5000);

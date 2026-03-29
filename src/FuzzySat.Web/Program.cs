@@ -13,6 +13,7 @@ builder.Services.AddRazorComponents()
 builder.Services.Configure<ProjectStorageOptions>(
     builder.Configuration.GetSection("ProjectStorage"));
 builder.Services.AddSingleton<RasterService>();
+builder.Services.AddSingleton<ProjectLoaderService>();
 builder.Services.AddScoped<ProjectStateService>();
 
 var app = builder.Build();
