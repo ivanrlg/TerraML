@@ -1,5 +1,9 @@
 @page "/band-viewer"
 @rendermode InteractiveServer
+@inject ProjectStateService ProjectState
+@inject RasterService RasterService
+@inject NotificationService NotificationService
+@inject ILogger<BandViewer> Logger
 
 <PageTitle>Band Viewer - FuzzySat</PageTitle>
 
@@ -7,130 +11,236 @@
     <div class="page-header">
         <div>
             <h1 class="page-title">Band Viewer</h1>
-            <p class="page-subtitle">Visualize spectral bands and false color composites on an interactive map.</p>
+            <p class="page-subtitle">Visualize spectral bands with real statistics, histograms, and grayscale previews.</p>
         </div>
         <span class="fs-badge fs-badge-blue">Step 2 of 5</span>
     </div>
 
-    @* Band Toolbar *@
-    <div class="band-toolbar">
-        <div class="toolbar-section">
-            <span class="toolbar-label">Band</span>
-            <RadzenDropDown @bind-Value="@_selectedBand" Data="@_bands" TextProperty="Name"
-                            ValueProperty="Name" Placeholder="Select band..." Style="width: 180px;" />
+    @if (!ProjectState.HasProject || string.IsNullOrWhiteSpace(ProjectState.Configuration?.InputRasterPath))
+    {
+        <div class="fs-card" style="text-align: center; padding: 3rem;">
+            <span class="material-icons" style="font-size: 3rem; color: var(--fs-text-tertiary); margin-bottom: 1rem;">layers</span>
+            <h3 style="color: var(--fs-text-secondary);">No Project Loaded</h3>
+            <p style="color: var(--fs-text-tertiary);">Configure a project with an input raster in <a href="/project-setup" style="color: var(--fs-accent-blue);">Project Setup</a> first.</p>
         </div>
-        <div class="toolbar-section">
-            <span class="toolbar-label">Composite</span>
-            <RadzenDropDown @bind-Value="@_composite" Data="@_composites" Style="width: 180px;" />
-        </div>
-        <div class="toolbar-section">
-            <span class="toolbar-label">Stretch</span>
-            <RadzenDropDown @bind-Value="@_stretch" Data="@_stretches" Style="width: 140px;" />
-        </div>
-        <div class="toolbar-spacer"></div>
-        <div class="toolbar-section">
-            <span class="toolbar-label">Opacity</span>
-            <RadzenSlider @bind-Value="@_opacity" Min="0" Max="100" Step="5" Style="width: 100px;" />
-            <span class="mono-text toolbar-val">@_opacity%</span>
-        </div>
-    </div>
-
-    <div class="viewer-layout">
-        @* Map *@
-        <div class="map-area">
-            <MapPlaceholder Height="520px" Message="Load a project to visualize spectral bands" Icon="layers" />
-        </div>
-
-        @* Side Panel *@
-        <div class="info-panel">
-            <div class="info-section">
-                <div class="info-header">
-                    <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-cyan);">info</span>
-                    <span>Band Metadata</span>
-                </div>
-                <div class="meta-grid">
-                    <span class="meta-label">Band</span>
-                    <span class="meta-value mono-text">@(_selectedBand ?? "None")</span>
-                    <span class="meta-label">Resolution</span>
-                    <span class="meta-value mono-text">15m</span>
-                    <span class="meta-label">Type</span>
-                    <span class="meta-value mono-text">Reflectance</span>
-                    <span class="meta-label">Range</span>
-                    <span class="meta-value mono-text">0 - 255</span>
-                </div>
+    }
+    else
+    {
+        @* Band Toolbar *@
+        <div class="band-toolbar">
+            <div class="toolbar-section">
+                <span class="toolbar-label">Band</span>
+                <RadzenDropDown @bind-Value="@_selectedBand" Data="@_bandNames"
+                                Placeholder="Select band..." Style="width: 180px;"
+                                Change="@(_ => OnBandChanged())" />
             </div>
-
-            <div class="info-section">
-                <div class="info-header">
-                    <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-blue);">bar_chart</span>
-                    <span>Histogram</span>
-                </div>
-                <RadzenChart Style="height: 180px;">
-                    <RadzenAreaSeries Data="@_histogramData" CategoryProperty="Bin" ValueProperty="Count"
-                                      Stroke="#3B82F6" StrokeWidth="1.5" Fill="rgba(59, 130, 246, 0.15)">
-                        <RadzenSeriesDataLabels Visible="false" />
-                    </RadzenAreaSeries>
-                    <RadzenCategoryAxis Visible="false" />
-                    <RadzenValueAxis Visible="false">
-                        <RadzenGridLines Visible="false" />
-                    </RadzenValueAxis>
-                </RadzenChart>
+            <div class="toolbar-section">
+                <span class="toolbar-label">Stretch</span>
+                <RadzenDropDown @bind-Value="@_stretch" Data="@_stretches" Style="width: 140px;" Disabled="true" />
             </div>
-
-            <div class="info-section">
-                <div class="info-header">
-                    <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-emerald);">query_stats</span>
-                    <span>Statistics</span>
-                </div>
-                <div class="meta-grid">
-                    <span class="meta-label">Min</span>
-                    <span class="meta-value mono-text">12</span>
-                    <span class="meta-label">Max</span>
-                    <span class="meta-value mono-text">243</span>
-                    <span class="meta-label">Mean</span>
-                    <span class="meta-value mono-text">127.4</span>
-                    <span class="meta-label">Std Dev</span>
-                    <span class="meta-value mono-text">38.2</span>
-                </div>
+            <div class="toolbar-spacer"></div>
+            <div class="toolbar-section">
+                <span class="toolbar-label">Opacity</span>
+                <RadzenSlider @bind-Value="@_opacity" Min="0" Max="100" Step="5" Style="width: 100px;" />
+                <span class="mono-text toolbar-val">@_opacity%</span>
             </div>
         </div>
-    </div>
+
+        <div class="viewer-layout">
+            @* Map / Preview Area *@
+            <div class="map-area">
+                @if (_isLoading)
+                {
+                    <div style="display: flex; align-items: center; justify-content: center; height: 520px; background: var(--fs-bg-surface); border-radius: var(--fs-radius-lg);">
+                        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" />
+                        <span style="margin-left: 1rem; color: var(--fs-text-secondary);">Loading band data...</span>
+                    </div>
+                }
+                else if (_bandPreviewBase64 is not null)
+                {
+                    <div style="background: var(--fs-bg-surface); border-radius: var(--fs-radius-lg); padding: 0.5rem; text-align: center;">
+                        <img src="data:image/png;base64,@_bandPreviewBase64" alt="Band preview"
+                             style="max-width: 100%; max-height: 520px; border-radius: var(--fs-radius-md); opacity: @(_opacity / 100.0);" />
+                    </div>
+                }
+                else
+                {
+                    <MapPlaceholder Height="520px" Message="Select a band to preview" Icon="layers" />
+                }
+            </div>
+
+            @* Side Panel *@
+            <div class="info-panel">
+                <div class="info-section">
+                    <div class="info-header">
+                        <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-cyan);">info</span>
+                        <span>Band Metadata</span>
+                    </div>
+                    <div class="meta-grid">
+                        <span class="meta-label">Band</span>
+                        <span class="meta-value mono-text">@(_selectedBand ?? "None")</span>
+                        <span class="meta-label">Dimensions</span>
+                        <span class="meta-value mono-text">@(ProjectState.RasterInfo is not null ? $"{ProjectState.RasterInfo.Columns} x {ProjectState.RasterInfo.Rows}" : "—")</span>
+                        <span class="meta-label">Data Type</span>
+                        <span class="meta-value mono-text">@(ProjectState.RasterInfo?.DataType ?? "—")</span>
+                        <span class="meta-label">Bands</span>
+                        <span class="meta-value mono-text">@(ProjectState.RasterInfo?.BandCount.ToString() ?? "—")</span>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <div class="info-header">
+                        <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-blue);">bar_chart</span>
+                        <span>Histogram</span>
+                    </div>
+                    @if (_histogramData.Count > 0)
+                    {
+                        <RadzenChart Style="height: 180px;">
+                            <RadzenAreaSeries Data="@_histogramData" CategoryProperty="Bin" ValueProperty="Count"
+                                              Stroke="#3B82F6" StrokeWidth="1.5" Fill="rgba(59, 130, 246, 0.15)">
+                                <RadzenSeriesDataLabels Visible="false" />
+                            </RadzenAreaSeries>
+                            <RadzenCategoryAxis Visible="false" />
+                            <RadzenValueAxis Visible="false">
+                                <RadzenGridLines Visible="false" />
+                            </RadzenValueAxis>
+                        </RadzenChart>
+                    }
+                    else
+                    {
+                        <p style="color: var(--fs-text-tertiary); font-size: 0.85rem;">Select a band to view histogram.</p>
+                    }
+                </div>
+
+                <div class="info-section">
+                    <div class="info-header">
+                        <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-emerald);">query_stats</span>
+                        <span>Statistics</span>
+                    </div>
+                    <div class="meta-grid">
+                        <span class="meta-label">Min</span>
+                        <span class="meta-value mono-text">@(_stats?.Min.ToString("F2") ?? "—")</span>
+                        <span class="meta-label">Max</span>
+                        <span class="meta-value mono-text">@(_stats?.Max.ToString("F2") ?? "—")</span>
+                        <span class="meta-label">Mean</span>
+                        <span class="meta-value mono-text">@(_stats?.Mean.ToString("F2") ?? "—")</span>
+                        <span class="meta-label">Std Dev</span>
+                        <span class="meta-value mono-text">@(_stats?.StdDev.ToString("F2") ?? "—")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
-    private string? _selectedBand = "VNIR1";
-    private string _composite = "Single Band";
+    private string? _selectedBand;
     private string _stretch = "Min-Max";
     private double _opacity = 100;
+    private bool _isLoading = false;
 
-    private List<BandOption> _bands =
-    [
-        new("VNIR1"), new("VNIR2"), new("SWIR1"), new("SWIR2")
-    ];
-
-    private List<string> _composites = ["Single Band", "True Color", "False Color IR", "NDVI"];
+    private List<string> _bandNames = [];
     private List<string> _stretches = ["Min-Max", "Std Dev", "Histogram Eq."];
 
+    private BandStatistics? _stats;
+    private string? _bandPreviewBase64;
     private List<HistBin> _histogramData = [];
+    private MultispectralImage? _loadedImage;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _histogramData = GenerateMockHistogram();
-    }
-
-    private static List<HistBin> GenerateMockHistogram()
-    {
-        var data = new List<HistBin>();
-        var rng = new Random(42);
-        for (var i = 0; i < 50; i++)
+        if (ProjectState.HasProject && !string.IsNullOrWhiteSpace(ProjectState.Configuration?.InputRasterPath))
         {
-            var x = i * 5.0;
-            var gaussian = Math.Exp(-0.5 * Math.Pow((x - 125) / 40, 2)) * 200;
-            data.Add(new HistBin($"{i * 5}", (int)(gaussian + rng.Next(0, 15))));
+            _bandNames = ProjectState.Configuration.Bands?.Select(b => b.Name).ToList() ?? [];
+
+            if (_bandNames.Count > 0)
+            {
+                _selectedBand = _bandNames[0];
+
+                // Load raster info if not already available
+                if (!ProjectState.HasRasterInfo)
+                {
+                    try
+                    {
+                        var info = await Task.Run(() => RasterService.GetInfo(ProjectState.Configuration.InputRasterPath));
+                        ProjectState.RasterInfo = info;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Failed to load raster info for BandViewer");
+                    }
+                }
+
+                await LoadBandData();
+            }
         }
-        return data;
     }
 
-    private record BandOption(string Name);
-    private record HistBin(string Bin, int Count);
+    private const long MaxPixels = 50_000_000; // ~50 megapixels safety limit
+
+    private async Task OnBandChanged()
+    {
+        if (_selectedBand is not null && !_isLoading)
+            await LoadBandData();
+    }
+
+    private async Task LoadBandData()
+    {
+        if (_selectedBand is null || ProjectState.Configuration?.InputRasterPath is null) return;
+
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Size guard: check raster dimensions before loading into memory
+            var info = ProjectState.RasterInfo;
+            if (info is not null && (long)info.Rows * info.Columns * info.BandCount > MaxPixels)
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Raster Too Large",
+                    $"Raster ({info.Columns}x{info.Rows}, {info.BandCount} bands) exceeds the {MaxPixels / 1_000_000}M pixel limit for web preview.",
+                    duration: 6000);
+                return;
+            }
+
+            // Load image if not cached
+            if (_loadedImage is null)
+            {
+                _loadedImage = await Task.Run(() =>
+                    RasterService.ReadImage(ProjectState.Configuration.InputRasterPath, _bandNames));
+            }
+
+            var band = _loadedImage.GetBand(_selectedBand);
+
+            // Compute statistics
+            var stats = await Task.Run(() => RasterService.ComputeBandStatistics(band));
+            _stats = stats;
+
+            // Build histogram display data (sample every 4th bin for chart readability)
+            _histogramData = [];
+            for (var i = 0; i < 256; i += 4)
+            {
+                long sum = 0;
+                for (var j = i; j < Math.Min(i + 4, 256); j++)
+                    sum += stats.Histogram[j];
+                _histogramData.Add(new HistBin(i.ToString(), sum));
+            }
+
+            // Render preview (reuse min/max from stats to avoid redundant scan)
+            var png = await Task.Run(() => RasterService.RenderBandPreview(band, stats));
+            _bandPreviewBase64 = Convert.ToBase64String(png);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load band data for '{Band}'", _selectedBand);
+            NotificationService.Notify(NotificationSeverity.Error, "Load Error",
+                "Failed to load band data. Check logs for details.", duration: 5000);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private record HistBin(string Bin, long Count);
 }

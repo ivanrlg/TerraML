@@ -1,6 +1,9 @@
 @page "/training"
 @rendermode InteractiveServer
 @inject NotificationService NotificationService
+@inject ProjectStateService ProjectState
+@inject TrainingService TrainingService
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Training - FuzzySat</PageTitle>
 
@@ -8,117 +11,272 @@
     <div class="page-header">
         <div>
             <h1 class="page-title">Training Editor</h1>
-            <p class="page-subtitle">Draw training areas on the map and extract spectral statistics for each land cover class.</p>
+            <p class="page-subtitle">Import training samples (CSV) and extract spectral statistics for each land cover class.</p>
         </div>
         <span class="fs-badge fs-badge-emerald">Step 3 of 5</span>
     </div>
 
-    @* Mock Drawing Toolbar *@
-    <div class="drawing-toolbar">
-        <div class="toolbar-group">
-            <button type="button" class="tool-btn" title="Draw Polygon" aria-label="Draw Polygon" disabled>
-                <span class="material-icons" aria-hidden="true">pentagon</span>
-            </button>
-            <button type="button" class="tool-btn" title="Draw Rectangle" aria-label="Draw Rectangle" disabled>
-                <span class="material-icons" aria-hidden="true">crop_landscape</span>
-            </button>
-            <button type="button" class="tool-btn" title="Point Sample" aria-label="Point Sample" disabled>
-                <span class="material-icons" aria-hidden="true">location_on</span>
-            </button>
+    @if (!ProjectState.HasProject)
+    {
+        <div class="fs-card" style="text-align: center; padding: 3rem;">
+            <span class="material-icons" style="font-size: 3rem; color: var(--fs-text-tertiary); margin-bottom: 1rem;">school</span>
+            <h3 style="color: var(--fs-text-secondary);">No Project Loaded</h3>
+            <p style="color: var(--fs-text-tertiary);">Configure a project in <a href="/project-setup" style="color: var(--fs-accent-blue);">Project Setup</a> first.</p>
         </div>
-        <div class="toolbar-divider"></div>
-        <div class="toolbar-group">
-            <button type="button" class="tool-btn" title="Edit" aria-label="Edit" disabled>
-                <span class="material-icons" aria-hidden="true">edit</span>
-            </button>
-            <button type="button" class="tool-btn" title="Delete" aria-label="Delete" disabled>
-                <span class="material-icons" aria-hidden="true">delete_outline</span>
-            </button>
+    }
+    else
+    {
+        @* Import Toolbar *@
+        <div class="drawing-toolbar">
+            <div class="toolbar-group">
+                <label class="tool-btn tool-btn-active" title="Import training samples from CSV" style="cursor: pointer;">
+                    <span class="material-icons" aria-hidden="true">upload_file</span>
+                    <InputFile OnChange="@OnCsvUploaded" accept=".csv" style="display: none;" />
+                </label>
+                <span style="color: var(--fs-text-secondary); font-size: 0.85rem; margin-left: 0.5rem;">
+                    Import CSV (format: class,band1,band2,...)
+                </span>
+            </div>
+            <div class="toolbar-divider"></div>
+            <div class="toolbar-group">
+                <button type="button" class="tool-btn" title="Draw Polygon (requires Leaflet)" disabled>
+                    <span class="material-icons" aria-hidden="true">pentagon</span>
+                </button>
+                <button type="button" class="tool-btn" title="Draw Rectangle (requires Leaflet)" disabled>
+                    <span class="material-icons" aria-hidden="true">crop_landscape</span>
+                </button>
+            </div>
+            <div class="toolbar-spacer"></div>
+            @if (_samples.Count > 0)
+            {
+                <span class="fs-badge fs-badge-emerald mono-text">@_samples.Count samples loaded</span>
+            }
         </div>
-        <div class="toolbar-spacer"></div>
-        <span class="toolbar-hint">Load a project to enable drawing tools</span>
-    </div>
 
-    <div class="main-layout">
-        @* Map Area *@
-        <div class="map-col">
-            <MapPlaceholder Height="480px" Message="Load a project to draw training areas" Icon="draw" />
-        </div>
-
-        @* Right Panel *@
-        <div class="panel-col">
-            @* Class Cards *@
-            <div class="panel-section">
-                <div class="panel-header">
-                    <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-blue);">palette</span>
-                    <span>Training Classes</span>
-                </div>
-                @foreach (var cls in _classes)
-                {
-                    var isSelected = _selectedClass == cls.Name;
-                    <button type="button" class="class-card @(isSelected ? "class-selected" : "")" @onclick="() => _selectedClass = cls.Name">
-                        <span class="class-dot" style="background: @cls.Color;"></span>
-                        <span class="class-name">@cls.Name</span>
-                        <span class="class-samples mono-text">@cls.Samples pts</span>
-                    </button>
-                }
+        <div class="main-layout">
+            @* Map Area (placeholder) *@
+            <div class="map-col">
+                <MapPlaceholder Height="480px" Message="Drawing tools require Leaflet integration (coming soon). Use CSV import instead." Icon="draw" />
             </div>
 
-            @* Spectral Signature Chart *@
-            <div class="panel-section">
-                <div class="panel-header">
-                    <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-cyan);">show_chart</span>
-                    <span>Spectral Signatures</span>
-                </div>
-                <RadzenChart Style="height: 200px;">
-                    @foreach (var cls in _classes)
+            @* Right Panel *@
+            <div class="panel-col">
+                @* Class Cards *@
+                <div class="panel-section">
+                    <div class="panel-header">
+                        <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-blue);">palette</span>
+                        <span>Training Classes</span>
+                    </div>
+                    @foreach (var cls in _classCards)
                     {
-                        <RadzenLineSeries Data="@cls.SpectralData" CategoryProperty="Band" ValueProperty="Value"
-                                          Title="@cls.Name" Stroke="@cls.Color" StrokeWidth="2">
-                            <RadzenMarkers MarkerType="MarkerType.Circle" Size="4" Stroke="@cls.Color" Fill="@cls.Color" />
-                        </RadzenLineSeries>
+                        var isSelected = _selectedClass == cls.Name;
+                        <button type="button" class="class-card @(isSelected ? "class-selected" : "")" @onclick="() => _selectedClass = cls.Name">
+                            <span class="class-dot" style="background: @cls.Color;"></span>
+                            <span class="class-name">@cls.Name</span>
+                            <span class="class-samples mono-text">@cls.Samples pts</span>
+                        </button>
                     }
-                    <RadzenCategoryAxis />
-                    <RadzenValueAxis>
-                        <RadzenGridLines Visible="true" />
-                    </RadzenValueAxis>
-                    <RadzenLegend Visible="false" />
-                </RadzenChart>
-            </div>
+                </div>
 
-            @* Actions *@
-            <div class="panel-actions">
-                <RadzenButton Text="Extract Statistics" Icon="calculate" ButtonStyle="ButtonStyle.Primary" Style="width: 100%;" Click="@ExtractStatistics" />
-                <RadzenButton Text="Export Session" Icon="file_download" ButtonStyle="ButtonStyle.Secondary" Style="width: 100%;" Click="@ExportSession" />
+                @* Spectral Signature Chart *@
+                @if (_spectralSeries.Count > 0)
+                {
+                    <div class="panel-section">
+                        <div class="panel-header">
+                            <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-cyan);">show_chart</span>
+                            <span>Spectral Signatures (Mean)</span>
+                        </div>
+                        <RadzenChart Style="height: 200px;">
+                            @foreach (var series in _spectralSeries)
+                            {
+                                <RadzenLineSeries Data="@series.Points" CategoryProperty="Band" ValueProperty="Value"
+                                                  Title="@series.Name" Stroke="@series.Color" StrokeWidth="2">
+                                    <RadzenMarkers MarkerType="MarkerType.Circle" Size="4" Stroke="@series.Color" Fill="@series.Color" />
+                                </RadzenLineSeries>
+                            }
+                            <RadzenCategoryAxis />
+                            <RadzenValueAxis>
+                                <RadzenGridLines Visible="true" />
+                            </RadzenValueAxis>
+                            <RadzenLegend Visible="false" />
+                        </RadzenChart>
+                    </div>
+                }
+
+                @* Actions *@
+                <div class="panel-actions">
+                    <RadzenButton Text="Extract Statistics" Icon="calculate" ButtonStyle="ButtonStyle.Primary"
+                                  Style="width: 100%;" Click="@ExtractStatistics"
+                                  Disabled="@(_samples.Count == 0 || _isProcessing)" />
+                    <RadzenButton Text="Export Session" Icon="file_download" ButtonStyle="ButtonStyle.Secondary"
+                                  Style="width: 100%;" Click="@ExportSession"
+                                  Disabled="@(!ProjectState.HasTrainingSession)" />
+                </div>
             </div>
         </div>
-    </div>
+    }
 </div>
 
 @code {
-    private string? _selectedClass = "Urban";
+    private string? _selectedClass;
+    private bool _isProcessing = false;
+    private List<LabeledPixelSample> _samples = [];
+    private List<string> _bandNames = [];
+    private List<ClassCard> _classCards = [];
+    private List<SpectralSeries> _spectralSeries = [];
 
-    private List<TrainingClass> _classes =
-    [
-        new("Urban", "#EF4444", 24, [new("VNIR1", 128), new("VNIR2", 95), new("SWIR1", 72), new("SWIR2", 88)]),
-        new("Water", "#3B82F6", 23, [new("VNIR1", 35), new("VNIR2", 28), new("SWIR1", 15), new("SWIR2", 12)]),
-        new("Forest", "#10B981", 25, [new("VNIR1", 55), new("VNIR2", 180), new("SWIR1", 45), new("SWIR2", 38)]),
-        new("Agriculture", "#F59E0B", 23, [new("VNIR1", 68), new("VNIR2", 145), new("SWIR1", 55), new("SWIR2", 48)]),
-        new("Bare Soil", "#D97706", 22, [new("VNIR1", 115), new("VNIR2", 100), new("SWIR1", 95), new("SWIR2", 105)])
-    ];
-
-    private void ExtractStatistics()
+    protected override void OnInitialized()
     {
-        NotificationService.Notify(NotificationSeverity.Info, "Coming Soon",
-            "Statistics extraction requires training areas drawn on a loaded raster.", duration: 4000);
+        if (ProjectState.HasProject && ProjectState.Configuration?.Classes is not null)
+        {
+            _classCards = ProjectState.Configuration.Classes
+                .Select(c => new ClassCard(c.Name, c.Color ?? "#808080", 0))
+                .ToList();
+            _selectedClass = _classCards.FirstOrDefault()?.Name;
+        }
     }
 
-    private void ExportSession()
+    private async Task OnCsvUploaded(InputFileChangeEventArgs e)
     {
-        NotificationService.Notify(NotificationSeverity.Info, "Coming Soon",
-            "Training session export will be available after extracting statistics.", duration: 4000);
+        var file = e.File;
+        if (file is null) return;
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB max
+            var (samples, bandNames, warnings) = await Task.Run(() =>
+            {
+                using var ms = new MemoryStream();
+                stream.CopyTo(ms);
+                ms.Position = 0;
+                return TrainingService.LoadSamplesFromCsv(ms);
+            });
+
+            _samples = samples;
+            _bandNames = bandNames;
+
+            if (warnings.Count > 0)
+            {
+                var shown = warnings.Take(5).ToList();
+                var msg = string.Join("\n", shown);
+                if (warnings.Count > 5)
+                    msg += $"\n...and {warnings.Count - 5} more warning(s).";
+                NotificationService.Notify(NotificationSeverity.Warning, "CSV Warnings", msg, duration: 8000);
+            }
+
+            if (samples.Count == 0)
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "No Samples",
+                    "No valid training samples found in the CSV.", duration: 4000);
+                return;
+            }
+
+            UpdateClassCards();
+            UpdateSpectralChart();
+
+            NotificationService.Notify(NotificationSeverity.Success, "Samples Loaded",
+                $"{samples.Count} samples from {file.Name}.", duration: 4000);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "CSV Error",
+                ex.Message, duration: 5000);
+        }
     }
 
+    private void UpdateClassCards()
+    {
+        var classCounts = _samples.GroupBy(s => s.ClassName)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        // Merge with project classes (keep colors from config)
+        var configClasses = ProjectState.Configuration?.Classes ?? [];
+        var colorMap = configClasses.ToDictionary(c => c.Name, c => c.Color ?? "#808080");
+
+        _classCards = classCounts.Select(kvp => new ClassCard(
+            kvp.Key,
+            colorMap.GetValueOrDefault(kvp.Key, "#808080"),
+            kvp.Value
+        )).OrderByDescending(c => c.Samples).ToList();
+
+        _selectedClass = _classCards.FirstOrDefault()?.Name;
+    }
+
+    private void UpdateSpectralChart()
+    {
+        _spectralSeries = [];
+        var configClasses = ProjectState.Configuration?.Classes ?? [];
+        var colorMap = configClasses.ToDictionary(c => c.Name, c => c.Color ?? "#808080");
+
+        var grouped = _samples.GroupBy(s => s.ClassName);
+        foreach (var group in grouped)
+        {
+            var points = new List<SpectralPoint>();
+            foreach (var band in _bandNames)
+            {
+                var mean = group.Average(s => s.BandValues.GetValueOrDefault(band, 0));
+                points.Add(new SpectralPoint(band, Math.Round(mean, 2)));
+            }
+
+            _spectralSeries.Add(new SpectralSeries(
+                group.Key,
+                colorMap.GetValueOrDefault(group.Key, "#808080"),
+                points
+            ));
+        }
+    }
+
+    private async Task ExtractStatistics()
+    {
+        if (_samples.Count == 0) return;
+
+        _isProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            var session = await Task.Run(() => TrainingService.CreateSession(_samples));
+            ProjectState.TrainingSession = session;
+
+            NotificationService.Notify(NotificationSeverity.Success, "Statistics Extracted",
+                $"Training session created: {session.ClassNames.Count} classes, {session.BandNames.Count} bands.", duration: 5000);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Extraction Failed",
+                ex.Message, duration: 5000);
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private async Task ExportSession()
+    {
+        if (!ProjectState.HasTrainingSession) return;
+
+        try
+        {
+            var json = TrainingService.ExportSessionJson(ProjectState.TrainingSession!);
+            var projectName = ProjectState.Configuration?.ProjectName ?? "session";
+            var safeName = string.Join("_", projectName.Split(Path.GetInvalidFileNameChars())).Trim('_');
+            if (string.IsNullOrWhiteSpace(safeName)) safeName = "session";
+            var fileName = $"{safeName}_training.json";
+
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "application/json", json);
+
+            NotificationService.Notify(NotificationSeverity.Success, "Exported",
+                $"Training session exported as {fileName}.", duration: 4000);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Export Failed",
+                ex.Message, duration: 5000);
+        }
+    }
+
+    private record ClassCard(string Name, string Color, int Samples);
     private record SpectralPoint(string Band, double Value);
-    private record TrainingClass(string Name, string Color, int Samples, List<SpectralPoint> SpectralData);
+    private record SpectralSeries(string Name, string Color, List<SpectralPoint> Points);
 }

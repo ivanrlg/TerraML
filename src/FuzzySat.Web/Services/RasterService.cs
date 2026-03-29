@@ -1,4 +1,5 @@
 using FuzzySat.Core.Raster;
+using SkiaSharp;
 
 namespace FuzzySat.Web.Services;
 
@@ -101,14 +102,85 @@ public sealed class RasterService
     }
 
     /// <summary>
+    /// Renders a grayscale PNG preview of a single band, normalized to 0-255.
+    /// Returns the PNG as a byte array suitable for base64 embedding.
+    /// </summary>
+    public byte[] RenderBandPreview(Band band, int maxWidth = 800, int maxHeight = 600)
+    {
+        ArgumentNullException.ThrowIfNull(band);
+
+        // Compute min/max (needed when no BandStatistics available)
+        var rows = band.Rows;
+        var cols = band.Columns;
+        var min = double.MaxValue;
+        var max = double.MinValue;
+        for (var r = 0; r < rows; r++)
+            for (var c = 0; c < cols; c++)
+            {
+                var v = band[r, c];
+                if (v < min) min = v;
+                if (v > max) max = v;
+            }
+
+        return RenderBandPreviewInternal(band, min, max, maxWidth, maxHeight);
+    }
+
+    /// <summary>
     /// Validates that a raster file path points to an existing file
     /// with a supported raster extension.
     /// </summary>
+    /// <summary>
+    /// Renders a grayscale PNG preview reusing pre-computed min/max from BandStatistics.
+    /// Avoids redundant full-band scan.
+    /// </summary>
+    public byte[] RenderBandPreview(Band band, BandStatistics stats, int maxWidth = 800, int maxHeight = 600)
+    {
+        ArgumentNullException.ThrowIfNull(band);
+        ArgumentNullException.ThrowIfNull(stats);
+        return RenderBandPreviewInternal(band, stats.Min, stats.Max, maxWidth, maxHeight);
+    }
+
+    private byte[] RenderBandPreviewInternal(Band band, double min, double max, int maxWidth, int maxHeight)
+    {
+        var rows = band.Rows;
+        var cols = band.Columns;
+
+        var scale = Math.Min(1.0, Math.Min((double)maxWidth / cols, (double)maxHeight / rows));
+        var outW = Math.Max(1, (int)(cols * scale));
+        var outH = Math.Max(1, (int)(rows * scale));
+        var range = max - min;
+
+        using var bitmap = new SKBitmap(outW, outH, SKColorType.Gray8, SKAlphaType.Opaque);
+        var pixels = bitmap.GetPixelSpan();
+
+        for (var y = 0; y < outH; y++)
+        {
+            var srcRow = Math.Min((int)(y / scale), rows - 1);
+            for (var x = 0; x < outW; x++)
+            {
+                var srcCol = Math.Min((int)(x / scale), cols - 1);
+                byte gray = range > 0
+                    ? (byte)Math.Clamp((band[srcRow, srcCol] - min) / range * 255, 0, 255)
+                    : (byte)128;
+                pixels[y * outW + x] = gray;
+            }
+        }
+
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 90);
+        return data.ToArray();
+    }
+
     private static void ValidateRasterPath(string filePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
 
         var fullPath = Path.GetFullPath(filePath);
+
+        // Reject UNC paths to prevent network file access
+        if (fullPath.StartsWith(@"\\", StringComparison.Ordinal))
+            throw new ArgumentException("UNC/network paths are not allowed.", nameof(filePath));
+
         if (!File.Exists(fullPath))
             throw new FileNotFoundException("Raster file not found.", fullPath);
 
