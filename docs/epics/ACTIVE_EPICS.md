@@ -12,6 +12,7 @@
 |--------|----------|-------|
 | En Progreso | 0 | - |
 | Planificado | 5 | #1 Core Engine, #2 I/O & CLI, #3 Advanced, #4 ML Hybrid, #5 Blazor Web |
+| Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 | Completado | 0 | - |
 
 ---
@@ -85,3 +86,25 @@ o random forest, automated training area suggestion (K-Means).
 **Scope**: Blazor Server web app con Leaflet.js maps, upload de imagery, training area
 drawing, clasificacion con progreso en tiempo real, confusion matrix interactiva,
 export GeoTIFF/JSON/PDF.
+
+---
+
+## Epic #6 - Gap Analysis: Road to 100%
+
+- **Status**: Documentacion (solo analisis, no codigo)
+- **Priority**: P0 — Prerequisito para planificar trabajo restante
+- **Folder**: [epic-006-gap-to-100/](epic-006-gap-to-100/)
+- **Depends on**: Ninguno
+- **Creado**: 2026-03-28
+- **PRs**: Ninguno (documentacion only)
+
+**Scope**: Auditoria exhaustiva del estado real del proyecto vs lo documentado en EPICs
+#1-#5. Cataloga todos los gaps para llegar al 100%: Core ~95% completo, CLI ~20%,
+API ~0%, Web ~25%, CI/CD ~30%. Incluye roadmap priorizado de 69 tareas en 7 fases.
+Documenta decisiones tecnicas criticas (Leaflet JS interop, tile rendering server-side,
+API async pattern, GDAL en Docker).
+
+**Documentos**:
+- [00-overview.md](epic-006-gap-to-100/00-overview.md) — Inventario completo de gaps
+- [01-plan.md](epic-006-gap-to-100/01-plan.md) — Roadmap priorizado por fases
+- [02-technical-design.md](epic-006-gap-to-100/02-technical-design.md) — Decisiones tecnicas y riesgos
