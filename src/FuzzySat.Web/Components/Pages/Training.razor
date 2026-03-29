@@ -15,23 +15,23 @@
     @* Mock Drawing Toolbar *@
     <div class="drawing-toolbar">
         <div class="toolbar-group">
-            <button class="tool-btn" title="Draw Polygon" disabled>
-                <span class="material-icons">pentagon</span>
+            <button type="button" class="tool-btn" title="Draw Polygon" aria-label="Draw Polygon" disabled>
+                <span class="material-icons" aria-hidden="true">pentagon</span>
             </button>
-            <button class="tool-btn" title="Draw Rectangle" disabled>
-                <span class="material-icons">crop_landscape</span>
+            <button type="button" class="tool-btn" title="Draw Rectangle" aria-label="Draw Rectangle" disabled>
+                <span class="material-icons" aria-hidden="true">crop_landscape</span>
             </button>
-            <button class="tool-btn" title="Point Sample" disabled>
-                <span class="material-icons">location_on</span>
+            <button type="button" class="tool-btn" title="Point Sample" aria-label="Point Sample" disabled>
+                <span class="material-icons" aria-hidden="true">location_on</span>
             </button>
         </div>
         <div class="toolbar-divider"></div>
         <div class="toolbar-group">
-            <button class="tool-btn" title="Edit" disabled>
-                <span class="material-icons">edit</span>
+            <button type="button" class="tool-btn" title="Edit" aria-label="Edit" disabled>
+                <span class="material-icons" aria-hidden="true">edit</span>
             </button>
-            <button class="tool-btn" title="Delete" disabled>
-                <span class="material-icons">delete_outline</span>
+            <button type="button" class="tool-btn" title="Delete" aria-label="Delete" disabled>
+                <span class="material-icons" aria-hidden="true">delete_outline</span>
             </button>
         </div>
         <div class="toolbar-spacer"></div>
@@ -55,11 +55,11 @@
                 @foreach (var cls in _classes)
                 {
                     var isSelected = _selectedClass == cls.Name;
-                    <div class="class-card @(isSelected ? "class-selected" : "")" @onclick="() => _selectedClass = cls.Name">
+                    <button type="button" class="class-card @(isSelected ? "class-selected" : "")" @onclick="() => _selectedClass = cls.Name">
                         <span class="class-dot" style="background: @cls.Color;"></span>
                         <span class="class-name">@cls.Name</span>
                         <span class="class-samples mono-text">@cls.Samples pts</span>
-                    </div>
+                    </button>
                 }
             </div>
 

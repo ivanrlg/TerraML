@@ -9,8 +9,8 @@
     @if (ClassNames.Count == 0 || Matrix.GetLength(0) < ClassNames.Count || Matrix.GetLength(1) < ClassNames.Count)
     {
         <div class="cm-empty">
-            <span class="material-icons" style="color: var(--fs-text-tertiary);">grid_off</span>
-            <span style="color: var(--fs-text-tertiary); font-size: 0.85rem;">No confusion matrix data available</span>
+            <span class="material-icons" aria-hidden="true">grid_off</span>
+            <span>No confusion matrix data available</span>
         </div>
     }
     else

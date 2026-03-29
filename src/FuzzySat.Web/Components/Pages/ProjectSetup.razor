@@ -29,7 +29,7 @@
                     <label class="field-label">Input Raster</label>
                     <div class="path-input">
                         <RadzenTextBox @bind-Value="@_inputPath" Placeholder="Path to multispectral image (GeoTIFF)" Style="width: 100%;" />
-                        <button class="browse-btn" disabled title="File browser not yet available">
+                        <button type="button" class="browse-btn" aria-label="Browse for input raster" disabled title="File browser not yet available">
                             <span class="material-icons">folder_open</span>
                         </button>
                     </div>
@@ -45,7 +45,7 @@
                 <div class="preset-grid">
                     @foreach (var preset in _presets)
                     {
-                        <button class="preset-btn @(_selectedPreset == preset.Name ? "preset-active" : "")"
+                        <button type="button" class="preset-btn @(_selectedPreset == preset.Name ? "preset-active" : "")"
                                 @onclick="() => ApplyPreset(preset)">
                             <span class="preset-name">@preset.Name</span>
                             <span class="preset-detail">@preset.Bands bands @@ @preset.Resolution</span>

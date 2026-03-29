@@ -1,5 +1,6 @@
 @page "/classification"
 @rendermode InteractiveServer
+@implements IDisposable
 
 <PageTitle>Classification - FuzzySat</PageTitle>
 
@@ -128,6 +129,13 @@
     private int _currentStage = 0;
     private CancellationTokenSource? _cts;
 
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
+    }
+
     private List<string> _mfTypes = ["Gaussian", "Triangular", "Trapezoidal", "Bell"];
     private List<string> _andOperators = ["Minimum", "Product"];
     private List<string> _defuzzifiers = ["Max Weight", "Weighted Average"];
@@ -178,8 +186,10 @@
         {
             _statusMessage = "Classification cancelled.";
         }
-
-        _isRunning = false;
+        finally
+        {
+            _isRunning = false;
+        }
     }
 
     private void CancelClassification()

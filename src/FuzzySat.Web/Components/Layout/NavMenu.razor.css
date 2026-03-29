@@ -29,6 +29,13 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+}
+
+.brand-area:hover {
+    text-decoration: none;
+    color: inherit;
 }
 
 .brand-icon {
