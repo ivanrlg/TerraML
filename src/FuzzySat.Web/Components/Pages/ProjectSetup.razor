@@ -33,7 +33,7 @@
                     <label class="field-label">Input Raster</label>
                     <div class="path-input">
                         <RadzenTextBox @bind-Value="@_inputPath" Placeholder="Path to multispectral image (GeoTIFF)" Style="width: 100%;" />
-                        <button type="button" class="browse-btn" aria-label="Browse for input raster" disabled title="File browser not yet available">
+                        <button type="button" class="browse-btn" aria-label="Browse for input raster" @onclick="BrowseRaster" title="Browse for input raster">
                             <span class="material-icons">folder_open</span>
                         </button>
                     </div>
@@ -239,6 +239,12 @@
         {
             _isSaving = false;
         }
+    }
+
+    private void BrowseRaster()
+    {
+        NotificationService.Notify(NotificationSeverity.Info, "Coming Soon",
+            "File browser requires native file dialog integration. Enter the path manually for now.", duration: 4000);
     }
 
     private void ResetConfiguration()

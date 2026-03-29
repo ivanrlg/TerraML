@@ -1,5 +1,6 @@
 @page "/training"
 @rendermode InteractiveServer
+@inject NotificationService NotificationService
 
 <PageTitle>Training - FuzzySat</PageTitle>
 
@@ -87,8 +88,8 @@
 
             @* Actions *@
             <div class="panel-actions">
-                <RadzenButton Text="Extract Statistics" Icon="calculate" ButtonStyle="ButtonStyle.Primary" Style="width: 100%;" Disabled="true" />
-                <RadzenButton Text="Export Session" Icon="file_download" ButtonStyle="ButtonStyle.Secondary" Style="width: 100%;" Disabled="true" />
+                <RadzenButton Text="Extract Statistics" Icon="calculate" ButtonStyle="ButtonStyle.Primary" Style="width: 100%;" Click="@ExtractStatistics" />
+                <RadzenButton Text="Export Session" Icon="file_download" ButtonStyle="ButtonStyle.Secondary" Style="width: 100%;" Click="@ExportSession" />
             </div>
         </div>
     </div>
@@ -105,6 +106,18 @@
         new("Agriculture", "#F59E0B", 23, [new("VNIR1", 68), new("VNIR2", 145), new("SWIR1", 55), new("SWIR2", 48)]),
         new("Bare Soil", "#D97706", 22, [new("VNIR1", 115), new("VNIR2", 100), new("SWIR1", 95), new("SWIR2", 105)])
     ];
+
+    private void ExtractStatistics()
+    {
+        NotificationService.Notify(NotificationSeverity.Info, "Coming Soon",
+            "Statistics extraction requires training areas drawn on a loaded raster.", duration: 4000);
+    }
+
+    private void ExportSession()
+    {
+        NotificationService.Notify(NotificationSeverity.Info, "Coming Soon",
+            "Training session export will be available after extracting statistics.", duration: 4000);
+    }
 
     private record SpectralPoint(string Band, double Value);
     private record TrainingClass(string Name, string Color, int Samples, List<SpectralPoint> SpectralData);
