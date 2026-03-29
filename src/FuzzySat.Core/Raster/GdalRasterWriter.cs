@@ -7,6 +7,7 @@ namespace FuzzySat.Core.Raster;
 /// <summary>
 /// Writes classification results as GeoTIFF rasters using GDAL.
 /// Each pixel value is the numeric code of the predicted land cover class.
+/// Optionally copies projection and geotransform from a source raster.
 /// </summary>
 public sealed class GdalRasterWriter : IRasterWriter
 {
@@ -25,7 +26,7 @@ public sealed class GdalRasterWriter : IRasterWriter
     }
 
     /// <inheritdoc />
-    public void Write(string filePath, ClassificationResult result)
+    public void Write(string filePath, ClassificationResult result, RasterInfo? sourceInfo = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
         ArgumentNullException.ThrowIfNull(result);
@@ -43,6 +44,13 @@ public sealed class GdalRasterWriter : IRasterWriter
             ?? throw new InvalidOperationException("GTiff driver is not available. Ensure GDAL is properly initialized.");
         using var dataset = driver.Create(filePath, cols, rows, 1, DataType.GDT_Int32, null)
             ?? throw new IOException($"Failed to create output raster: '{filePath}'.");
+
+        // Copy spatial reference from source if available
+        if (sourceInfo?.Projection is not null)
+            dataset.SetProjection(sourceInfo.Projection);
+
+        if (sourceInfo?.GeoTransform is { Length: 6 } gt)
+            dataset.SetGeoTransform(gt);
 
         var buffer = new int[rows * cols];
         for (var row = 0; row < rows; row++)
