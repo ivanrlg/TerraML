@@ -1,6 +1,7 @@
 @page "/classification"
 @rendermode InteractiveServer
 @implements IDisposable
+@inject NotificationService NotificationService
 
 <PageTitle>Classification - FuzzySat</PageTitle>
 
@@ -114,7 +115,7 @@
         {
             <RadzenButton Text="Run Classification" Icon="play_arrow" ButtonStyle="ButtonStyle.Primary" Click="@RunClassification" class="run-btn" />
         }
-        <RadzenButton Text="Export Result" Icon="download" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!_completed)" />
+        <RadzenButton Text="Export Result" Icon="download" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!_completed)" Click="@ExportResult" />
     </div>
 </div>
 
@@ -195,6 +196,12 @@
     private void CancelClassification()
     {
         _cts?.Cancel();
+    }
+
+    private void ExportResult()
+    {
+        NotificationService.Notify(NotificationSeverity.Info, "Coming Soon",
+            "GeoTIFF export will be available once connected to real raster classification.", duration: 4000);
     }
 
     private record StageInfo(int Order, string Name);

@@ -1,5 +1,9 @@
 @page "/project-setup"
 @rendermode InteractiveServer
+@using System.Text.Json
+@using FuzzySat.Core.Configuration
+@using FuzzySat.Core.Classification
+@inject NotificationService NotificationService
 
 <PageTitle>Project Setup - FuzzySat</PageTitle>
 
@@ -29,7 +33,7 @@
                     <label class="field-label">Input Raster</label>
                     <div class="path-input">
                         <RadzenTextBox @bind-Value="@_inputPath" Placeholder="Path to multispectral image (GeoTIFF)" Style="width: 100%;" />
-                        <button type="button" class="browse-btn" aria-label="Browse for input raster" disabled title="File browser not yet available">
+                        <button type="button" class="browse-btn" aria-label="Browse for input raster" @onclick="BrowseRaster" title="Browse for input raster">
                             <span class="material-icons">folder_open</span>
                         </button>
                     </div>
@@ -136,8 +140,8 @@
                     <span class="summary-value mono-text">@(_bands.Count + _classes.Count * (_bands.Count + 1))D</span>
                 </div>
                 <hr class="fs-divider" />
-                <RadzenButton Text="Save Configuration" Icon="save" ButtonStyle="ButtonStyle.Primary" Style="width: 100%;" />
-                <RadzenButton Text="Reset" Icon="restart_alt" ButtonStyle="ButtonStyle.Secondary" Style="width: 100%;" class="rz-mt-2" />
+                <RadzenButton Text="Save Configuration" Icon="save" ButtonStyle="ButtonStyle.Primary" Style="width: 100%;" Click="@SaveConfiguration" Disabled="@_isSaving" />
+                <RadzenButton Text="Reset" Icon="restart_alt" ButtonStyle="ButtonStyle.Secondary" Style="width: 100%;" class="rz-mt-2" Click="@ResetConfiguration" />
             </div>
         </div>
     </div>
@@ -147,6 +151,7 @@
     private string _projectName = "";
     private string _inputPath = "";
     private string? _selectedPreset = "ASTER";
+    private bool _isSaving = false;
     private List<BandEntry> _bands = [new("VNIR1", 0, "Visible NIR 1"), new("VNIR2", 1, "Visible NIR 2"), new("SWIR1", 2, "Shortwave IR 1"), new("SWIR2", 3, "Shortwave IR 2")];
     private List<ClassEntry> _classes =
     [
@@ -162,6 +167,102 @@
         new("Landsat 8", 11, "30m"),
         new("Custom", 0, "-")
     ];
+
+    private async Task SaveConfiguration()
+    {
+        if (string.IsNullOrWhiteSpace(_projectName))
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Missing Project Name",
+                "Please enter a project name before saving.", duration: 4000);
+            return;
+        }
+
+        if (_bands.Count == 0)
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "No Bands Configured",
+                "Add at least one spectral band.", duration: 4000);
+            return;
+        }
+
+        if (_classes.Count == 0)
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "No Classes Defined",
+                "Add at least one land cover class.", duration: 4000);
+            return;
+        }
+
+        _isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            var config = new ClassifierConfiguration
+            {
+                ProjectName = _projectName.Trim(),
+                InputRasterPath = string.IsNullOrWhiteSpace(_inputPath) ? null : _inputPath.Trim(),
+                Bands = _bands.Select(b => new BandConfiguration
+                {
+                    Name = b.Name,
+                    SourceIndex = b.Index,
+                    Description = string.IsNullOrWhiteSpace(b.Description) ? null : b.Description
+                }).ToList(),
+                Classes = _classes.Select(c => new LandCoverClass
+                {
+                    Name = c.Name,
+                    Code = c.Code,
+                    Color = c.Color
+                }).ToList()
+            };
+
+            var safeName = string.Join("_", _projectName.Trim().Split(Path.GetInvalidFileNameChars()));
+            var projectDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "FuzzySat", "projects");
+            Directory.CreateDirectory(projectDir);
+            var filePath = Path.Combine(projectDir, $"{safeName}.json");
+
+            var json = JsonSerializer.Serialize(config, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+
+            await File.WriteAllTextAsync(filePath, json);
+
+            NotificationService.Notify(NotificationSeverity.Success, "Configuration Saved",
+                $"Saved to {filePath}", duration: 5000);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Save Failed",
+                ex.Message, duration: 6000);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void BrowseRaster()
+    {
+        NotificationService.Notify(NotificationSeverity.Info, "Coming Soon",
+            "File browser requires native file dialog integration. Enter the path manually for now.", duration: 4000);
+    }
+
+    private void ResetConfiguration()
+    {
+        _projectName = "";
+        _inputPath = "";
+        _selectedPreset = "ASTER";
+        _bands = [new("VNIR1", 0, "Visible NIR 1"), new("VNIR2", 1, "Visible NIR 2"), new("SWIR1", 2, "Shortwave IR 1"), new("SWIR2", 3, "Shortwave IR 2")];
+        _classes =
+        [
+            new("Urban", 1, "#EF4444"), new("Water", 2, "#3B82F6"), new("Forest", 3, "#10B981"),
+            new("Agriculture", 4, "#F59E0B"), new("Bare Soil", 5, "#D97706"),
+            new("Cloud", 6, "#E8ECF4"), new("Shadow", 7, "#6B7280")
+        ];
+
+        NotificationService.Notify(NotificationSeverity.Info, "Reset",
+            "Configuration reset to defaults.", duration: 3000);
+    }
 
     private void ApplyPreset(SensorPreset preset)
     {

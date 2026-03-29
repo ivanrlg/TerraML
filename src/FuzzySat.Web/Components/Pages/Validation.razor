@@ -1,5 +1,6 @@
 @page "/validation"
 @rendermode InteractiveServer
+@inject NotificationService NotificationService
 
 <PageTitle>Validation - FuzzySat</PageTitle>
 
@@ -10,7 +11,7 @@
             <p class="page-subtitle">Classification accuracy metrics and confusion matrix analysis</p>
         </div>
         <div class="header-actions">
-            <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" />
+            <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@ExportCsv" />
         </div>
     </div>
 
@@ -229,6 +230,12 @@
             (ProducersAccuracy + UsersAccuracy) == 0
                 ? 0
                 : 2 * (ProducersAccuracy * UsersAccuracy) / (ProducersAccuracy + UsersAccuracy);
+    }
+
+    private void ExportCsv()
+    {
+        NotificationService.Notify(NotificationSeverity.Info, "Coming Soon",
+            "CSV export will be available once connected to real classification results.", duration: 4000);
     }
 
     private record DonutItem(string Label, int Value);
