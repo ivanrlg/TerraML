@@ -36,7 +36,7 @@ Maximum Likelihood, Decision Tree, and Minimum Distance classifiers.
 
 > The full story of this project in a podcast-style narrative (generated with Google NotebookLM).
 
-https://github.com/user-attachments/assets/51e3a3ac-a0b2-44da-9ecf-b1ce59cf2c48
+https://github.com/user-attachments/assets/e0f93bfc-7f02-4af7-876e-2a6649c89ad2
 
 From a 2008 thesis archived in a Venezuelan university to a modern open-source tool --
 this episode covers the fuzzy logic engine, why pure fuzzy isn't enough in 2026,
