@@ -3,52 +3,177 @@
 
 <PageTitle>Validation - FuzzySat</PageTitle>
 
-<RadzenStack Gap="1rem" class="rz-p-4">
-    <h1><RadzenText TextStyle="TextStyle.H4">Validation Results</RadzenText></h1>
-    <RadzenText TextStyle="TextStyle.Body1" class="rz-color-secondary">
-        Evaluate classification accuracy with confusion matrix and statistical metrics.
-    </RadzenText>
+<div class="validation-page fs-fade-in">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Validation Results</h1>
+            <p class="page-subtitle">Classification accuracy metrics and confusion matrix analysis</p>
+        </div>
+        <div class="header-actions">
+            <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" />
+        </div>
+    </div>
 
-    <RadzenRow>
-        <RadzenColumn Size="4">
-            <RadzenCard>
-                <RadzenText TextStyle="TextStyle.H6">Overall Metrics</RadzenText>
-                <RadzenStack Gap="0.5rem" class="rz-mt-2">
-                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
-                        <RadzenText>Overall Accuracy:</RadzenText>
-                        <RadzenText TextStyle="TextStyle.H6">@($"{_overallAccuracy:P1}")</RadzenText>
-                    </RadzenStack>
-                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
-                        <RadzenText>Kappa Coefficient:</RadzenText>
-                        <RadzenText TextStyle="TextStyle.H6">@($"{_kappa:F4}")</RadzenText>
-                    </RadzenStack>
-                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
-                        <RadzenText>Total Samples:</RadzenText>
-                        <RadzenText TextStyle="TextStyle.H6">@_totalSamples</RadzenText>
-                    </RadzenStack>
-                </RadzenStack>
-            </RadzenCard>
-        </RadzenColumn>
-        <RadzenColumn Size="8">
-            <RadzenCard>
-                <RadzenText TextStyle="TextStyle.H6">Per-Class Accuracy</RadzenText>
-                <RadzenDataGrid Data="@_classMetrics" TItem="ClassMetricRow" class="rz-mt-2">
-                    <Columns>
-                        <RadzenDataGridColumn TItem="ClassMetricRow" Property="ClassName" Title="Class" />
-                        <RadzenDataGridColumn TItem="ClassMetricRow" Property="ProducersAccuracy" Title="Producer's Acc." FormatString="{0:P1}" Width="140px" />
-                        <RadzenDataGridColumn TItem="ClassMetricRow" Property="UsersAccuracy" Title="User's Acc." FormatString="{0:P1}" Width="120px" />
-                        <RadzenDataGridColumn TItem="ClassMetricRow" Property="Samples" Title="Samples" Width="100px" />
-                    </Columns>
-                </RadzenDataGrid>
-            </RadzenCard>
-        </RadzenColumn>
-    </RadzenRow>
-</RadzenStack>
+    @* KPI Cards Row *@
+    <div class="kpi-row">
+        <div class="kpi-card fs-scale-in" style="animation-delay: 0.1s;">
+            <div class="kpi-icon-area" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2);">
+                <span class="material-icons" style="color: var(--fs-accent-emerald);">verified</span>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Overall Accuracy</span>
+                <span class="kpi-value" style="color: var(--fs-accent-emerald);">@($"{_overallAccuracy:P1}")</span>
+                <div class="kpi-bar">
+                    <div class="kpi-bar-fill" style="width: @($"{_overallAccuracy * 100}%"); background: var(--fs-accent-emerald);"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="kpi-card fs-scale-in" style="animation-delay: 0.2s;">
+            <div class="kpi-icon-area" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.2);">
+                <span class="material-icons" style="color: var(--fs-accent-blue);">functions</span>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Kappa Coefficient</span>
+                <span class="kpi-value" style="color: var(--fs-accent-blue);">@($"{_kappa:F4}")</span>
+                <span class="kpi-interpretation">Substantial Agreement</span>
+            </div>
+        </div>
+
+        <div class="kpi-card fs-scale-in" style="animation-delay: 0.3s;">
+            <div class="kpi-icon-area" style="background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.2);">
+                <span class="material-icons" style="color: var(--fs-accent-violet);">analytics</span>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Total Samples</span>
+                <span class="kpi-value" style="color: var(--fs-accent-violet);">@_totalSamples</span>
+                <span class="kpi-interpretation">7 classes evaluated</span>
+            </div>
+        </div>
+
+        <div class="kpi-card fs-scale-in" style="animation-delay: 0.4s;">
+            <div class="kpi-icon-area" style="background: rgba(6, 182, 212, 0.1); border-color: rgba(6, 182, 212, 0.2);">
+                <span class="material-icons" style="color: var(--fs-accent-cyan);">check_circle</span>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Correct Classifications</span>
+                <span class="kpi-value" style="color: var(--fs-accent-cyan);">@_correctCount</span>
+                <span class="kpi-interpretation">of @_totalSamples total</span>
+            </div>
+        </div>
+    </div>
+
+    @* Confusion Matrix *@
+    <div class="section-card fs-scale-in" style="animation-delay: 0.3s;">
+        <ConfusionMatrixHeatmap ClassNames="_classNames" Matrix="_confusionMatrix" />
+    </div>
+
+    @* Charts Row *@
+    <div class="charts-row">
+        @* Per-Class Accuracy Bar Chart *@
+        <div class="section-card chart-card fs-scale-in" style="animation-delay: 0.4s;">
+            <div class="section-header">
+                <span class="material-icons section-icon">bar_chart</span>
+                <span class="section-title">Per-Class Accuracy</span>
+            </div>
+            <RadzenChart Style="height: 320px;">
+                <RadzenBarSeries Data="@_classMetrics" CategoryProperty="ClassName" ValueProperty="ProducersAccuracyPct" Title="Producer's Acc.">
+                    <RadzenSeriesDataLabels Visible="false" />
+                </RadzenBarSeries>
+                <RadzenBarSeries Data="@_classMetrics" CategoryProperty="ClassName" ValueProperty="UsersAccuracyPct" Title="User's Acc.">
+                    <RadzenSeriesDataLabels Visible="false" />
+                </RadzenBarSeries>
+                <RadzenCategoryAxis />
+                <RadzenValueAxis Min="0" Max="100" Step="25">
+                    <RadzenGridLines Visible="true" />
+                </RadzenValueAxis>
+                <RadzenLegend Position="LegendPosition.Bottom" />
+            </RadzenChart>
+        </div>
+
+        @* Accuracy Donut *@
+        <div class="section-card chart-card fs-scale-in" style="animation-delay: 0.5s;">
+            <div class="section-header">
+                <span class="material-icons section-icon">donut_large</span>
+                <span class="section-title">Classification Split</span>
+            </div>
+            <RadzenChart Style="height: 320px;">
+                <RadzenDonutSeries Data="@_donutData" CategoryProperty="Label" ValueProperty="Value" Title="Accuracy">
+                    <RadzenSeriesDataLabels Visible="true" />
+                </RadzenDonutSeries>
+            </RadzenChart>
+            <div class="donut-center-label">
+                <span class="donut-pct">@($"{_overallAccuracy:P0}")</span>
+                <span class="donut-sublabel">Accurate</span>
+            </div>
+        </div>
+    </div>
+
+    @* Enhanced Data Grid *@
+    <div class="section-card fs-scale-in" style="animation-delay: 0.5s;">
+        <div class="section-header">
+            <span class="material-icons section-icon">table_chart</span>
+            <span class="section-title">Detailed Per-Class Metrics</span>
+        </div>
+        <RadzenDataGrid Data="@_classMetrics" TItem="ClassMetricRow" class="metrics-grid">
+            <Columns>
+                <RadzenDataGridColumn TItem="ClassMetricRow" Property="ClassName" Title="Class" Width="140px">
+                    <Template Context="item">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="width: 10px; height: 10px; border-radius: 50%; background: @GetClassColor(item.ClassName); flex-shrink: 0;"></span>
+                            <span>@item.ClassName</span>
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ClassMetricRow" Property="ProducersAccuracy" Title="Producer's Acc." Width="150px">
+                    <Template Context="item">
+                        <div class="acc-cell">
+                            <div class="acc-bar" style="width: @($"{item.ProducersAccuracy * 100}%"); background: @GetAccuracyColor(item.ProducersAccuracy);"></div>
+                            <span class="acc-text">@($"{item.ProducersAccuracy:P1}")</span>
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ClassMetricRow" Property="UsersAccuracy" Title="User's Acc." Width="150px">
+                    <Template Context="item">
+                        <div class="acc-cell">
+                            <div class="acc-bar" style="width: @($"{item.UsersAccuracy * 100}%"); background: @GetAccuracyColor(item.UsersAccuracy);"></div>
+                            <span class="acc-text">@($"{item.UsersAccuracy:P1}")</span>
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ClassMetricRow" Property="F1Score" Title="F1 Score" Width="120px">
+                    <Template Context="item">
+                        <span class="mono-text" style="color: @GetAccuracyColor(item.F1Score);">@($"{item.F1Score:F3}")</span>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ClassMetricRow" Property="Samples" Title="Samples" Width="100px">
+                    <Template Context="item">
+                        <span class="mono-text">@item.Samples</span>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+</div>
 
 @code {
     private double _overallAccuracy = 0.8187;
     private double _kappa = 0.7637;
     private int _totalSamples = 171;
+    private int _correctCount = 140;
+
+    private List<string> _classNames = ["Urban", "Water", "Forest", "Agriculture", "Bare Soil", "Cloud", "Shadow"];
+
+    private int[,] _confusionMatrix = new int[,]
+    {
+        { 21, 0, 1, 1, 1, 0, 0 },   // Urban
+        { 0, 21, 0, 0, 0, 1, 1 },    // Water
+        { 1, 0, 21, 2, 0, 0, 1 },    // Forest
+        { 2, 0, 2, 18, 1, 0, 0 },    // Agriculture
+        { 1, 0, 0, 2, 17, 1, 1 },    // Bare Soil
+        { 0, 1, 0, 0, 1, 25, 3 },    // Cloud
+        { 0, 1, 1, 0, 2, 2, 18 }     // Shadow
+    };
 
     private List<ClassMetricRow> _classMetrics =
     [
@@ -61,5 +186,42 @@
         new("Shadow", 0.76, 0.73, 24)
     ];
 
-    private record ClassMetricRow(string ClassName, double ProducersAccuracy, double UsersAccuracy, int Samples);
+    private List<DonutItem> _donutData = [];
+
+    protected override void OnInitialized()
+    {
+        _donutData =
+        [
+            new("Correct", _correctCount),
+            new("Incorrect", _totalSamples - _correctCount)
+        ];
+    }
+
+    private static string GetClassColor(string className) => className switch
+    {
+        "Urban" => "#EF4444",
+        "Water" => "#3B82F6",
+        "Forest" => "#10B981",
+        "Agriculture" => "#F59E0B",
+        "Bare Soil" => "#D97706",
+        "Cloud" => "#E8ECF4",
+        "Shadow" => "#6B7280",
+        _ => "#8B95B0"
+    };
+
+    private static string GetAccuracyColor(double accuracy) => accuracy switch
+    {
+        >= 0.85 => "#10B981",
+        >= 0.70 => "#F59E0B",
+        _ => "#EF4444"
+    };
+
+    private record ClassMetricRow(string ClassName, double ProducersAccuracy, double UsersAccuracy, int Samples)
+    {
+        public double ProducersAccuracyPct => ProducersAccuracy * 100;
+        public double UsersAccuracyPct => UsersAccuracy * 100;
+        public double F1Score => 2 * (ProducersAccuracy * UsersAccuracy) / (ProducersAccuracy + UsersAccuracy);
+    }
+
+    private record DonutItem(string Label, int Value);
 }

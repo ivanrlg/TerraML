@@ -1,0 +1,210 @@
+.setup-page {
+    padding: 1.5rem 0;
+}
+
+.page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.page-subtitle {
+    font-size: 0.85rem;
+    color: var(--fs-text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* Layout */
+.setup-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1.5rem;
+}
+
+.form-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* Form Sections */
+.form-section {
+    background: var(--fs-bg-surface);
+    border: 1px solid var(--fs-border);
+    border-radius: var(--fs-radius-md);
+    padding: 1.25rem;
+}
+
+.form-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--fs-text-primary);
+    margin-bottom: 1rem;
+}
+
+.section-icon {
+    font-size: 1.1rem;
+}
+
+.count-badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: var(--fs-text-tertiary);
+    background: var(--fs-bg-elevated);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* Fields */
+.field-group {
+    margin-bottom: 1rem;
+}
+
+.field-group:last-child {
+    margin-bottom: 0;
+}
+
+.field-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--fs-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.4rem;
+}
+
+.path-input {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.browse-btn {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--fs-border);
+    background: var(--fs-bg-elevated);
+    border-radius: var(--fs-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: not-allowed;
+    opacity: 0.5;
+    flex-shrink: 0;
+    color: var(--fs-text-secondary);
+}
+
+.browse-btn .material-icons {
+    font-size: 1.1rem;
+}
+
+/* Sensor Presets */
+.preset-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+
+.preset-btn {
+    padding: 0.65rem 0.5rem;
+    border: 1px solid var(--fs-border);
+    background: var(--fs-bg-elevated);
+    border-radius: var(--fs-radius-sm);
+    cursor: pointer;
+    text-align: center;
+    transition: all 200ms ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    color: var(--fs-text-primary);
+}
+
+.preset-btn:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.preset-active {
+    border-color: var(--fs-accent-blue);
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.preset-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.preset-detail {
+    font-size: 0.65rem;
+    color: var(--fs-text-tertiary);
+}
+
+/* Summary Panel */
+.summary-col {
+    position: sticky;
+    top: 4.5rem;
+    align-self: start;
+}
+
+.summary-card {
+    background: var(--fs-bg-surface);
+    border: 1px solid var(--fs-border);
+    border-radius: var(--fs-radius-md);
+    padding: 1.25rem;
+}
+
+.summary-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid rgba(42, 53, 88, 0.3);
+}
+
+.summary-item:last-of-type {
+    border-bottom: none;
+}
+
+.summary-label {
+    font-size: 0.8rem;
+    color: var(--fs-text-secondary);
+}
+
+.summary-value {
+    font-size: 0.85rem;
+    color: var(--fs-text-primary);
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .setup-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .summary-col {
+        position: static;
+    }
+
+    .preset-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

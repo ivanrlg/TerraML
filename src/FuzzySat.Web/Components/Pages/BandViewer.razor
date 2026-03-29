@@ -3,33 +3,134 @@
 
 <PageTitle>Band Viewer - FuzzySat</PageTitle>
 
-<RadzenStack Gap="1rem" class="rz-p-4">
-    <h1><RadzenText TextStyle="TextStyle.H4">Band Viewer</RadzenText></h1>
-    <RadzenText TextStyle="TextStyle.Body1" class="rz-color-secondary">
-        Visualize spectral bands and false color composites. Requires a loaded project with raster data.
-    </RadzenText>
+<div class="bandviewer-page fs-fade-in">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Band Viewer</h1>
+            <p class="page-subtitle">Visualize spectral bands and false color composites on an interactive map.</p>
+        </div>
+        <span class="fs-badge fs-badge-blue">Step 2 of 5</span>
+    </div>
 
-    <RadzenCard>
-        <RadzenText TextStyle="TextStyle.H6">Band Selection</RadzenText>
-        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" class="rz-mt-2">
+    @* Band Toolbar *@
+    <div class="band-toolbar">
+        <div class="toolbar-section">
+            <span class="toolbar-label">Band</span>
             <RadzenDropDown @bind-Value="@_selectedBand" Data="@_bands" TextProperty="Name"
-                            ValueProperty="Name" Placeholder="Select band..." Style="width: 200px;" />
-        </RadzenStack>
-    </RadzenCard>
+                            ValueProperty="Name" Placeholder="Select band..." Style="width: 180px;" />
+        </div>
+        <div class="toolbar-section">
+            <span class="toolbar-label">Composite</span>
+            <RadzenDropDown @bind-Value="@_composite" Data="@_composites" Style="width: 180px;" />
+        </div>
+        <div class="toolbar-section">
+            <span class="toolbar-label">Stretch</span>
+            <RadzenDropDown @bind-Value="@_stretch" Data="@_stretches" Style="width: 140px;" />
+        </div>
+        <div class="toolbar-spacer"></div>
+        <div class="toolbar-section">
+            <span class="toolbar-label">Opacity</span>
+            <RadzenSlider @bind-Value="@_opacity" Min="0" Max="100" Step="5" Style="width: 100px;" />
+            <span class="mono-text toolbar-val">@_opacity%</span>
+        </div>
+    </div>
 
-    <RadzenCard Style="height: 500px; display: flex; align-items: center; justify-content: center;">
-        <RadzenText class="rz-color-secondary">
-            Map viewer will be integrated with Leaflet.js when raster data is loaded.
-        </RadzenText>
-    </RadzenCard>
-</RadzenStack>
+    <div class="viewer-layout">
+        @* Map *@
+        <div class="map-area">
+            <MapPlaceholder Height="520px" Message="Load a project to visualize spectral bands" Icon="layers" />
+        </div>
+
+        @* Side Panel *@
+        <div class="info-panel">
+            <div class="info-section">
+                <div class="info-header">
+                    <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-cyan);">info</span>
+                    <span>Band Metadata</span>
+                </div>
+                <div class="meta-grid">
+                    <span class="meta-label">Band</span>
+                    <span class="meta-value mono-text">@(_selectedBand ?? "None")</span>
+                    <span class="meta-label">Resolution</span>
+                    <span class="meta-value mono-text">15m</span>
+                    <span class="meta-label">Type</span>
+                    <span class="meta-value mono-text">Reflectance</span>
+                    <span class="meta-label">Range</span>
+                    <span class="meta-value mono-text">0 - 255</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <div class="info-header">
+                    <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-blue);">bar_chart</span>
+                    <span>Histogram</span>
+                </div>
+                <RadzenChart Style="height: 180px;">
+                    <RadzenAreaSeries Data="@_histogramData" CategoryProperty="Bin" ValueProperty="Count"
+                                      Stroke="#3B82F6" StrokeWidth="1.5" Fill="rgba(59, 130, 246, 0.15)">
+                        <RadzenSeriesDataLabels Visible="false" />
+                    </RadzenAreaSeries>
+                    <RadzenCategoryAxis Visible="false" />
+                    <RadzenValueAxis Visible="false">
+                        <RadzenGridLines Visible="false" />
+                    </RadzenValueAxis>
+                </RadzenChart>
+            </div>
+
+            <div class="info-section">
+                <div class="info-header">
+                    <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-emerald);">query_stats</span>
+                    <span>Statistics</span>
+                </div>
+                <div class="meta-grid">
+                    <span class="meta-label">Min</span>
+                    <span class="meta-value mono-text">12</span>
+                    <span class="meta-label">Max</span>
+                    <span class="meta-value mono-text">243</span>
+                    <span class="meta-label">Mean</span>
+                    <span class="meta-value mono-text">127.4</span>
+                    <span class="meta-label">Std Dev</span>
+                    <span class="meta-value mono-text">38.2</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
-    private string? _selectedBand;
+    private string? _selectedBand = "VNIR1";
+    private string _composite = "Single Band";
+    private string _stretch = "Min-Max";
+    private double _opacity = 100;
+
     private List<BandOption> _bands =
     [
         new("VNIR1"), new("VNIR2"), new("SWIR1"), new("SWIR2")
     ];
 
+    private List<string> _composites = ["Single Band", "True Color", "False Color IR", "NDVI"];
+    private List<string> _stretches = ["Min-Max", "Std Dev", "Histogram Eq."];
+
+    private List<HistBin> _histogramData = [];
+
+    protected override void OnInitialized()
+    {
+        _histogramData = GenerateMockHistogram();
+    }
+
+    private static List<HistBin> GenerateMockHistogram()
+    {
+        var data = new List<HistBin>();
+        var rng = new Random(42);
+        for (var i = 0; i < 50; i++)
+        {
+            var x = i * 5.0;
+            var gaussian = Math.Exp(-0.5 * Math.Pow((x - 125) / 40, 2)) * 200;
+            data.Add(new HistBin($"{i * 5}", (int)(gaussian + rng.Next(0, 15))));
+        }
+        return data;
+    }
+
     private record BandOption(string Name);
+    private record HistBin(string Bin, int Count);
 }

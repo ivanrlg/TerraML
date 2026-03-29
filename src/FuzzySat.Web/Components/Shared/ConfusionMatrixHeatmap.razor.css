@@ -1,0 +1,112 @@
+.cm-container {
+    width: 100%;
+}
+
+.cm-title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.cm-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--fs-text-primary);
+}
+
+.cm-subtitle {
+    font-size: 0.75rem;
+    color: var(--fs-text-tertiary);
+}
+
+.cm-grid {
+    display: grid;
+    gap: 2px;
+    width: 100%;
+}
+
+.cm-corner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem;
+    font-size: 0.6rem;
+    color: var(--fs-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    line-height: 1.3;
+}
+
+.cm-corner-actual {
+    transform: rotate(-45deg) translateX(-4px);
+}
+
+.cm-corner-predicted {
+    transform: rotate(-45deg) translateX(4px);
+}
+
+.cm-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--fs-text-secondary);
+}
+
+.cm-header-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.cm-header-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.cm-row-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--fs-text-secondary);
+}
+
+.cm-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: 4px;
+    min-height: 44px;
+    cursor: default;
+    transition: all 150ms ease;
+    border: 1px solid transparent;
+}
+
+.cm-cell:hover {
+    border-color: var(--fs-border-focus);
+    transform: scale(1.05);
+    z-index: 1;
+}
+
+.cm-diagonal {
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.cm-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--fs-text-primary);
+}

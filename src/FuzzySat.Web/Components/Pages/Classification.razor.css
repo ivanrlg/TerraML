@@ -1,0 +1,208 @@
+.classification-page {
+    padding: 1.5rem 0;
+}
+
+.page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.page-subtitle {
+    font-size: 0.85rem;
+    color: var(--fs-text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* Config Cards Grid */
+.config-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.config-card {
+    background: var(--fs-bg-surface);
+    border: 1px solid var(--fs-border);
+    border-radius: var(--fs-radius-md);
+    padding: 1.25rem;
+    transition: all 250ms ease;
+}
+
+.config-card:hover {
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+.config-active {
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.1);
+}
+
+.config-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.config-icon {
+    font-size: 1.1rem;
+}
+
+.config-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--fs-text-secondary);
+}
+
+.mf-preview {
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+    background: var(--fs-bg-input);
+    border-radius: var(--fs-radius-sm);
+    padding: 0.5rem;
+}
+
+.mf-svg {
+    width: 100%;
+    height: 100%;
+}
+
+.mf-text-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.mf-formula {
+    font-size: 1.1rem;
+    color: var(--fs-text-secondary);
+}
+
+.mf-hint {
+    font-size: 0.7rem;
+    color: var(--fs-text-tertiary);
+}
+
+/* Progress Section */
+.progress-section {
+    background: var(--fs-bg-surface);
+    border: 1px solid var(--fs-border);
+    border-radius: var(--fs-radius-md);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.progress-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.progress-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    flex: 1;
+}
+
+.progress-pct {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--fs-accent-blue);
+}
+
+.progress-stages {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.stage {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid var(--fs-border);
+    transition: all 250ms ease;
+}
+
+.stage-icon {
+    font-size: 0.9rem;
+}
+
+.stage-pending {
+    color: var(--fs-text-tertiary);
+    background: transparent;
+}
+
+.stage-pending .stage-icon {
+    color: var(--fs-text-tertiary);
+}
+
+.stage-active {
+    color: var(--fs-accent-blue);
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.stage-active .stage-icon {
+    color: var(--fs-accent-blue);
+}
+
+.stage-done {
+    color: var(--fs-accent-emerald);
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.stage-done .stage-icon {
+    color: var(--fs-accent-emerald);
+}
+
+.status-msg {
+    font-size: 0.85rem;
+    color: var(--fs-text-secondary);
+    margin-top: 0.75rem;
+    margin-bottom: 0;
+}
+
+/* Action Row */
+.action-row {
+    display: flex;
+    gap: 0.75rem;
+}
+
+::deep .run-btn {
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .config-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .progress-stages {
+        flex-wrap: wrap;
+    }
+}

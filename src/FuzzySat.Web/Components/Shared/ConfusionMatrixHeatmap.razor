@@ -1,0 +1,86 @@
+@* Confusion Matrix Heatmap — Visual 7x7 grid with color interpolation *@
+
+<div class="cm-container">
+    <div class="cm-title-row">
+        <span class="cm-title">Confusion Matrix</span>
+        <span class="cm-subtitle">Predicted vs Actual</span>
+    </div>
+
+    <div class="cm-grid" style="grid-template-columns: 100px repeat(@ClassNames.Count, 1fr);">
+        @* Header row *@
+        <div class="cm-corner">
+            <span class="cm-corner-actual">Actual</span>
+            <span class="cm-corner-predicted">Predicted</span>
+        </div>
+        @foreach (var cls in ClassNames)
+        {
+            <div class="cm-header">
+                <span class="cm-header-dot" style="background: @GetClassColor(cls);"></span>
+                <span class="cm-header-text">@GetShortName(cls)</span>
+            </div>
+        }
+
+        @* Data rows *@
+        @for (var i = 0; i < ClassNames.Count; i++)
+        {
+            <div class="cm-row-header">
+                <span class="cm-header-dot" style="background: @GetClassColor(ClassNames[i]);"></span>
+                <span>@GetShortName(ClassNames[i])</span>
+            </div>
+            @for (var j = 0; j < ClassNames.Count; j++)
+            {
+                var value = Matrix[i, j];
+                var maxVal = GetRowMax(i);
+                var intensity = maxVal > 0 ? (double)value / maxVal : 0;
+                var isDiagonal = i == j;
+                <div class="cm-cell @(isDiagonal ? "cm-diagonal" : "")"
+                     style="background: @GetCellBackground(intensity, isDiagonal);"
+                     title="Actual: @ClassNames[i], Predicted: @ClassNames[j], Count: @value">
+                    <span class="cm-value">@value</span>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<string> ClassNames { get; set; } = [];
+    [Parameter] public int[,] Matrix { get; set; } = new int[0, 0];
+
+    private static readonly Dictionary<string, string> ClassColors = new()
+    {
+        ["Urban"] = "#EF4444",
+        ["Water"] = "#3B82F6",
+        ["Forest"] = "#10B981",
+        ["Agriculture"] = "#F59E0B",
+        ["Bare Soil"] = "#D97706",
+        ["Cloud"] = "#E8ECF4",
+        ["Shadow"] = "#6B7280"
+    };
+
+    private string GetClassColor(string className) =>
+        ClassColors.GetValueOrDefault(className, "#8B95B0");
+
+    private string GetShortName(string name) =>
+        name.Length > 6 ? name[..6] + "." : name;
+
+    private int GetRowMax(int row)
+    {
+        var max = 0;
+        for (var j = 0; j < ClassNames.Count; j++)
+            if (Matrix[row, j] > max) max = Matrix[row, j];
+        return max;
+    }
+
+    private string GetCellBackground(double intensity, bool isDiagonal)
+    {
+        if (isDiagonal)
+        {
+            var alpha = 0.15 + intensity * 0.5;
+            return $"rgba(16, 185, 129, {alpha:F2})";
+        }
+        if (intensity < 0.05) return "transparent";
+        var a = 0.05 + intensity * 0.35;
+        return $"rgba(239, 68, 68, {a:F2})";
+    }
+}

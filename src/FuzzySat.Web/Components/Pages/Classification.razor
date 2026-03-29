@@ -3,69 +3,189 @@
 
 <PageTitle>Classification - FuzzySat</PageTitle>
 
-<RadzenStack Gap="1rem" class="rz-p-4">
-    <h1><RadzenText TextStyle="TextStyle.H4">Classification</RadzenText></h1>
-    <RadzenText TextStyle="TextStyle.Body1" class="rz-color-secondary">
-        Run fuzzy inference to classify each pixel into a land cover class.
-    </RadzenText>
+<div class="classification-page fs-fade-in">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Classification</h1>
+            <p class="page-subtitle">Configure and run fuzzy inference to classify each pixel into a land cover class.</p>
+        </div>
+        <span class="fs-badge fs-badge-blue">Step 4 of 5</span>
+    </div>
 
-    <RadzenCard>
-        <RadzenText TextStyle="TextStyle.H6">Configuration</RadzenText>
-        <RadzenStack Gap="0.5rem" class="rz-mt-2">
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
-                <RadzenText Style="width: 150px;">Membership Function:</RadzenText>
-                <RadzenDropDown @bind-Value="@_mfType" Data="@_mfTypes" Style="width: 200px;" />
-            </RadzenStack>
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
-                <RadzenText Style="width: 150px;">AND Operator:</RadzenText>
-                <RadzenDropDown @bind-Value="@_andOperator" Data="@_andOperators" Style="width: 200px;" />
-            </RadzenStack>
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
-                <RadzenText Style="width: 150px;">Defuzzifier:</RadzenText>
-                <RadzenDropDown @bind-Value="@_defuzzifier" Data="@_defuzzifiers" Style="width: 200px;" />
-            </RadzenStack>
-        </RadzenStack>
-    </RadzenCard>
+    @* Configuration Cards *@
+    <div class="config-grid">
+        <div class="config-card @(_mfType == "Gaussian" ? "config-active" : "")">
+            <div class="config-card-header">
+                <span class="material-icons config-icon" style="color: var(--fs-accent-blue);">functions</span>
+                <span class="config-label">Membership Function</span>
+            </div>
+            <div class="mf-preview">
+                @switch (_mfType)
+                {
+                    case "Gaussian":
+                        <svg viewBox="0 0 120 50" class="mf-svg">
+                            <path d="M 5 45 Q 20 45 35 40 Q 50 30 60 8 Q 70 30 75 40 Q 90 45 115 45" fill="none" stroke="#3B82F6" stroke-width="2"/>
+                            <line x1="5" y1="45" x2="115" y2="45" stroke="#2A3558" stroke-width="1"/>
+                        </svg>
+                        break;
+                    case "Triangular":
+                        <svg viewBox="0 0 120 50" class="mf-svg">
+                            <polyline points="5,45 60,5 115,45" fill="none" stroke="#06B6D4" stroke-width="2"/>
+                            <line x1="5" y1="45" x2="115" y2="45" stroke="#2A3558" stroke-width="1"/>
+                        </svg>
+                        break;
+                    case "Trapezoidal":
+                        <svg viewBox="0 0 120 50" class="mf-svg">
+                            <polyline points="5,45 30,5 90,5 115,45" fill="none" stroke="#10B981" stroke-width="2"/>
+                            <line x1="5" y1="45" x2="115" y2="45" stroke="#2A3558" stroke-width="1"/>
+                        </svg>
+                        break;
+                    case "Bell":
+                        <svg viewBox="0 0 120 50" class="mf-svg">
+                            <path d="M 5 45 Q 5 45 25 44 Q 40 42 48 30 Q 55 10 60 8 Q 65 10 72 30 Q 80 42 95 44 Q 115 45 115 45" fill="none" stroke="#8B5CF6" stroke-width="2"/>
+                            <line x1="5" y1="45" x2="115" y2="45" stroke="#2A3558" stroke-width="1"/>
+                        </svg>
+                        break;
+                }
+            </div>
+            <RadzenDropDown @bind-Value="@_mfType" Data="@_mfTypes" Style="width: 100%;" />
+        </div>
 
-    <RadzenCard>
-        <RadzenText TextStyle="TextStyle.H6">Progress</RadzenText>
-        <RadzenProgressBar Value="@_progress" ShowValue="true" class="rz-mt-2" />
-        <RadzenText class="rz-mt-2">@_statusMessage</RadzenText>
-    </RadzenCard>
+        <div class="config-card">
+            <div class="config-card-header">
+                <span class="material-icons config-icon" style="color: var(--fs-accent-emerald);">join_inner</span>
+                <span class="config-label">AND Operator</span>
+            </div>
+            <div class="mf-preview">
+                <div class="mf-text-display">
+                    <span class="mf-formula mono-text">@(_andOperator == "Minimum" ? "min(a, b)" : "a × b")</span>
+                    <span class="mf-hint">@(_andOperator == "Minimum" ? "Weakest link rule" : "Algebraic product")</span>
+                </div>
+            </div>
+            <RadzenDropDown @bind-Value="@_andOperator" Data="@_andOperators" Style="width: 100%;" />
+        </div>
 
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
-        <RadzenButton Text="Run Classification" ButtonStyle="ButtonStyle.Primary" Click="@RunClassification" />
-        <RadzenButton Text="Export Result" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!_completed)" />
-    </RadzenStack>
-</RadzenStack>
+        <div class="config-card">
+            <div class="config-card-header">
+                <span class="material-icons config-icon" style="color: var(--fs-accent-amber);">output</span>
+                <span class="config-label">Defuzzifier</span>
+            </div>
+            <div class="mf-preview">
+                <div class="mf-text-display">
+                    <span class="mf-formula mono-text">@(_defuzzifier == "Max Weight" ? "argmax(w)" : "\u03A3(w\u00B7c)/\u03A3w")</span>
+                    <span class="mf-hint">@(_defuzzifier == "Max Weight" ? "Highest strength wins" : "Weighted combination")</span>
+                </div>
+            </div>
+            <RadzenDropDown @bind-Value="@_defuzzifier" Data="@_defuzzifiers" Style="width: 100%;" />
+        </div>
+    </div>
+
+    @* Progress Section *@
+    <div class="progress-section">
+        <div class="progress-header">
+            <span class="material-icons" style="color: var(--fs-accent-blue); font-size: 1.1rem;">speed</span>
+            <span class="progress-title">Classification Progress</span>
+            <span class="progress-pct mono-text">@($"{_progress:F0}%")</span>
+        </div>
+
+        <div class="progress-stages">
+            @foreach (var stage in _stages)
+            {
+                var stageClass = GetStageClass(stage.Order);
+                <div class="stage @stageClass">
+                    <span class="stage-icon material-icons">@(stageClass == "stage-done" ? "check_circle" : stageClass == "stage-active" ? "pending" : "radio_button_unchecked")</span>
+                    <span class="stage-name">@stage.Name</span>
+                </div>
+            }
+        </div>
+
+        <RadzenProgressBar Value="@_progress" ShowValue="false" Style="height: 6px;" class="rz-mt-2" />
+        <p class="status-msg">@_statusMessage</p>
+    </div>
+
+    @* Action Buttons *@
+    <div class="action-row">
+        @if (_isRunning)
+        {
+            <RadzenButton Text="Cancel" Icon="stop" ButtonStyle="ButtonStyle.Danger" Click="@CancelClassification" />
+        }
+        else
+        {
+            <RadzenButton Text="Run Classification" Icon="play_arrow" ButtonStyle="ButtonStyle.Primary" Click="@RunClassification" class="run-btn" />
+        }
+        <RadzenButton Text="Export Result" Icon="download" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!_completed)" />
+    </div>
+</div>
 
 @code {
     private string _mfType = "Gaussian";
     private string _andOperator = "Minimum";
     private string _defuzzifier = "Max Weight";
     private double _progress = 0;
-    private string _statusMessage = "Ready to classify.";
+    private string _statusMessage = "Ready to classify. Configure parameters and press Run.";
     private bool _completed = false;
+    private bool _isRunning = false;
+    private int _currentStage = 0;
+    private CancellationTokenSource? _cts;
 
     private List<string> _mfTypes = ["Gaussian", "Triangular", "Trapezoidal", "Bell"];
     private List<string> _andOperators = ["Minimum", "Product"];
     private List<string> _defuzzifiers = ["Max Weight", "Weighted Average"];
 
+    private List<StageInfo> _stages =
+    [
+        new(1, "Loading Raster"),
+        new(2, "Computing MFs"),
+        new(3, "Fuzzy Inference"),
+        new(4, "Writing Output")
+    ];
+
+    private string GetStageClass(int order)
+    {
+        if (order < _currentStage) return "stage-done";
+        if (order == _currentStage) return "stage-active";
+        return "stage-pending";
+    }
+
     private async Task RunClassification()
     {
-        _statusMessage = "Classifying...";
-        _progress = 0;
+        _cts = new CancellationTokenSource();
+        _isRunning = true;
         _completed = false;
+        _progress = 0;
+        _currentStage = 1;
 
-        for (var i = 0; i <= 100; i += 10)
+        var stageMessages = new[] { "Loading raster bands...", "Computing membership functions...", "Running fuzzy inference on pixels...", "Writing classified output..." };
+
+        for (var i = 0; i <= 100; i += 5)
         {
+            if (_cts.Token.IsCancellationRequested) break;
             _progress = i;
-            _statusMessage = $"Processing... {i}%";
+            _currentStage = i switch { < 20 => 1, < 45 => 2, < 85 => 3, _ => 4 };
+            _statusMessage = stageMessages[_currentStage - 1] + $" ({i}%)";
             StateHasChanged();
-            await Task.Delay(200);
+            await Task.Delay(150, _cts.Token).ContinueWith(_ => { });
         }
 
-        _statusMessage = "Classification complete.";
-        _completed = true;
+        if (!_cts.Token.IsCancellationRequested)
+        {
+            _progress = 100;
+            _currentStage = 5;
+            _statusMessage = "Classification complete. 7 classes identified.";
+            _completed = true;
+        }
+        else
+        {
+            _statusMessage = "Classification cancelled.";
+        }
+
+        _isRunning = false;
     }
+
+    private void CancelClassification()
+    {
+        _cts?.Cancel();
+    }
+
+    private record StageInfo(int Order, string Name);
 }

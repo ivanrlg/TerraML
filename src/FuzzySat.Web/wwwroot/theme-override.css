@@ -1,0 +1,250 @@
+/* ============================================================
+   Radzen Theme Override — Deep Orbit Dark
+   Loaded AFTER material-base.css to override Radzen defaults
+   ============================================================ */
+
+:root {
+    /* Radzen core overrides */
+    --rz-base-background-color: var(--fs-bg-primary);
+    --rz-base-color: var(--fs-text-primary);
+    --rz-text-color: var(--fs-text-primary);
+    --rz-text-secondary-color: var(--fs-text-secondary);
+    --rz-text-disabled-color: var(--fs-text-tertiary);
+
+    /* Primary */
+    --rz-primary: var(--fs-accent-blue);
+    --rz-primary-light: rgba(59, 130, 246, 0.15);
+    --rz-primary-lighter: rgba(59, 130, 246, 0.08);
+    --rz-on-primary: #ffffff;
+
+    /* Secondary */
+    --rz-secondary: var(--fs-text-secondary);
+    --rz-secondary-light: rgba(139, 149, 176, 0.15);
+    --rz-secondary-lighter: rgba(139, 149, 176, 0.08);
+
+    /* Semantic */
+    --rz-info: var(--fs-accent-cyan);
+    --rz-success: var(--fs-accent-emerald);
+    --rz-warning: var(--fs-accent-amber);
+    --rz-danger: var(--fs-accent-red);
+
+    /* Surfaces */
+    --rz-base-background-color: var(--fs-bg-primary);
+    --rz-card-background-color: var(--fs-bg-surface);
+    --rz-dialog-background-color: var(--fs-bg-elevated);
+    --rz-panel-background-color: var(--fs-bg-surface);
+    --rz-sidebar-background-color: var(--fs-bg-elevated);
+
+    /* Inputs */
+    --rz-input-background-color: var(--fs-bg-input);
+    --rz-input-color: var(--fs-text-primary);
+    --rz-input-border: var(--fs-border);
+    --rz-input-focus-border: var(--fs-border-focus);
+    --rz-input-placeholder-color: var(--fs-text-tertiary);
+
+    /* Borders */
+    --rz-border-color: var(--fs-border);
+    --rz-grid-cell-border: var(--fs-border);
+
+    /* Buttons */
+    --rz-button-background-color: var(--fs-accent-blue);
+    --rz-button-color: #ffffff;
+
+    /* Cards */
+    --rz-card-border: 1px solid var(--fs-border);
+    --rz-card-padding: 1.25rem;
+
+    /* DataGrid */
+    --rz-grid-header-background-color: var(--fs-bg-elevated);
+    --rz-grid-header-color: var(--fs-text-secondary);
+    --rz-grid-row-background-color: var(--fs-bg-surface);
+    --rz-grid-row-color: var(--fs-text-primary);
+    --rz-grid-row-hover-background-color: var(--fs-bg-hover);
+    --rz-grid-cell-border-color: var(--fs-border);
+    --rz-grid-alt-row-background-color: rgba(26, 35, 64, 0.5);
+    --rz-grid-background-color: var(--fs-bg-surface);
+    --rz-grid-stripe-background-color: var(--fs-bg-elevated);
+    --rz-grid-stripe-odd-background-color: var(--fs-bg-surface);
+    --rz-grid-frozen-stripe-background-color: var(--fs-bg-elevated);
+    --rz-grid-frozen-stripe-odd-background-color: var(--fs-bg-surface);
+    --rz-grid-cell-color: var(--fs-text-primary);
+    --rz-grid-cell-border: 1px solid var(--fs-border);
+    --rz-grid-bottom-cell-border: 1px solid var(--fs-border);
+    --rz-grid-header-cell-border-bottom: 1px solid var(--fs-border);
+    --rz-base-50: var(--fs-bg-elevated);
+    --rz-base-background-color: var(--fs-bg-surface);
+
+    /* Dropdown */
+    --rz-dropdown-item-hover-background-color: var(--fs-bg-hover);
+    --rz-dropdown-background-color: var(--fs-bg-elevated);
+
+    /* Tabs / Steps */
+    --rz-steps-item-background-color: var(--fs-bg-elevated);
+    --rz-steps-item-color: var(--fs-text-secondary);
+    --rz-steps-current-item-background-color: var(--fs-accent-blue);
+    --rz-steps-current-item-color: #ffffff;
+
+    /* Progress bar */
+    --rz-progressbar-background-color: var(--fs-bg-elevated);
+    --rz-progressbar-fill-background-color: var(--fs-accent-blue);
+    --rz-progressbar-color: #ffffff;
+
+    /* ListBox */
+    --rz-listbox-background-color: var(--fs-bg-input);
+    --rz-listbox-item-hover-background-color: var(--fs-bg-hover);
+    --rz-listbox-item-selected-background-color: rgba(59, 130, 246, 0.2);
+
+    /* Tooltip */
+    --rz-tooltip-background-color: var(--fs-bg-elevated);
+    --rz-tooltip-color: var(--fs-text-primary);
+
+    /* Chart */
+    --rz-chart-background-color: transparent;
+}
+
+/* Card styling refinements */
+.rz-card {
+    background: var(--fs-bg-surface) !important;
+    border: 1px solid var(--fs-border) !important;
+    border-radius: var(--fs-radius-md) !important;
+    box-shadow: var(--fs-shadow-sm) !important;
+    transition: border-color var(--fs-transition-normal), box-shadow var(--fs-transition-normal) !important;
+}
+
+.rz-card:hover {
+    border-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+/* DataGrid refinements */
+.rz-datatable .rz-datatable-thead > tr > th,
+.rz-grid-table thead th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--fs-text-secondary) !important;
+    background-color: var(--fs-bg-elevated) !important;
+    border-color: var(--fs-border) !important;
+}
+
+/* Force dark backgrounds on ALL striped table rows — exact Radzen selectors */
+.rz-grid-table-striped tbody > tr:not(.rz-expanded-row-content):nth-child(even) > td,
+.rz-grid-table-striped tbody > tr:not(.rz-expanded-row-content):nth-child(even) > td.rz-frozen-cell {
+    background-color: var(--fs-bg-elevated) !important;
+    color: var(--fs-text-primary) !important;
+}
+
+.rz-grid-table-striped tbody > tr:not(.rz-expanded-row-content):nth-child(odd) > td,
+.rz-grid-table-striped tbody > tr:not(.rz-expanded-row-content):nth-child(odd) > td.rz-frozen-cell {
+    background-color: var(--fs-bg-surface) !important;
+    color: var(--fs-text-primary) !important;
+}
+
+/* Generic DataGrid row overrides */
+.rz-datatable .rz-datatable-data > tr {
+    transition: background-color var(--fs-transition-fast);
+    background-color: var(--fs-bg-surface) !important;
+    color: var(--fs-text-primary) !important;
+}
+
+.rz-datatable .rz-datatable-data > tr:nth-child(even) {
+    background-color: var(--fs-bg-elevated) !important;
+}
+
+.rz-datatable .rz-datatable-data > tr:hover,
+.rz-grid-table-striped tbody > tr:hover > td {
+    background-color: var(--fs-bg-hover) !important;
+}
+
+.rz-datatable .rz-datatable-data > tr > td,
+.rz-grid-table td {
+    color: var(--fs-text-primary) !important;
+    border-color: var(--fs-border) !important;
+}
+
+/* Ensure all DataGrid containers and text are dark themed */
+.rz-data-grid,
+.rz-datatable,
+.rz-datatable-scrollable-body,
+.rz-grid-table {
+    background-color: var(--fs-bg-surface) !important;
+    color: var(--fs-text-primary) !important;
+}
+
+.rz-cell-data {
+    color: var(--fs-text-primary) !important;
+}
+
+.rz-column-title,
+.rz-column-title-content {
+    color: var(--fs-text-secondary) !important;
+}
+
+/* Button refinements */
+.rz-button.rz-primary {
+    border-radius: var(--fs-radius-sm) !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.01em;
+    transition: all var(--fs-transition-fast) !important;
+}
+
+.rz-button.rz-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+}
+
+.rz-button.rz-secondary {
+    background: var(--fs-bg-elevated) !important;
+    border: 1px solid var(--fs-border) !important;
+    color: var(--fs-text-primary) !important;
+    border-radius: var(--fs-radius-sm) !important;
+}
+
+.rz-button.rz-secondary:hover {
+    border-color: var(--fs-accent-blue) !important;
+    background: var(--fs-bg-hover) !important;
+}
+
+/* Input refinements */
+.rz-textbox,
+.rz-dropdown,
+.rz-listbox {
+    border-radius: var(--fs-radius-sm) !important;
+}
+
+/* ProgressBar refinements */
+.rz-progressbar {
+    border-radius: var(--fs-radius-lg) !important;
+    overflow: hidden;
+}
+
+.rz-progressbar-value {
+    border-radius: var(--fs-radius-lg) !important;
+    background: linear-gradient(90deg, var(--fs-accent-blue), var(--fs-accent-cyan)) !important;
+}
+
+/* Steps refinements */
+.rz-steps .rz-steps-item.rz-state-complete .rz-steps-index {
+    background: var(--fs-accent-emerald) !important;
+}
+
+/* Text overrides for dark theme */
+.rz-color-secondary {
+    color: var(--fs-text-secondary) !important;
+}
+
+/* Radzen Arc Gauge styling */
+.rz-arc-gauge {
+    --rz-arc-gauge-track-color: var(--fs-bg-elevated);
+}
+
+/* Chart axis and grid */
+.rz-chart .rz-axis-title,
+.rz-chart .rz-tick-text {
+    fill: var(--fs-text-secondary) !important;
+}
+
+.rz-chart .rz-grid-line {
+    stroke: var(--fs-border) !important;
+    stroke-opacity: 0.5;
+}

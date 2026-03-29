@@ -1,0 +1,43 @@
+@* Professional map placeholder with grid pattern and mock controls *@
+
+<div class="map-placeholder" style="height: @Height;">
+    <div class="map-grid-bg"></div>
+
+    <div class="map-crosshair">
+        <div class="crosshair-h"></div>
+        <div class="crosshair-v"></div>
+    </div>
+
+    <div class="map-controls">
+        <div class="map-ctrl-btn" title="Zoom In">
+            <span class="material-icons">add</span>
+        </div>
+        <div class="map-ctrl-btn" title="Zoom Out">
+            <span class="material-icons">remove</span>
+        </div>
+        <div class="map-ctrl-btn" title="Fit Extent">
+            <span class="material-icons">crop_free</span>
+        </div>
+    </div>
+
+    <div class="map-coords">
+        <span class="material-icons" style="font-size: 0.85rem;">location_on</span>
+        <span class="mono-text">8.5897N, -71.1561W</span>
+    </div>
+
+    <div class="map-overlay-msg">
+        <span class="material-icons" style="font-size: 2rem; color: var(--fs-text-tertiary);">@Icon</span>
+        <span>@Message</span>
+    </div>
+
+    <div class="map-scale">
+        <div class="scale-bar"></div>
+        <span>5 km</span>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Height { get; set; } = "500px";
+    [Parameter] public string Message { get; set; } = "Load a project to view raster data";
+    [Parameter] public string Icon { get; set; } = "satellite_alt";
+}

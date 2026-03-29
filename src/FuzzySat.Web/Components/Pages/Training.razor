@@ -3,45 +3,109 @@
 
 <PageTitle>Training - FuzzySat</PageTitle>
 
-<RadzenStack Gap="1rem" class="rz-p-4">
-    <h1><RadzenText TextStyle="TextStyle.H4">Training Editor</RadzenText></h1>
-    <RadzenText TextStyle="TextStyle.Body1" class="rz-color-secondary">
-        Draw training areas on the map and extract spectral statistics for each land cover class.
-    </RadzenText>
+<div class="training-page fs-fade-in">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Training Editor</h1>
+            <p class="page-subtitle">Draw training areas on the map and extract spectral statistics for each land cover class.</p>
+        </div>
+        <span class="fs-badge fs-badge-emerald">Step 3 of 5</span>
+    </div>
 
-    <RadzenRow>
-        <RadzenColumn Size="8">
-            <RadzenCard Style="height: 500px; display: flex; align-items: center; justify-content: center;">
-                <RadzenText class="rz-color-secondary">
-                    Interactive map for drawing training polygons (Leaflet.js integration pending).
-                </RadzenText>
-            </RadzenCard>
-        </RadzenColumn>
-        <RadzenColumn Size="4">
-            <RadzenCard>
-                <RadzenText TextStyle="TextStyle.H6">Training Classes</RadzenText>
-                <RadzenListBox @bind-Value="@_selectedClass" Data="@_classes" TextProperty="Name"
-                               ValueProperty="Name" Style="width: 100%; height: 200px;" class="rz-mt-2" />
+    @* Mock Drawing Toolbar *@
+    <div class="drawing-toolbar">
+        <div class="toolbar-group">
+            <button class="tool-btn" title="Draw Polygon" disabled>
+                <span class="material-icons">pentagon</span>
+            </button>
+            <button class="tool-btn" title="Draw Rectangle" disabled>
+                <span class="material-icons">crop_landscape</span>
+            </button>
+            <button class="tool-btn" title="Point Sample" disabled>
+                <span class="material-icons">location_on</span>
+            </button>
+        </div>
+        <div class="toolbar-divider"></div>
+        <div class="toolbar-group">
+            <button class="tool-btn" title="Edit" disabled>
+                <span class="material-icons">edit</span>
+            </button>
+            <button class="tool-btn" title="Delete" disabled>
+                <span class="material-icons">delete_outline</span>
+            </button>
+        </div>
+        <div class="toolbar-spacer"></div>
+        <span class="toolbar-hint">Load a project to enable drawing tools</span>
+    </div>
 
-                <RadzenText TextStyle="TextStyle.H6" class="rz-mt-4">Statistics</RadzenText>
-                <RadzenText class="rz-mt-2 rz-color-secondary">
-                    Select a class and draw training areas to compute mean and standard deviation per band.
-                </RadzenText>
+    <div class="main-layout">
+        @* Map Area *@
+        <div class="map-col">
+            <MapPlaceholder Height="480px" Message="Load a project to draw training areas" Icon="draw" />
+        </div>
 
-                <RadzenButton Text="Extract Statistics" ButtonStyle="ButtonStyle.Primary" class="rz-mt-4 w-100" />
-                <RadzenButton Text="Export Training Session" ButtonStyle="ButtonStyle.Secondary" class="rz-mt-2 w-100" />
-            </RadzenCard>
-        </RadzenColumn>
-    </RadzenRow>
-</RadzenStack>
+        @* Right Panel *@
+        <div class="panel-col">
+            @* Class Cards *@
+            <div class="panel-section">
+                <div class="panel-header">
+                    <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-blue);">palette</span>
+                    <span>Training Classes</span>
+                </div>
+                @foreach (var cls in _classes)
+                {
+                    var isSelected = _selectedClass == cls.Name;
+                    <div class="class-card @(isSelected ? "class-selected" : "")" @onclick="() => _selectedClass = cls.Name">
+                        <span class="class-dot" style="background: @cls.Color;"></span>
+                        <span class="class-name">@cls.Name</span>
+                        <span class="class-samples mono-text">@cls.Samples pts</span>
+                    </div>
+                }
+            </div>
+
+            @* Spectral Signature Chart *@
+            <div class="panel-section">
+                <div class="panel-header">
+                    <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-cyan);">show_chart</span>
+                    <span>Spectral Signatures</span>
+                </div>
+                <RadzenChart Style="height: 200px;">
+                    @foreach (var cls in _classes)
+                    {
+                        <RadzenLineSeries Data="@cls.SpectralData" CategoryProperty="Band" ValueProperty="Value"
+                                          Title="@cls.Name" Stroke="@cls.Color" StrokeWidth="2">
+                            <RadzenMarkers MarkerType="MarkerType.Circle" Size="4" Stroke="@cls.Color" Fill="@cls.Color" />
+                        </RadzenLineSeries>
+                    }
+                    <RadzenCategoryAxis />
+                    <RadzenValueAxis>
+                        <RadzenGridLines Visible="true" />
+                    </RadzenValueAxis>
+                    <RadzenLegend Visible="false" />
+                </RadzenChart>
+            </div>
+
+            @* Actions *@
+            <div class="panel-actions">
+                <RadzenButton Text="Extract Statistics" Icon="calculate" ButtonStyle="ButtonStyle.Primary" Style="width: 100%;" Disabled="true" />
+                <RadzenButton Text="Export Session" Icon="file_download" ButtonStyle="ButtonStyle.Secondary" Style="width: 100%;" Disabled="true" />
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
-    private string? _selectedClass;
-    private List<ClassOption> _classes =
+    private string? _selectedClass = "Urban";
+
+    private List<TrainingClass> _classes =
     [
-        new("Urban"), new("Water"), new("Forest"),
-        new("Agriculture"), new("Bare Soil")
+        new("Urban", "#EF4444", 24, [new("VNIR1", 128), new("VNIR2", 95), new("SWIR1", 72), new("SWIR2", 88)]),
+        new("Water", "#3B82F6", 23, [new("VNIR1", 35), new("VNIR2", 28), new("SWIR1", 15), new("SWIR2", 12)]),
+        new("Forest", "#10B981", 25, [new("VNIR1", 55), new("VNIR2", 180), new("SWIR1", 45), new("SWIR2", 38)]),
+        new("Agriculture", "#F59E0B", 23, [new("VNIR1", 68), new("VNIR2", 145), new("SWIR1", 55), new("SWIR2", 48)]),
+        new("Bare Soil", "#D97706", 22, [new("VNIR1", 115), new("VNIR2", 100), new("SWIR1", 95), new("SWIR2", 105)])
     ];
 
-    private record ClassOption(string Name);
+    private record SpectralPoint(string Band, double Value);
+    private record TrainingClass(string Name, string Color, int Samples, List<SpectralPoint> SpectralData);
 }

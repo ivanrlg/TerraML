@@ -2,39 +2,163 @@
 
 <PageTitle>FuzzySat - Fuzzy Logic Satellite Image Classifier</PageTitle>
 
-<RadzenStack Gap="1rem" class="rz-p-4">
-    <h1><RadzenText TextStyle="TextStyle.H3">FuzzySat</RadzenText></h1>
-    <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-color-secondary">
-        Satellite image classification using fuzzy logic inference
-    </RadzenText>
+<div class="home-page fs-fade-in">
+    @* Hero Section *@
+    <div class="hero">
+        <div class="hero-bg-pattern"></div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="material-icons" style="font-size: 0.85rem;">satellite_alt</span>
+                Open Source Satellite Classifier
+            </div>
+            <h1 class="hero-title">
+                <span class="fs-gradient-text">FuzzySat</span>
+            </h1>
+            <p class="hero-subtitle">
+                Satellite image classification powered by fuzzy logic inference.
+                Reimagined from a 2008 thesis into a modern hybrid ML pipeline.
+            </p>
+            <div class="hero-actions">
+                <a href="project-setup" class="hero-cta">
+                    <span class="material-icons">rocket_launch</span>
+                    Create New Project
+                </a>
+                <a href="validation" class="hero-cta-secondary">
+                    <span class="material-icons">assessment</span>
+                    View Demo Results
+                </a>
+            </div>
+        </div>
+    </div>
 
-    <RadzenCard class="rz-mt-4">
-        <RadzenText TextStyle="TextStyle.H5">Getting Started</RadzenText>
-        <RadzenText class="rz-mt-2">
-            FuzzySat implements a fuzzy inference system for classifying multispectral satellite
-            imagery. Based on the original 2008 thesis that achieved 81.87% Overall Accuracy
-            (Kappa = 0.7637), outperforming Maximum Likelihood, Decision Tree, and Minimum Distance classifiers.
-        </RadzenText>
-    </RadzenCard>
+    @* Stats Bar *@
+    <div class="stats-row">
+        <div class="stat-card fs-scale-in" style="animation-delay: 0.15s;">
+            <span class="stat-number" style="color: var(--fs-accent-emerald);">81.87%</span>
+            <span class="stat-desc">Overall Accuracy</span>
+            <span class="stat-detail">Original Thesis (2008)</span>
+        </div>
+        <div class="stat-card fs-scale-in" style="animation-delay: 0.25s;">
+            <span class="stat-number" style="color: var(--fs-accent-blue);">0.7637</span>
+            <span class="stat-desc">Kappa Coefficient</span>
+            <span class="stat-detail">Substantial Agreement</span>
+        </div>
+        <div class="stat-card fs-scale-in" style="animation-delay: 0.35s;">
+            <span class="stat-number" style="color: var(--fs-accent-cyan);">13</span>
+            <span class="stat-desc">Spectral Bands</span>
+            <span class="stat-detail">Sentinel-2 Copernicus</span>
+        </div>
+        <div class="stat-card fs-scale-in" style="animation-delay: 0.45s;">
+            <span class="stat-number" style="color: var(--fs-accent-violet);">4</span>
+            <span class="stat-desc">MF Types</span>
+            <span class="stat-detail">Gaussian, Tri, Trap, Bell</span>
+        </div>
+    </div>
 
-    <RadzenText TextStyle="TextStyle.H5" class="rz-mt-4">Workflow</RadzenText>
-    <RadzenSteps>
-        <Steps>
-            <RadzenStepsItem Text="Project Setup">
-                Configure bands, define land cover classes, and set input/output paths.
-            </RadzenStepsItem>
-            <RadzenStepsItem Text="Band Viewer">
-                Visualize spectral bands and false color composites on an interactive map.
-            </RadzenStepsItem>
-            <RadzenStepsItem Text="Training">
-                Draw training areas and extract spectral statistics (mean + stddev per class per band).
-            </RadzenStepsItem>
-            <RadzenStepsItem Text="Classification">
-                Run fuzzy inference to classify each pixel into a land cover class.
-            </RadzenStepsItem>
-            <RadzenStepsItem Text="Validation">
-                Evaluate accuracy with confusion matrix, Overall Accuracy, and Kappa coefficient.
-            </RadzenStepsItem>
-        </Steps>
-    </RadzenSteps>
-</RadzenStack>
+    @* Workflow Steps *@
+    <div class="workflow-section">
+        <h2 class="section-heading">
+            <span class="material-icons" style="color: var(--fs-accent-blue);">route</span>
+            Classification Workflow
+        </h2>
+        <div class="workflow-grid">
+            <a href="project-setup" class="workflow-card fs-scale-in" style="animation-delay: 0.2s;">
+                <div class="wf-step-badge">1</div>
+                <span class="material-icons wf-icon" style="color: var(--fs-accent-blue);">tune</span>
+                <span class="wf-title">Project Setup</span>
+                <span class="wf-desc">Configure bands, define land cover classes, set paths</span>
+            </a>
+            <a href="band-viewer" class="workflow-card fs-scale-in" style="animation-delay: 0.3s;">
+                <div class="wf-step-badge">2</div>
+                <span class="material-icons wf-icon" style="color: var(--fs-accent-cyan);">layers</span>
+                <span class="wf-title">Band Viewer</span>
+                <span class="wf-desc">Visualize spectral bands and false color composites</span>
+            </a>
+            <a href="training" class="workflow-card fs-scale-in" style="animation-delay: 0.4s;">
+                <div class="wf-step-badge">3</div>
+                <span class="material-icons wf-icon" style="color: var(--fs-accent-emerald);">model_training</span>
+                <span class="wf-title">Training</span>
+                <span class="wf-desc">Draw training areas, extract spectral statistics</span>
+            </a>
+            <a href="classification" class="workflow-card fs-scale-in" style="animation-delay: 0.5s;">
+                <div class="wf-step-badge">4</div>
+                <span class="material-icons wf-icon" style="color: var(--fs-accent-amber);">category</span>
+                <span class="wf-title">Classification</span>
+                <span class="wf-desc">Run fuzzy inference engine on every pixel</span>
+            </a>
+            <a href="validation" class="workflow-card fs-scale-in" style="animation-delay: 0.6s;">
+                <div class="wf-step-badge">5</div>
+                <span class="material-icons wf-icon" style="color: var(--fs-accent-violet);">assessment</span>
+                <span class="wf-title">Validation</span>
+                <span class="wf-desc">Confusion matrix, Kappa, accuracy assessment</span>
+            </a>
+        </div>
+    </div>
+
+    @* Feature Highlights *@
+    <div class="features-section">
+        <h2 class="section-heading">
+            <span class="material-icons" style="color: var(--fs-accent-cyan);">auto_awesome</span>
+            Key Capabilities
+        </h2>
+        <div class="features-grid">
+            <div class="feature-card fs-scale-in" style="animation-delay: 0.3s;">
+                <span class="material-icons feature-icon" style="color: var(--fs-accent-blue);">insights</span>
+                <h3 class="feature-title">Fuzzy Inference Engine</h3>
+                <p class="feature-desc">Gaussian, Triangular, Trapezoidal, and Bell membership functions with configurable AND operators and defuzzifiers.</p>
+            </div>
+            <div class="feature-card fs-scale-in" style="animation-delay: 0.4s;">
+                <span class="material-icons feature-icon" style="color: var(--fs-accent-emerald);">psychology</span>
+                <h3 class="feature-title">Hybrid ML Pipeline</h3>
+                <p class="feature-desc">Fuzzy features as intelligent preprocessing for Random Forest and SDCA classifiers via ML.NET. 39 to 111 enriched features.</p>
+            </div>
+            <div class="feature-card fs-scale-in" style="animation-delay: 0.5s;">
+                <span class="material-icons feature-icon" style="color: var(--fs-accent-cyan);">public</span>
+                <h3 class="feature-title">Free Satellite Imagery</h3>
+                <p class="feature-desc">Built for Sentinel-2 Copernicus data: 13 bands, 10m resolution, global coverage. GDAL-powered raster I/O.</p>
+            </div>
+        </div>
+    </div>
+
+    @* Thesis Comparison *@
+    <div class="comparison-section">
+        <h2 class="section-heading">
+            <span class="material-icons" style="color: var(--fs-accent-amber);">emoji_events</span>
+            Original Thesis Results (2008)
+        </h2>
+        <div class="comparison-grid">
+            <div class="comp-row comp-winner">
+                <span class="comp-name">Fuzzy Logic</span>
+                <div class="comp-bar-area">
+                    <div class="comp-bar" style="width: 81.87%; background: linear-gradient(90deg, var(--fs-accent-emerald), var(--fs-accent-cyan));"></div>
+                </div>
+                <span class="comp-value mono-text">81.87%</span>
+                <span class="comp-kappa mono-text">K=0.7637</span>
+            </div>
+            <div class="comp-row">
+                <span class="comp-name">Max. Likelihood</span>
+                <div class="comp-bar-area">
+                    <div class="comp-bar" style="width: 74.27%; background: var(--fs-accent-blue); opacity: 0.6;"></div>
+                </div>
+                <span class="comp-value mono-text">74.27%</span>
+                <span class="comp-kappa mono-text">K=0.6650</span>
+            </div>
+            <div class="comp-row">
+                <span class="comp-name">Decision Tree</span>
+                <div class="comp-bar-area">
+                    <div class="comp-bar" style="width: 63.74%; background: var(--fs-accent-amber); opacity: 0.6;"></div>
+                </div>
+                <span class="comp-value mono-text">63.74%</span>
+                <span class="comp-kappa mono-text">K=0.5312</span>
+            </div>
+            <div class="comp-row">
+                <span class="comp-name">Min. Distance</span>
+                <div class="comp-bar-area">
+                    <div class="comp-bar" style="width: 56.14%; background: var(--fs-accent-red); opacity: 0.6;"></div>
+                </div>
+                <span class="comp-value mono-text">56.14%</span>
+                <span class="comp-kappa mono-text">K=0.4233</span>
+            </div>
+        </div>
+    </div>
+</div>
