@@ -8,9 +8,9 @@
 
 ## Estado Actual
 
-> **Proyecto al ~45% global**
-> - Core Engine: 95% (Epic #1 completado, falta PCA de Epic #3)
-> - CLI: 20% funcional (stubs sin cablear)
+> **Proyecto al ~55% global** (subio de 45% tras Fases 1-2)
+> - Core Engine: **100%** (PCA implementado, 242 tests passing)
+> - CLI: **80%** funcional (4 comandos wired, falta VisualizeCommand)
 > - API: 0% (template default)
 > - Web: 35% (UI mock, no conectada a Core)
 > - CI/CD: 30% (solo build+test)
@@ -85,11 +85,24 @@
 - [x] 01-plan.md (72 tareas en 7 fases)
 - [x] 02-technical-design.md (decisiones tecnicas y riesgos)
 
-### Fase 0 — Reconciliacion de EPICs
+### Fase 0 — Reconciliacion de EPICs (PR #14)
 - [x] Auditoria de los 5 EPICs contra codigo real
 - [x] Actualizar READMEs con estados reales
 - [x] Actualizar ACTIVE_EPICS.md y EPIC_HISTORY.md
 - [x] Actualizar task/todo.md (este archivo)
+
+### Fase 1 — Core 100% (PR #15)
+- [x] PCA implementation (PcaTransformer via ML.NET, 9 tests)
+- [x] GeoTransform en RasterInfo + GdalRasterReader/Writer (preserva georeferencing)
+- [x] TrainingSessionDto compartido en Core (FromSession/ToSession)
+
+### Fase 2 — CLI Wiring (PR #15)
+- [x] Cablear InfoCommand a GdalRasterReader.ReadInfo() + Spectre table
+- [x] Cablear TrainCommand a TrainingSession + CSV parser + JSON export
+- [x] Cablear ClassifyCommand a FuzzyInferenceEngine + GdalRasterWriter + progress bar
+- [x] Cablear ValidateCommand a ConfusionMatrix + per-class metrics table
+- [x] Spectre.Console output (tablas, progress bars, colores)
+- [x] CSV validation (header check, band name trimming, duplicates)
 
 ---
 
@@ -97,19 +110,8 @@
 
 > Ver [Epic #6 plan](../docs/epics/epic-006-gap-to-100/01-plan.md) para detalle completo.
 
-### Fase 1 — Core 100% (P0)
-- [ ] PCA implementation (ML.NET PrincipalComponentAnalysis estimator)
-- [ ] Verificar Visualization module
-- [ ] Code coverage report en CI (>80% threshold)
-
-### Fase 2 — CLI Wiring (P1)
-- [ ] Cablear InfoCommand a GdalRasterReader.ReadInfo()
-- [ ] Cablear TrainCommand a TrainingSession + CSV reader
-- [ ] Cablear ClassifyCommand a FuzzyClassifier + GdalRasterReader/Writer
-- [ ] Cablear ValidateCommand a ConfusionMatrix
+### Fase 2 — CLI Pendiente
 - [ ] Crear VisualizeCommand (false color composite → PNG)
-- [ ] Spectre.Console output (tablas, progress bars)
-- [ ] JSON config loading en CLI
 - [ ] Tests CLI
 
 ### Fase 3 — Web Real (P1)
