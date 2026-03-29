@@ -160,7 +160,7 @@
     private double _overallAccuracy = 0.8187;
     private double _kappa = 0.7637;
     private int _totalSamples = 171;
-    private int _correctCount = 140;
+    private int _correctCount;
 
     private List<string> _classNames = ["Urban", "Water", "Forest", "Agriculture", "Bare Soil", "Cloud", "Shadow"];
 
@@ -190,6 +190,11 @@
 
     protected override void OnInitialized()
     {
+        // Compute correct count from confusion matrix diagonal
+        _correctCount = 0;
+        for (var i = 0; i < _classNames.Count && i < _confusionMatrix.GetLength(0); i++)
+            _correctCount += _confusionMatrix[i, i];
+
         _donutData =
         [
             new("Correct", _correctCount),
@@ -220,7 +225,10 @@
     {
         public double ProducersAccuracyPct => ProducersAccuracy * 100;
         public double UsersAccuracyPct => UsersAccuracy * 100;
-        public double F1Score => 2 * (ProducersAccuracy * UsersAccuracy) / (ProducersAccuracy + UsersAccuracy);
+        public double F1Score =>
+            (ProducersAccuracy + UsersAccuracy) == 0
+                ? 0
+                : 2 * (ProducersAccuracy * UsersAccuracy) / (ProducersAccuracy + UsersAccuracy);
     }
 
     private record DonutItem(string Label, int Value);

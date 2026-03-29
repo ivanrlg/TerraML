@@ -189,6 +189,10 @@
                 new("B8", 7, "Panchromatic"), new("B9", 8, "Cirrus"), new("B10", 9, "TIR 1"), new("B11", 10, "TIR 2")
             ];
         }
+        else if (preset.Name == "Custom")
+        {
+            _bands = [];
+        }
     }
 
     private void AddBand() => _bands.Add(new($"Band{_bands.Count + 1}", _bands.Count, ""));

@@ -149,6 +149,7 @@
 
     private async Task RunClassification()
     {
+        _cts?.Dispose();
         _cts = new CancellationTokenSource();
         _isRunning = true;
         _completed = false;
@@ -157,24 +158,23 @@
 
         var stageMessages = new[] { "Loading raster bands...", "Computing membership functions...", "Running fuzzy inference on pixels...", "Writing classified output..." };
 
-        for (var i = 0; i <= 100; i += 5)
+        try
         {
-            if (_cts.Token.IsCancellationRequested) break;
-            _progress = i;
-            _currentStage = i switch { < 20 => 1, < 45 => 2, < 85 => 3, _ => 4 };
-            _statusMessage = stageMessages[_currentStage - 1] + $" ({i}%)";
-            StateHasChanged();
-            await Task.Delay(150, _cts.Token).ContinueWith(_ => { });
-        }
+            for (var i = 0; i <= 100; i += 5)
+            {
+                _progress = i;
+                _currentStage = i switch { < 20 => 1, < 45 => 2, < 85 => 3, _ => 4 };
+                _statusMessage = stageMessages[_currentStage - 1] + $" ({i}%)";
+                StateHasChanged();
+                await Task.Delay(150, _cts.Token);
+            }
 
-        if (!_cts.Token.IsCancellationRequested)
-        {
             _progress = 100;
             _currentStage = 5;
             _statusMessage = "Classification complete. 7 classes identified.";
             _completed = true;
         }
-        else
+        catch (OperationCanceledException)
         {
             _statusMessage = "Classification cancelled.";
         }

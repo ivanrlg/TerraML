@@ -1,36 +1,36 @@
 @* Professional map placeholder with grid pattern and mock controls *@
 
 <div class="map-placeholder" style="height: @Height;">
-    <div class="map-grid-bg"></div>
+    <div class="map-grid-bg" aria-hidden="true"></div>
 
-    <div class="map-crosshair">
+    <div class="map-crosshair" aria-hidden="true">
         <div class="crosshair-h"></div>
         <div class="crosshair-v"></div>
     </div>
 
     <div class="map-controls">
-        <div class="map-ctrl-btn" title="Zoom In">
-            <span class="material-icons">add</span>
-        </div>
-        <div class="map-ctrl-btn" title="Zoom Out">
-            <span class="material-icons">remove</span>
-        </div>
-        <div class="map-ctrl-btn" title="Fit Extent">
-            <span class="material-icons">crop_free</span>
-        </div>
+        <button type="button" class="map-ctrl-btn" aria-label="Zoom in" disabled>
+            <span class="material-icons" aria-hidden="true">add</span>
+        </button>
+        <button type="button" class="map-ctrl-btn" aria-label="Zoom out" disabled>
+            <span class="material-icons" aria-hidden="true">remove</span>
+        </button>
+        <button type="button" class="map-ctrl-btn" aria-label="Fit extent" disabled>
+            <span class="material-icons" aria-hidden="true">crop_free</span>
+        </button>
     </div>
 
     <div class="map-coords">
-        <span class="material-icons" style="font-size: 0.85rem;">location_on</span>
+        <span class="material-icons" style="font-size: 0.85rem;" aria-hidden="true">location_on</span>
         <span class="mono-text">8.5897N, -71.1561W</span>
     </div>
 
     <div class="map-overlay-msg">
-        <span class="material-icons" style="font-size: 2rem; color: var(--fs-text-tertiary);">@Icon</span>
+        <span class="material-icons" style="font-size: 2rem; color: var(--fs-text-tertiary);" aria-hidden="true">@Icon</span>
         <span>@Message</span>
     </div>
 
-    <div class="map-scale">
+    <div class="map-scale" aria-hidden="true">
         <div class="scale-bar"></div>
         <span>5 km</span>
     </div>

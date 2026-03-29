@@ -5,7 +5,6 @@
 
 :root {
     /* Radzen core overrides */
-    --rz-base-background-color: var(--fs-bg-primary);
     --rz-base-color: var(--fs-text-primary);
     --rz-text-color: var(--fs-text-primary);
     --rz-text-secondary-color: var(--fs-text-secondary);
@@ -29,7 +28,6 @@
     --rz-danger: var(--fs-accent-red);
 
     /* Surfaces */
-    --rz-base-background-color: var(--fs-bg-primary);
     --rz-card-background-color: var(--fs-bg-surface);
     --rz-dialog-background-color: var(--fs-bg-elevated);
     --rz-panel-background-color: var(--fs-bg-surface);
@@ -72,7 +70,7 @@
     --rz-grid-bottom-cell-border: 1px solid var(--fs-border);
     --rz-grid-header-cell-border-bottom: 1px solid var(--fs-border);
     --rz-base-50: var(--fs-bg-elevated);
-    --rz-base-background-color: var(--fs-bg-surface);
+    --rz-base-background-color: var(--fs-bg-primary);
 
     /* Dropdown */
     --rz-dropdown-item-hover-background-color: var(--fs-bg-hover);
