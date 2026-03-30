@@ -8,12 +8,12 @@ A modern C#/.NET 10 reimplementation of a 2008 thesis that outperformed
 Maximum Likelihood, Decision Tree, and Minimum Distance classifiers.
 
 
-    <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10" /></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License" /></a>
-    <img src="https://img.shields.io/badge/Tests-233%20passing-brightgreen" alt="233 Tests" />
-    <img src="https://img.shields.io/badge/C%23-13-239120?logo=csharp" alt="C# 13" />
-    <img src="https://img.shields.io/badge/OA-81.87%25-blue" alt="Overall Accuracy" />
-    <img src="https://img.shields.io/badge/%CE%BA-0.7637-blue" alt="Kappa" />
+<a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10" /></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License" /></a>
+<img src="https://img.shields.io/badge/Tests-260%20passing-brightgreen" alt="260 Tests" />
+<img src="https://img.shields.io/badge/C%23-13-239120?logo=csharp" alt="C# 13" />
+<img src="https://img.shields.io/badge/OA-81.87%25-blue" alt="Overall Accuracy" />
+<img src="https://img.shields.io/badge/%CE%BA-0.7637-blue" alt="Kappa" />
 
 </div>
 
@@ -27,7 +27,7 @@ Maximum Likelihood, Decision Tree, and Minimum Distance classifiers.
 | **4 Membership Functions** | Gaussian, Triangular, Trapezoidal, Generalized Bell |
 | **Hybrid ML Pipeline** | ML.NET Random Forest + SDCA using fuzzy features |
 | **GDAL Raster I/O** | Read GeoTIFF with geospatial metadata; write classified rasters |
-| **233 Unit Tests** | Mathematical correctness validated against thesis data |
+| **260 Unit Tests** | 242 Core + 18 Web — mathematical correctness validated against thesis data |
 | **Explainable AI** | Every membership degree and firing strength is inspectable |
 
 ---
@@ -339,13 +339,10 @@ git clone https://github.com/ivanrlg/FuzzySat.git
 cd FuzzySat
 
 dotnet build
-dotnet test     # 233 tests
+dotnet test     # 260 tests
 ```
 
 ### CLI Usage
-
-> **Note**: CLI commands are currently scaffolded with argument parsing and help text.
-> Full GDAL-based implementations will be wired in a future release.
 
 ```bash
 # Classify a raster image
@@ -354,16 +351,14 @@ dotnet run --project src/FuzzySat.CLI -- classify \
     --model training-session.json \
     --output classified.tif
 
-# Extract training statistics
+# Extract training statistics from labeled samples
 dotnet run --project src/FuzzySat.CLI -- train \
-    --input data/aster-merida.tif \
     --samples training-areas.csv \
     --output training-session.json
 
-# Validate classification accuracy
+# Validate classification accuracy (CSV: actual,predicted)
 dotnet run --project src/FuzzySat.CLI -- validate \
-    --classified classified.tif \
-    --truth ground-truth.tif
+    --truth ground-truth.csv
 
 # Display raster metadata
 dotnet run --project src/FuzzySat.CLI -- info data/aster-merida.tif
@@ -511,7 +506,7 @@ FuzzySat includes a server-side Blazor web app with a wizard-flow interface:
 |:---|:---|
 | **Home** | Project overview and workflow steps |
 | **Project Setup** | Configure bands, define land cover classes, set I/O paths |
-| **Band Viewer** | Visualize spectral bands (Leaflet.js map placeholder) |
+| **Band Viewer** | Real band statistics, histograms, and SkiaSharp grayscale previews |
 | **Training** | Draw training areas and extract spectral statistics |
 | **Classification** | Configure MF type, AND operator, defuzzifier; run with progress bar |
 | **Validation** | View Overall Accuracy, Kappa, per-class producer's/user's accuracy |
@@ -616,7 +611,8 @@ FuzzySat/
 │   ├── FuzzySat.Api/                      # REST API (ASP.NET Core)
 │   └── FuzzySat.Web/                      # Blazor Server (6 pages, Radzen UI)
 ├── tests/
-│   └── FuzzySat.Core.Tests/               # 233 unit tests (xUnit + FluentAssertions)
+│   ├── FuzzySat.Core.Tests/               # 242 unit tests (xUnit + FluentAssertions)
+│   └── FuzzySat.Web.Tests/                # 18 service tests (security, raster, statistics)
 ├── samples/
 │   └── sample-project.json                # ASTER Merida configuration example
 └── docs/                                  # Epic planning, architecture, troubleshooting
