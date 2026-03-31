@@ -174,31 +174,89 @@
                               Click="@RunClassification" class="run-btn"
                               Disabled="@(!CanRun)" />
             }
-            <RadzenButton Text="Export Result" Icon="download" ButtonStyle="ButtonStyle.Secondary"
+            <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Secondary"
                           Disabled="@(!_completed)" Click="@ExportResult" />
+            <RadzenButton Text="Download GeoTIFF" Icon="map" ButtonStyle="ButtonStyle.Secondary"
+                          Disabled="@(!_completed)" Click="@ExportGeoTiff" />
         </div>
 
         @if (_completed && _classCounts is not null)
         {
-            @* Classification Summary *@
+            @* Area Statistics Table *@
             <div class="fs-card" style="margin-top: 1.5rem;">
                 <div class="section-header">
                     <span class="material-icons section-icon">pie_chart</span>
-                    <span class="section-title">Classification Summary</span>
+                    <span class="section-title">Area Statistics</span>
                     <span class="fs-badge @(_classificationMethod == "Pure Fuzzy" ? "fs-badge-blue" : "fs-badge-emerald")" style="margin-left: auto;">@_classificationMethod</span>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin-top: 1rem;">
-                    @foreach (var (className, count) in _classCounts)
-                    {
-                        var color = _colorMap.GetValueOrDefault(className, "#888");
-                        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--fs-bg-tertiary); border-radius: 8px;">
-                            <span style="width: 14px; height: 14px; border-radius: 3px; background: @color; flex-shrink: 0; cursor: pointer; border: 1px solid rgba(255,255,255,0.15);"
-                                  @onclick="() => OpenColorPicker(className)" title="Click to change color"></span>
-                            <span style="color: var(--fs-text-secondary); flex: 1;">@className</span>
-                            <span class="mono-text" style="color: var(--fs-text-primary);">@count.ToString("N0")</span>
-                        </div>
-                    }
+                <div style="overflow-x: auto; margin-top: 1rem;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--fs-border);">
+                                <th style="text-align: left; padding: 0.5rem; color: var(--fs-text-tertiary); font-weight: 600;">Class</th>
+                                <th style="text-align: right; padding: 0.5rem; color: var(--fs-text-tertiary); font-weight: 600;">Pixels</th>
+                                @if (_hasGeoTransform)
+                                {
+                                    <th style="text-align: right; padding: 0.5rem; color: var(--fs-text-tertiary); font-weight: 600;">Area (m²)</th>
+                                    <th style="text-align: right; padding: 0.5rem; color: var(--fs-text-tertiary); font-weight: 600;">Area (ha)</th>
+                                }
+                                <th style="text-align: right; padding: 0.5rem; color: var(--fs-text-tertiary); font-weight: 600;">%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (_areaStats is not null)
+                            {
+                                @foreach (var stat in _areaStats)
+                                {
+                                    var color = _colorMap.GetValueOrDefault(stat.ClassName, "#888");
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                            <span style="width: 14px; height: 14px; border-radius: 3px; background: @color; flex-shrink: 0; cursor: pointer; border: 1px solid rgba(255,255,255,0.15);"
+                                                  @onclick="() => OpenColorPicker(stat.ClassName)" title="Click to change color"></span>
+                                            <span style="color: var(--fs-text-secondary);">@stat.ClassName</span>
+                                        </td>
+                                        <td class="mono-text" style="text-align: right; padding: 0.5rem; color: var(--fs-text-primary);">@stat.PixelCount.ToString("N0")</td>
+                                        @if (_hasGeoTransform)
+                                        {
+                                            <td class="mono-text" style="text-align: right; padding: 0.5rem; color: var(--fs-text-primary);">@stat.AreaM2.ToString("N0")</td>
+                                            <td class="mono-text" style="text-align: right; padding: 0.5rem; color: var(--fs-text-primary);">@stat.AreaHectares.ToString("N2")</td>
+                                        }
+                                        <td class="mono-text" style="text-align: right; padding: 0.5rem; color: var(--fs-text-primary);">@stat.Percentage.ToString("F1")%</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
                 </div>
+
+                @* Area Distribution Chart *@
+                @if (_areaStats is not null && _areaStats.Count > 0)
+                {
+                    <div style="display: flex; gap: 1.5rem; margin-top: 1.25rem; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 250px;">
+                            <RadzenChart Style="height: 220px;">
+                                <RadzenPieSeries Data="@_areaStats" Title="Distribution"
+                                    CategoryProperty="ClassName" ValueProperty="Percentage">
+                                    <RadzenSeriesDataLabels Visible="true" />
+                                </RadzenPieSeries>
+                            </RadzenChart>
+                        </div>
+                        <div style="flex: 1; min-width: 250px;">
+                            <RadzenChart Style="height: 220px;">
+                                <RadzenBarSeries Data="@_areaStats"
+                                    CategoryProperty="ClassName"
+                                    ValueProperty="@(_hasGeoTransform ? "AreaHectares" : "PixelCount")"
+                                    Title="@(_hasGeoTransform ? "Hectares" : "Pixels")">
+                                    <RadzenSeriesDataLabels Visible="false" />
+                                </RadzenBarSeries>
+                                <RadzenCategoryAxis />
+                                <RadzenValueAxis>
+                                    <RadzenGridLines Visible="true" />
+                                </RadzenValueAxis>
+                            </RadzenChart>
+                        </div>
+                    </div>
+                }
             </div>
 
             @* Color Picker Dialog *@
@@ -280,6 +338,8 @@
     private int _currentStage = 0;
     private CancellationTokenSource? _cts;
     private List<KeyValuePair<string, int>>? _classCounts;
+    private IReadOnlyList<Core.Classification.AreaCalculator.ClassAreaStats>? _areaStats;
+    private bool _hasGeoTransform;
 
     // Image viewer state
     private Dictionary<string, string> _colorMap = new();
@@ -425,6 +485,11 @@
                     counts[cls] = counts.GetValueOrDefault(cls) + 1;
                 }
             _classCounts = counts.OrderByDescending(kv => kv.Value).ToList();
+
+            // Compute area statistics
+            var geoTransform = ProjectState.RasterInfo?.GeoTransform;
+            _hasGeoTransform = geoTransform is { Length: >= 6 } && Math.Abs(geoTransform[1]) > 0;
+            _areaStats = Core.Classification.AreaCalculator.Calculate(result, geoTransform);
 
             _progress = 100;
             _currentStage = 5;
@@ -593,19 +658,34 @@
 
     private async Task ExportResult()
     {
-        if (_classCounts is null) return;
+        if (_areaStats is null && _classCounts is null) return;
 
         var lines = new System.Text.StringBuilder();
-        lines.AppendLine("Class,Pixel Count,Percentage");
 
-        var total = _classCounts.Sum(kv => kv.Value);
-        foreach (var (className, count) in _classCounts)
+        if (_areaStats is not null)
         {
-            var pct = total > 0 ? (double)count / total * 100 : 0;
-            lines.AppendLine($"{ValidationService.CsvEscape(className)},{count},{pct:F2}");
+            lines.AppendLine(_hasGeoTransform
+                ? "Class,Pixel Count,Area (m²),Area (ha),Percentage"
+                : "Class,Pixel Count,Percentage");
+
+            foreach (var stat in _areaStats)
+            {
+                if (_hasGeoTransform)
+                    lines.AppendLine($"{ValidationService.CsvEscape(stat.ClassName)},{stat.PixelCount},{stat.AreaM2:F0},{stat.AreaHectares:F2},{stat.Percentage:F2}");
+                else
+                    lines.AppendLine($"{ValidationService.CsvEscape(stat.ClassName)},{stat.PixelCount},{stat.Percentage:F2}");
+            }
+
+            var totalPixels = _areaStats.Sum(s => s.PixelCount);
+            var totalArea = _areaStats.Sum(s => s.AreaM2);
+            var totalHa = _areaStats.Sum(s => s.AreaHectares);
+            if (_hasGeoTransform)
+                lines.AppendLine($"Total,{totalPixels},{totalArea:F0},{totalHa:F2},100.00");
+            else
+                lines.AppendLine($"Total,{totalPixels},100.00");
         }
+
         lines.AppendLine();
-        lines.AppendLine($"Total,{total},100.00");
         lines.AppendLine($"Method,{_classificationMethod}");
         lines.AppendLine($"MF Type,{_mfType}");
         lines.AppendLine($"AND Operator,{_andOperator}");
@@ -616,6 +696,41 @@
 
         NotificationService.Notify(NotificationSeverity.Success, "Exported",
             $"Classification summary saved as {fileName}.", duration: 4000);
+    }
+
+    private async Task ExportGeoTiff()
+    {
+        var result = ProjectState.ClassificationResult;
+        if (result is null) return;
+
+        try
+        {
+            var tempPath = Path.Combine(Path.GetTempPath(), $"fuzzysat_classified_{DateTime.Now:yyyyMMdd_HHmmss}.tif");
+            var sourceInfo = ProjectState.RasterInfo;
+
+            await Task.Run(() =>
+            {
+                var writer = new Core.Raster.GdalRasterWriter();
+                writer.Write(tempPath, result, sourceInfo);
+            });
+
+            var bytes = await File.ReadAllBytesAsync(tempPath);
+            var base64 = Convert.ToBase64String(bytes);
+            var fileName = Path.GetFileName(tempPath);
+
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "image/tiff", base64, true);
+
+            // Clean up temp file
+            try { File.Delete(tempPath); } catch { }
+
+            NotificationService.Notify(NotificationSeverity.Success, "GeoTIFF Exported",
+                $"Classified raster saved as {fileName}.", duration: 4000);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Export Failed",
+                ex.Message, duration: 6000);
+        }
     }
 
     private record StageInfo(int Order, string Name);
