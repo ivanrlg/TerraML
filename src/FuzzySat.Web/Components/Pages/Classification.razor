@@ -5,6 +5,7 @@
 @inject ProjectStateService ProjectState
 @inject RasterService RasterService
 @inject ClassificationService ClassificationSvc
+@inject HybridClassificationService HybridClassificationSvc
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Classification - FuzzySat</PageTitle>
@@ -31,6 +32,45 @@
     }
     else
     {
+        @* Classification Method Card *@
+        <div class="fs-card" style="margin-bottom: 1.5rem;">
+            <div class="section-header">
+                <span class="material-icons section-icon">hub</span>
+                <span class="section-title">Classification Method</span>
+            </div>
+            <div class="config-grid" style="margin-top: 1rem;">
+                @foreach (var method in _classificationMethods)
+                {
+                    var isActive = _classificationMethod == method.Name;
+                    <div class="config-card @(isActive ? "config-active" : "")" style="cursor: pointer;" @onclick="() => { if (!_isRunning) _classificationMethod = method.Name; }">
+                        <div class="config-card-header">
+                            <span class="material-icons config-icon" style="color: @method.Color;">@method.Icon</span>
+                            <span class="config-label">@method.Name</span>
+                        </div>
+                        <div class="mf-preview">
+                            <div class="mf-text-display">
+                                <span class="mf-formula mono-text" style="font-size: 0.75rem;">@method.Formula</span>
+                                <span class="mf-hint">@method.Hint</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            @if (_classificationMethod != "Pure Fuzzy")
+            {
+                <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: rgba(59, 130, 246, 0.08); border-radius: 8px; border-left: 3px solid var(--fs-accent-blue);">
+                    <span style="color: var(--fs-text-secondary); font-size: 0.82rem;">
+                        <span class="material-icons" style="font-size: 0.9rem; vertical-align: middle; margin-right: 0.25rem;">info</span>
+                        Fuzzy membership degrees are used as enriched features for ML.NET training.
+                        @if (!HasTrainingSamples)
+                        {
+                            <strong style="color: var(--fs-accent-amber);"> Requires training samples — draw regions in Training first.</strong>
+                        }
+                    </span>
+                </div>
+            }
+        </div>
+
         @* Configuration Cards *@
         <div class="config-grid">
             <div class="config-card @(_mfType == "Gaussian" ? "config-active" : "")">
@@ -144,6 +184,7 @@
                 <div class="section-header">
                     <span class="material-icons section-icon">pie_chart</span>
                     <span class="section-title">Classification Summary</span>
+                    <span class="fs-badge @(_classificationMethod == "Pure Fuzzy" ? "fs-badge-blue" : "fs-badge-emerald")" style="margin-left: auto;">@_classificationMethod</span>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin-top: 1rem;">
                     @foreach (var (className, count) in _classCounts)
@@ -160,6 +201,7 @@
 </div>
 
 @code {
+    private string _classificationMethod = "Pure Fuzzy";
     private string _mfType = "Gaussian";
     private string _andOperator = "Minimum";
     private string _defuzzifier = "Max Weight";
@@ -171,8 +213,11 @@
     private CancellationTokenSource? _cts;
     private List<KeyValuePair<string, int>>? _classCounts;
 
+    private bool HasTrainingSamples => ProjectState.TrainingSamples is { Count: > 0 };
+
     private bool CanRun => ProjectState.HasTrainingSession
-                           && ProjectState.Configuration?.InputRasterPath is not null;
+                           && ProjectState.Configuration?.InputRasterPath is not null
+                           && (_classificationMethod == "Pure Fuzzy" || HasTrainingSamples);
 
     public void Dispose()
     {
@@ -184,6 +229,15 @@
     private List<string> _mfTypes = ["Gaussian", "Triangular", "Trapezoidal", "Bell"];
     private List<string> _andOperators = ["Minimum", "Product"];
     private List<string> _defuzzifiers = ["Max Weight", "Weighted Average"];
+
+    private static readonly List<MethodInfo> _classificationMethods =
+    [
+        new("Pure Fuzzy", "functions", "var(--fs-accent-blue)", "Fuzzy Inference", "Direct fuzzy logic classification"),
+        new("Random Forest", "park", "var(--fs-accent-emerald)", "ML.NET + 100 Trees", "Ensemble of decision trees with fuzzy features"),
+        new("SDCA", "model_training", "var(--fs-accent-amber)", "Max Entropy", "Stochastic Dual Coordinate Ascent classifier")
+    ];
+
+    private record MethodInfo(string Name, string Icon, string Color, string Formula, string Hint);
 
     private List<StageInfo> _stages =
     [
@@ -220,7 +274,7 @@
             var rasterPath = ProjectState.Configuration!.InputRasterPath!;
             var bandNames = ProjectState.TrainingSession!.BandNames;
             var session = ProjectState.TrainingSession!;
-            var options = new ClassificationOptions(_mfType, _andOperator, _defuzzifier);
+            var options = new ClassificationOptions(_classificationMethod, _mfType, _andOperator, _defuzzifier);
 
             // Create progress handler on Blazor thread (Progress<T> captures sync context)
             var progress = new Progress<ClassificationProgress>(p =>
@@ -230,14 +284,19 @@
                 {
                     "Building membership functions" => 2,
                     "Initializing inference engine" => 2,
+                    "Training ML model" or "ML model trained" => 2,
                     "Classifying pixels" => 3,
                     "Building result" => 4,
                     "Complete" => 5,
                     _ => _currentStage
                 };
-                _statusMessage = p.Stage == "Classifying pixels"
-                    ? $"Classifying row {p.CurrentRow}/{p.TotalRows} ({p.Percentage:F0}%)"
-                    : $"{p.Stage} ({p.Percentage:F0}%)";
+                _statusMessage = p.Stage switch
+                {
+                    "Classifying pixels" => $"Classifying row {p.CurrentRow}/{p.TotalRows} ({p.Percentage:F0}%)",
+                    "Training ML model" => $"Training {_classificationMethod} model... ({p.Percentage:F0}%)",
+                    "ML model trained" => $"{_classificationMethod} model ready. Starting classification...",
+                    _ => $"{p.Stage} ({p.Percentage:F0}%)"
+                };
                 StateHasChanged();
             });
 
@@ -245,6 +304,14 @@
             var result = await Task.Run(() =>
             {
                 var image = RasterService.ReadImage(rasterPath, bandNames);
+
+                if (options.ClassificationMethod != "Pure Fuzzy")
+                {
+                    var samples = ProjectState.TrainingSamples!;
+                    return HybridClassificationSvc.Classify(
+                        image, session, samples, options, progress, _cts!.Token);
+                }
+
                 return ClassificationSvc.Classify(image, session, options, progress, _cts!.Token);
             });
 
@@ -263,7 +330,7 @@
 
             _progress = 100;
             _currentStage = 5;
-            _statusMessage = $"Classification complete. {result.Classes.Count} classes, {result.Rows * result.Columns:N0} pixels classified.";
+            _statusMessage = $"Classification complete ({_classificationMethod}). {result.Classes.Count} classes, {result.Rows * result.Columns:N0} pixels classified.";
             _completed = true;
 
             NotificationService.Notify(NotificationSeverity.Success, "Classification Complete",
@@ -317,6 +384,7 @@
         }
         lines.AppendLine();
         lines.AppendLine($"Total,{total},100.00");
+        lines.AppendLine($"Method,{_classificationMethod}");
         lines.AppendLine($"MF Type,{_mfType}");
         lines.AppendLine($"AND Operator,{_andOperator}");
         lines.AppendLine($"Defuzzifier,{_defuzzifier}");
