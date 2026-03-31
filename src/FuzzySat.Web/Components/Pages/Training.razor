@@ -392,6 +392,28 @@
                     .Where(p => nameSet.Contains(p.RedBand) && nameSet.Contains(p.GreenBand) && nameSet.Contains(p.BlueBand))
                     .ToList();
             }
+
+            // Restore persisted explore state
+            if (ProjectState.ExploreViewMode is not null)
+                _viewMode = ProjectState.ExploreViewMode;
+            if (ProjectState.ExploreBands is { } eb)
+            {
+                _selectedBandIndex = eb.SelectedBandIndex;
+                _redBandIndex = eb.RedBandIndex;
+                _greenBandIndex = eb.GreenBandIndex;
+                _blueBandIndex = eb.BlueBandIndex;
+            }
+            if (ProjectState.CachedImage is not null)
+                _image = ProjectState.CachedImage;
+            if (ProjectState.TrainingRegions is { Count: > 0 })
+                _regions = new List<TrainingRegion>(ProjectState.TrainingRegions);
+            if (ProjectState.TrainingSamples is { Count: > 0 })
+            {
+                _samples = new List<LabeledPixelSample>(ProjectState.TrainingSamples);
+                _bandNames = _samples[0].BandValues.Keys.ToList();
+                UpdateClassCards();
+                UpdateSpectralChart();
+            }
         }
     }
 
@@ -486,9 +508,12 @@
             // Request canvas init on next render (after DOM has the new image)
             _canvasInitialized = false;
             _needsCanvasInit = true;
+
+            PersistExploreState();
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Failed to load band preview");
             NotificationService.Notify(NotificationSeverity.Error, "Raster Error",
                 ex.Message, duration: 5000);
             _hasRaster = false;
@@ -588,6 +613,7 @@
 
         UpdateClassCards();
         UpdateSpectralChart();
+        PersistExploreState();
 
         await InvokeAsync(StateHasChanged);
     }
@@ -611,6 +637,7 @@
 
         UpdateClassCards();
         UpdateSpectralChart();
+        PersistExploreState();
 
         await JSRuntime.InvokeVoidAsync("trainingSelection.removeRegion", index);
     }
@@ -621,6 +648,7 @@
         _samples.Clear();
         UpdateClassCards();
         _spectralSeries.Clear();
+        PersistExploreState();
         await JSRuntime.InvokeVoidAsync("trainingSelection.clearAll");
     }
 
@@ -669,6 +697,7 @@
 
             UpdateClassCards();
             UpdateSpectralChart();
+            PersistExploreState();
 
             NotificationService.Notify(NotificationSeverity.Success, "Samples Loaded",
                 $"{samples.Count} samples from {file.Name}.", duration: 4000);
@@ -783,6 +812,16 @@
             NotificationService.Notify(NotificationSeverity.Error, "Export Failed",
                 ex.Message, duration: 5000);
         }
+    }
+
+    private void PersistExploreState()
+    {
+        ProjectState.ExploreViewMode = _viewMode;
+        ProjectState.ExploreBands = new ExploreBandSelection(
+            _selectedBandIndex, _redBandIndex, _greenBandIndex, _blueBandIndex);
+        ProjectState.TrainingRegions = _regions.Count > 0 ? new List<TrainingRegion>(_regions) : null;
+        ProjectState.TrainingSamples = _samples.Count > 0 ? new List<LabeledPixelSample>(_samples) : null;
+        ProjectState.CachedImage = _image;
     }
 
     // Composite presets (filtered at runtime by available band names)
