@@ -1,20 +1,20 @@
 # Project TODOs - FuzzySat
 
 > **Archivo central de tracking de progreso.**
-> Ultima actualizacion: 2026-03-30
+> Ultima actualizacion: 2026-03-31
 > **Reconciliado**: Alineado con auditoria de codigo real (Epic #6 gap analysis)
 
 ---
 
 ## Estado Actual
 
-> **Proyecto al ~72% global** (subio de 68% tras Fase 3D)
+> **Proyecto al ~74% global** (subio de 72% tras PR #24)
 > - Core Engine: **100%** (PCA implementado, 242 Core tests)
 > - CLI: **80%** funcional (4 comandos wired, falta VisualizeCommand)
 > - API: 0% (template default)
-> - Web: **78%** (Interactive Training Tool + Classification + Validation, PR #23 merged)
+> - Web: **82%** (False color composites + CSV export, PR #24 merged)
 > - CI/CD: 30% (solo build+test)
-> - Tests totales: **293** (242 Core + 51 Web)
+> - Tests totales: **327** (242 Core + 85 Web)
 
 ---
 
@@ -155,6 +155,15 @@
 - [x] Crear TrainingSession desde areas seleccionadas (sin CSV manual)
 - [x] PR review fixes: band sync, UI thread offload, IAsyncDisposable, deferred canvas init
 - [x] 51 Web tests (10 nuevos: PixelExtractionService)
+
+### Fase 3D+ — False Color Composites & CSV Export (PR #24) — COMPLETADA
+- [x] RasterService.RenderRgbComposite() (3-band composite → PNG)
+- [x] BandViewer: RGB Composite mode con channel selectors y presets (True Color, False Color, etc.)
+- [x] Training page: view mode toggle (Single Band / RGB Composite) + info banner
+- [x] TrainingService.ExportSamplesCsv() (labeled sample export)
+- [x] Training page: Export CSV button
+- [x] PR review fixes: band validation, <3 bands guard, presets
+- [x] 6 nuevos Web tests (RasterServiceRgbTests + TrainingServiceCsvExportTests)
 
 ### Fase 3E — Leaflet Maps (Deferred)
 - [ ] leaflet-interop.js + LeafletMap.razor

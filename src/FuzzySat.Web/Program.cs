@@ -18,6 +18,7 @@ builder.Services.AddSingleton<TrainingService>();
 builder.Services.AddSingleton<ClassificationService>();
 builder.Services.AddSingleton<ValidationService>();
 builder.Services.AddSingleton<PixelExtractionService>();
+builder.Services.AddSingleton<Sentinel2ImportService>();
 builder.Services.AddScoped<ProjectStateService>();
 
 var app = builder.Build();
