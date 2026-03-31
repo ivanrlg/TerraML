@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject ProjectPersistenceService Persistence
+@inject ProjectLoaderService ProjectLoader
 @using FuzzySat.Web.Services
 
 <div class="page">
@@ -38,3 +39,10 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">X</span>
 </div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await Persistence.AutoLoadLastProjectAsync(ProjectLoader);
+    }
+}

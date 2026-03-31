@@ -394,6 +394,25 @@ public sealed class ProjectPersistenceService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Auto-loads the last used project on app startup.
+    /// Called from MainLayout to ensure it runs regardless of which page the user lands on.
+    /// </summary>
+    public async Task AutoLoadLastProjectAsync(ProjectLoaderService loader)
+    {
+        if (_state.HasProject) return;
+
+        var lastProject = loader.GetLastProject();
+        if (lastProject is null) return;
+
+        var config = loader.LoadProject(lastProject);
+        if (config is null) return;
+
+        _state.Configuration = config;
+        await RestoreProjectStateAsync(lastProject);
+        _logger.LogInformation("Auto-loaded last project '{Project}'", lastProject);
+    }
+
     /// <summary>Sync tracking references so auto-save doesn't re-save what was just loaded.</summary>
     private void SyncTrackingReferences()
     {
