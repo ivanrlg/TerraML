@@ -49,6 +49,15 @@ public interface IProjectRepository
     /// <summary>Loads validation result, or null if none exists.</summary>
     Task<ValidationResultDto?> LoadValidationResultAsync(string projectName);
 
+    /// <summary>Saves the explore/train page band selection and view mode.</summary>
+    Task SaveExploreStateAsync(string projectName, ExploreStateDto state);
+
+    /// <summary>Loads explore state, or null if none exists.</summary>
+    Task<ExploreStateDto?> LoadExploreStateAsync(string projectName);
+
+    /// <summary>Deletes a specific artifact file for the given project.</summary>
+    Task DeleteArtifactAsync(string projectName, string fileName);
+
     /// <summary>Checks whether any persisted data exists for this project.</summary>
     Task<bool> HasPersistedDataAsync(string projectName);
 }

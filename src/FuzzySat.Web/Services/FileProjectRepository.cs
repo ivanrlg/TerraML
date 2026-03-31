@@ -136,7 +136,11 @@ public sealed class FileProjectRepository : IProjectRepository
         {
             var metaJson = await File.ReadAllTextAsync(metaPath);
             var metadata = JsonSerializer.Deserialize<ClassificationResultDto>(metaJson, JsonOptions);
-            if (metadata is null) return null;
+            if (metadata is null || metadata.ClassNames.Count == 0)
+            {
+                _logger.LogWarning("Classification metadata for '{Project}' is null or has no class names", projectName);
+                return null;
+            }
 
             await using var fileStream = new FileStream(dataPath, FileMode.Open, FileAccess.Read);
             await using var gzipStream = new GZipStream(fileStream, CompressionMode.Decompress);
@@ -228,7 +232,7 @@ public sealed class FileProjectRepository : IProjectRepository
     // --- Delete ---
 
     /// <summary>Deletes a specific artifact file for the given project.</summary>
-    public void DeleteArtifact(string projectName, string fileName)
+    public Task DeleteArtifactAsync(string projectName, string fileName)
     {
         var path = ResolveDataPath(projectName, fileName);
         try
@@ -239,6 +243,7 @@ public sealed class FileProjectRepository : IProjectRepository
         {
             _logger.LogWarning(ex, "Failed to delete '{Path}'", path);
         }
+        return Task.CompletedTask;
     }
 
     // --- Utility ---
@@ -333,21 +338,10 @@ public sealed class FileProjectRepository : IProjectRepository
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
 
-        if (name.IndexOf(Path.DirectorySeparatorChar) >= 0 ||
-            (Path.AltDirectorySeparatorChar != Path.DirectorySeparatorChar &&
-             name.IndexOf(Path.AltDirectorySeparatorChar) >= 0))
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
         {
-            throw new ArgumentException("Invalid project name: directory separators are not allowed.", nameof(name));
+            throw new ArgumentException(
+                "Invalid project name: contains invalid filename characters.", nameof(name));
         }
     }
-}
-
-/// <summary>DTO for persisting the Explore &amp; Train page band selection and view mode.</summary>
-public sealed class ExploreStateDto
-{
-    public string? ViewMode { get; set; }
-    public int? SelectedBandIndex { get; set; }
-    public int? RedBandIndex { get; set; }
-    public int? GreenBandIndex { get; set; }
-    public int? BlueBandIndex { get; set; }
 }
