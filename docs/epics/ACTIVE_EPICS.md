@@ -13,6 +13,7 @@
 | Completado | 2 | #1 Core Engine MVP, #3 Advanced Features |
 | Casi Completado | 2 | #2 I/O & CLI (~80%), #4 ML Hybrid (~90%) |
 | Parcial | 1 | #5 Blazor Web (~35%) |
+| Planificado | 1 | #7 Classified Image Output & Hybrid ML |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 
 ---
@@ -110,3 +111,23 @@ para llegar al 100%. Proyecto esta al ~45% global. Documenta decisiones tecnicas
 - [00-overview.md](epic-006-gap-to-100/00-overview.md) — Inventario completo de gaps (14 issues Web)
 - [01-plan.md](epic-006-gap-to-100/01-plan.md) — Roadmap priorizado por fases
 - [02-technical-design.md](epic-006-gap-to-100/02-technical-design.md) — Decisiones tecnicas y riesgos
+
+---
+
+## Epic #7 - Classified Image Output & Hybrid ML — PLANIFICADO
+
+- **Status**: **Planificado** (esperando merge de PR actual)
+- **Priority**: P1
+- **Folder**: [epic-007-classified-output/](epic-007-classified-output/)
+- **GitHub Issue**: [#27](https://github.com/ivanrlg/FuzzySat/issues/27)
+- **Creado**: 2026-03-31
+
+**Scope**: Completar el ciclo de clasificacion: (1) conectar HybridClassifier (Random Forest +
+SDCA) a la Web UI, (2) generar y visualizar imagen clasificada con side-by-side viewer y colores
+auto+editables, (3) calcular estadisticas de area por clase (m2, ha), (4) exportar GeoTIFF.
+
+**Plan**: 3 PRs, ~16 commits.
+**Documentos**:
+- [00-overview.md](epic-007-classified-output/00-overview.md) — Objetivo y alcance
+- [01-plan.md](epic-007-classified-output/01-plan.md) — Plan de implementacion por fases
+- [02-technical-design.md](epic-007-classified-output/02-technical-design.md) — Decisiones tecnicas
