@@ -466,14 +466,25 @@
             _discoveredBands = bands;
             _availableResolutions = Sentinel2ImportService.GetAvailableResolutions(bands);
 
-            // Auto-select finest resolution
-            var finest = _availableResolutions.FirstOrDefault();
-            if (finest > 0)
+            // Auto-select: all bands if same dimensions (e.g. Copernicus Browser resampled),
+            // otherwise only finest resolution
+            var allSameDimensions = bands.Count > 0
+                && bands.All(b => b.Width == bands[0].Width && b.Height == bands[0].Height);
+            if (allSameDimensions)
             {
-                _importSelectedBands = bands
-                    .Where(b => b.ResolutionMeters == finest)
-                    .Select(b => b.BandName)
+                _importSelectedBands = bands.Select(b => b.BandName)
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            }
+            else
+            {
+                var finest = _availableResolutions.FirstOrDefault();
+                if (finest > 0)
+                {
+                    _importSelectedBands = bands
+                        .Where(b => b.ResolutionMeters == finest)
+                        .Select(b => b.BandName)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                }
             }
 
             _importOutputPath = Path.Combine(Path.GetFullPath(_importFolderPath), "sentinel2_stack.vrt");
