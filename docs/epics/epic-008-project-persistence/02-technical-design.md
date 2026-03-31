@@ -1,4 +1,4 @@
-# Epic #8 — Diseno Tecnico
+# Epic #8 — Diseño Técnico
 
 ---
 

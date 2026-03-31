@@ -389,9 +389,25 @@
             await OnInputPathChanged(_inputPath);
         }
 
-        // Auto-load last used project if no project is currently loaded
-        if (!ProjectState.HasProject)
+        if (ProjectState.HasProject)
         {
+            // Project already loaded (e.g., by MainLayout auto-load) — populate UI fields
+            var config = ProjectState.Configuration!;
+            _projectName = config.ProjectName ?? "";
+            _inputPath = config.InputRasterPath ?? "";
+            _bands = config.Bands?.Select(b => new BandEntry(b.Name, b.SourceIndex, b.Description ?? "")).ToList() ?? [];
+            _classes = config.Classes?.Select(c => new ClassEntry(c.Name, c.Code, c.Color ?? "#808080")).ToList() ?? [];
+            _inputMode = config.InputMode == "ImportSentinel2" ? InputMode.ImportSentinel2 : InputMode.DirectPath;
+            _importFolderPath = config.ImportFolderPath ?? "";
+            _selectedProject = _existingProjects.FirstOrDefault(
+                p => p.Equals(config.ProjectName, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(_inputPath))
+                await OnInputPathChanged(_inputPath);
+        }
+        else
+        {
+            // Auto-load last used project
             var lastProject = ProjectLoader.GetLastProject();
             if (lastProject is not null && _existingProjects.Contains(lastProject, StringComparer.OrdinalIgnoreCase))
             {

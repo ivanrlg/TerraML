@@ -11,9 +11,9 @@ public sealed class ClassificationOptionsDto
     /// <summary>AND operator (e.g., "Minimum", "Product").</summary>
     public string AndOperator { get; set; } = "";
 
-    /// <summary>Defuzzifier type (e.g., "MaxWeight", "WeightedAverage").</summary>
+    /// <summary>Defuzzifier type (e.g., "Max Weight", "Weighted Average").</summary>
     public string DefuzzifierType { get; set; } = "";
 
-    /// <summary>Classification method (e.g., "PureFuzzy", "RandomForest", "SDCA").</summary>
+    /// <summary>Classification method (e.g., "Pure Fuzzy", "Random Forest", "SDCA").</summary>
     public string ClassificationMethod { get; set; } = "";
 }

@@ -102,6 +102,9 @@ public sealed class FileProjectRepository : IProjectRepository
             var cols = classMap.GetLength(1);
             var classNames = metadata.ClassNames;
 
+            if (classNames.Count > 255)
+                throw new ArgumentException($"Cannot persist more than 255 classes (got {classNames.Count}).");
+
             var classIndex = new Dictionary<string, byte>(StringComparer.Ordinal);
             for (var i = 0; i < classNames.Count; i++)
                 classIndex[classNames[i]] = (byte)i;
@@ -279,6 +282,9 @@ public sealed class FileProjectRepository : IProjectRepository
 
     private string ResolveDataPath(string projectName, string fileName)
     {
+        if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || fileName.Contains(".."))
+            throw new ArgumentException("Invalid artifact file name.", nameof(fileName));
+
         var dir = ResolveDataDir(projectName);
         return Path.Combine(dir, fileName);
     }

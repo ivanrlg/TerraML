@@ -247,7 +247,7 @@ public sealed class ProjectPersistenceService : IDisposable
                     }
 
                 await _repo.SaveClassificationResultAsync(projectName, metadata, classMap, confidenceMap);
-                _logger.LogInformation("ClassificationResult saved: {Rows}x{Cols}", classResult.Rows, classResult.Columns);
+                _logger.LogDebug("ClassificationResult saved: {Rows}x{Cols}", classResult.Rows, classResult.Columns);
             }
             else
             {
@@ -463,6 +463,7 @@ public sealed class ProjectPersistenceService : IDisposable
             _debounceCts?.Dispose();
             _debounceCts = null;
         }
-        _writeSemaphore.Dispose();
+        // Not disposing _writeSemaphore — in-flight auto-save tasks may still
+        // call Release() after Dispose, causing ObjectDisposedException.
     }
 }

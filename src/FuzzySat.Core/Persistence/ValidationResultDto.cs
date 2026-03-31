@@ -32,10 +32,19 @@ public sealed class ValidationResultDto
     public int[,] ToMatrix()
     {
         var n = ClassNames.Count;
+        if (Matrix.Length != n)
+            throw new InvalidOperationException(
+                $"Matrix has {Matrix.Length} rows but expected {n} (one per class).");
+
         var result = new int[n, n];
         for (var i = 0; i < n; i++)
+        {
+            if (Matrix[i].Length != n)
+                throw new InvalidOperationException(
+                    $"Matrix row {i} has {Matrix[i].Length} columns but expected {n}.");
             for (var j = 0; j < n; j++)
                 result[i, j] = Matrix[i][j];
+        }
         return result;
     }
 }

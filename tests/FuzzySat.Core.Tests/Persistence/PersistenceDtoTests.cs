@@ -128,7 +128,7 @@ public class PersistenceDtoTests
         // Reconstruct
         var restored = ConfusionMatrix.FromPersistedData(original.ClassNames, matrixData);
 
-        restored.ClassNames.Should().BeEquivalentTo(original.ClassNames);
+        restored.ClassNames.Should().Equal(original.ClassNames);
         restored.TotalSamples.Should().Be(original.TotalSamples);
         restored.CorrectCount.Should().Be(original.CorrectCount);
         restored.OverallAccuracy.Should().BeApproximately(original.OverallAccuracy, 1e-10);
