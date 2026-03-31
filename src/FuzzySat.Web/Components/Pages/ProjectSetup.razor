@@ -10,6 +10,7 @@
 @inject RasterService RasterService
 @inject ProjectLoaderService ProjectLoader
 @inject Sentinel2ImportService ImportService
+@inject ProjectPersistenceService PersistenceService
 
 <PageTitle>Project Setup - FuzzySat</PageTitle>
 
@@ -650,13 +651,20 @@
 
         ProjectState.Configuration = config;
 
+        // Restore persisted project state (training, classification, validation)
+        await PersistenceService.RestoreProjectStateAsync(_selectedProject);
+
         _rasterInfo = null;
         _rasterError = null;
         if (!string.IsNullOrWhiteSpace(_inputPath))
             await OnInputPathChanged(_inputPath);
 
+        var hasData = ProjectState.HasTrainingSession || ProjectState.HasClassificationResult;
         NotificationService.Notify(NotificationSeverity.Success, "Project Loaded",
-            $"Loaded '{_projectName}'.", duration: 3000);
+            hasData
+                ? $"Loaded '{_projectName}' with saved training and classification data."
+                : $"Loaded '{_projectName}'.",
+            duration: 3000);
     }
 
     private async Task SaveConfiguration()

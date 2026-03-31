@@ -1,3 +1,4 @@
+using FuzzySat.Core.Persistence;
 using FuzzySat.Web.Components;
 using FuzzySat.Web.Services;
 using Radzen;
@@ -20,7 +21,9 @@ builder.Services.AddSingleton<HybridClassificationService>();
 builder.Services.AddSingleton<ValidationService>();
 builder.Services.AddSingleton<PixelExtractionService>();
 builder.Services.AddSingleton<Sentinel2ImportService>();
+builder.Services.AddSingleton<IProjectRepository, FileProjectRepository>();
 builder.Services.AddScoped<ProjectStateService>();
+builder.Services.AddScoped<ProjectPersistenceService>();
 
 var app = builder.Build();
 
