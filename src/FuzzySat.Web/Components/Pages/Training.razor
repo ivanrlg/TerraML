@@ -729,13 +729,10 @@
         try
         {
             using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            var (samples, bandNames, warnings) = await Task.Run(() =>
-            {
-                using var ms = new MemoryStream();
-                stream.CopyTo(ms);
-                ms.Position = 0;
-                return TrainingService.LoadSamplesFromCsv(ms);
-            });
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            ms.Position = 0;
+            var (samples, bandNames, warnings) = TrainingService.LoadSamplesFromCsv(ms);
 
             _samples = samples;
             _bandNames = bandNames;
