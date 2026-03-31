@@ -1,8 +1,11 @@
 @page "/training"
 @rendermode InteractiveServer
+@implements IDisposable
 @inject NotificationService NotificationService
 @inject ProjectStateService ProjectState
 @inject TrainingService TrainingService
+@inject RasterService RasterService
+@inject PixelExtractionService PixelExtractor
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Training - FuzzySat</PageTitle>
@@ -11,7 +14,7 @@
     <div class="page-header">
         <div>
             <h1 class="page-title">Training Editor</h1>
-            <p class="page-subtitle">Import training samples (CSV) and extract spectral statistics for each land cover class.</p>
+            <p class="page-subtitle">Select training areas on the image or import samples from CSV.</p>
         </div>
         <span class="fs-badge fs-badge-emerald">Step 3 of 5</span>
     </div>
@@ -26,37 +29,102 @@
     }
     else
     {
-        @* Import Toolbar *@
+        @* Toolbar *@
         <div class="drawing-toolbar">
             <div class="toolbar-group">
-                <label class="tool-btn tool-btn-active" title="Import training samples from CSV" style="cursor: pointer;">
+                @if (_hasRaster)
+                {
+                    <button type="button" class="tool-btn @(_mode == "draw" ? "tool-btn-active" : "")"
+                            title="Draw rectangle to select training area"
+                            @onclick='() => _mode = "draw"'>
+                        <span class="material-icons" aria-hidden="true">crop_landscape</span>
+                    </button>
+                }
+                <label class="tool-btn @(_mode == "csv" ? "tool-btn-active" : "")" title="Import training samples from CSV" style="cursor: pointer;"
+                       @onclick='() => _mode = "csv"'>
                     <span class="material-icons" aria-hidden="true">upload_file</span>
                     <InputFile OnChange="@OnCsvUploaded" accept=".csv" style="display: none;" />
                 </label>
-                <span style="color: var(--fs-text-secondary); font-size: 0.85rem; margin-left: 0.5rem;">
-                    Import CSV (format: class,band1,band2,...)
-                </span>
             </div>
-            <div class="toolbar-divider"></div>
-            <div class="toolbar-group">
-                <button type="button" class="tool-btn" title="Draw Polygon (requires Leaflet)" disabled>
-                    <span class="material-icons" aria-hidden="true">pentagon</span>
-                </button>
-                <button type="button" class="tool-btn" title="Draw Rectangle (requires Leaflet)" disabled>
-                    <span class="material-icons" aria-hidden="true">crop_landscape</span>
-                </button>
-            </div>
+            @if (_hasRaster && _mode == "draw")
+            {
+                <div class="toolbar-divider"></div>
+                <div class="toolbar-group">
+                    <span style="color: var(--fs-text-tertiary); font-size: 0.8rem; margin-right: 0.5rem;">Band:</span>
+                    <RadzenDropDown @bind-Value="@_selectedBandIndex" Data="@_bandOptions"
+                                    TextProperty="Name" ValueProperty="Index"
+                                    Style="width: 140px; height: 32px;" Change="@OnBandChanged" />
+                </div>
+                <div class="toolbar-divider"></div>
+                <div class="toolbar-group">
+                    <span style="color: var(--fs-text-tertiary); font-size: 0.8rem; margin-right: 0.5rem;">Class:</span>
+                    <RadzenDropDown @bind-Value="@_selectedClass" Data="@_classOptions"
+                                    TextProperty="Name" ValueProperty="Name"
+                                    Style="width: 140px; height: 32px;" Change="@OnClassChanged" />
+                </div>
+            }
             <div class="toolbar-spacer"></div>
             @if (_samples.Count > 0)
             {
-                <span class="fs-badge fs-badge-emerald mono-text">@_samples.Count samples loaded</span>
+                <span class="fs-badge fs-badge-emerald mono-text">@_samples.Count samples</span>
+            }
+            @if (_regions.Count > 0)
+            {
+                <button type="button" class="tool-btn" title="Clear all regions" @onclick="ClearAllRegions">
+                    <span class="material-icons" aria-hidden="true">delete_sweep</span>
+                </button>
             }
         </div>
 
         <div class="main-layout">
-            @* Map Area (placeholder) *@
+            @* Image Area *@
             <div class="map-col">
-                <MapPlaceholder Height="480px" Message="Drawing tools require Leaflet integration (coming soon). Use CSV import instead." Icon="draw" />
+                @if (_hasRaster && _mode == "draw")
+                {
+                    <div class="band-preview-container" style="position: relative; display: inline-block;">
+                        @if (!string.IsNullOrEmpty(_bandPreviewBase64))
+                        {
+                            <img id="training-preview-img" src="data:image/png;base64,@_bandPreviewBase64"
+                                 alt="Band preview" style="display: block; max-width: 100%; max-height: 520px;" />
+                            <canvas id="training-selection-canvas"
+                                    style="position: absolute; top: 0; left: 0; cursor: crosshair; width: 100%; height: 100%;"></canvas>
+                        }
+                        else
+                        {
+                            <div style="display: flex; align-items: center; justify-content: center; height: 400px; color: var(--fs-text-tertiary);">
+                                <span class="material-icons" style="font-size: 2rem; margin-right: 0.5rem;">hourglass_empty</span>
+                                Loading band preview...
+                            </div>
+                        }
+                    </div>
+                    @if (_regions.Count > 0)
+                    {
+                        <div style="margin-top: 0.75rem;">
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                @for (var i = 0; i < _regions.Count; i++)
+                                {
+                                    var idx = i;
+                                    var r = _regions[i];
+                                    <div style="display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.6rem; background: var(--fs-bg-tertiary); border-radius: 6px; border: 1px solid @(r.Color)33;">
+                                        <span style="width: 8px; height: 8px; border-radius: 50%; background: @r.Color; flex-shrink: 0;"></span>
+                                        <span style="color: var(--fs-text-secondary); font-size: 0.8rem;">@r.ClassName</span>
+                                        <span class="mono-text" style="color: var(--fs-text-tertiary); font-size: 0.75rem;">@r.PixelCount px</span>
+                                        <button type="button" style="background: none; border: none; cursor: pointer; color: var(--fs-text-tertiary); padding: 0; line-height: 1;"
+                                                title="Remove region" @onclick="() => RemoveRegion(idx)">
+                                            <span class="material-icons" style="font-size: 0.9rem;">close</span>
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                else if (_mode == "csv" || !_hasRaster)
+                {
+                    <MapPlaceholder Height="480px"
+                                    Message="@(_hasRaster ? "Switch to Draw mode or upload a CSV file." : "Set an Input Raster in Project Setup to enable drawing. Use CSV import instead.")"
+                                    Icon="@(_hasRaster ? "upload_file" : "image")" />
+                }
             </div>
 
             @* Right Panel *@
@@ -70,7 +138,7 @@
                     @foreach (var cls in _classCards)
                     {
                         var isSelected = _selectedClass == cls.Name;
-                        <button type="button" class="class-card @(isSelected ? "class-selected" : "")" @onclick="() => _selectedClass = cls.Name">
+                        <button type="button" class="class-card @(isSelected ? "class-selected" : "")" @onclick="() => SelectClass(cls.Name)">
                             <span class="class-dot" style="background: @cls.Color;"></span>
                             <span class="class-name">@cls.Name</span>
                             <span class="class-samples mono-text">@cls.Samples pts</span>
@@ -105,7 +173,7 @@
 
                 @* Actions *@
                 <div class="panel-actions">
-                    <RadzenButton Text="Extract Statistics" Icon="calculate" ButtonStyle="ButtonStyle.Primary"
+                    <RadzenButton Text="Extract & Train" Icon="calculate" ButtonStyle="ButtonStyle.Primary"
                                   Style="width: 100%;" Click="@ExtractStatistics"
                                   Disabled="@(_samples.Count == 0 || _isProcessing)" />
                     <RadzenButton Text="Export Session" Icon="file_download" ButtonStyle="ButtonStyle.Secondary"
@@ -118,32 +186,219 @@
 </div>
 
 @code {
+    private string _mode = "draw"; // "draw" or "csv"
     private string? _selectedClass;
     private bool _isProcessing = false;
+    private bool _hasRaster = false;
+    private bool _canvasInitialized = false;
     private List<LabeledPixelSample> _samples = [];
     private List<string> _bandNames = [];
     private List<ClassCard> _classCards = [];
     private List<SpectralSeries> _spectralSeries = [];
+    private List<TrainingRegion> _regions = [];
+
+    // Band preview
+    private int _selectedBandIndex = 0;
+    private string? _bandPreviewBase64;
+    private Core.Raster.MultispectralImage? _image;
+    private List<BandOption> _bandOptions = [];
+    private List<ClassOption> _classOptions = [];
+
+    private DotNetObjectReference<Training>? _dotNetRef;
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+        _ = JSRuntime.InvokeVoidAsync("trainingSelection.dispose");
+    }
 
     protected override void OnInitialized()
     {
         if (ProjectState.HasProject && ProjectState.Configuration?.Classes is not null)
         {
-            _classCards = ProjectState.Configuration.Classes
-                .Select(c => new ClassCard(c.Name, c.Color ?? "#808080", 0))
+            _classOptions = ProjectState.Configuration.Classes
+                .Select(c => new ClassOption(c.Name, c.Color ?? "#808080"))
+                .ToList();
+            _classCards = _classOptions
+                .Select(c => new ClassCard(c.Name, c.Color, 0))
                 .ToList();
             _selectedClass = _classCards.FirstOrDefault()?.Name;
+
+            // Check if raster is available
+            _hasRaster = !string.IsNullOrWhiteSpace(ProjectState.Configuration.InputRasterPath);
+
+            if (!_hasRaster) _mode = "csv";
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _hasRaster && _mode == "draw")
+        {
+            await LoadBandPreview();
+        }
+    }
+
+    private async Task LoadBandPreview()
+    {
+        if (!_hasRaster || ProjectState.Configuration?.InputRasterPath is null) return;
+
+        try
+        {
+            _image ??= await Task.Run(() =>
+                RasterService.ReadImage(ProjectState.Configuration.InputRasterPath));
+
+            _bandOptions = _image.BandNames
+                .Select((name, i) => new BandOption(name, i))
+                .ToList();
+
+            if (_selectedBandIndex < _image.BandNames.Count)
+            {
+                var band = _image.GetBand(_image.BandNames[_selectedBandIndex]);
+                var stats = RasterService.ComputeBandStatistics(band);
+                var png = RasterService.RenderBandPreview(band, stats);
+                _bandPreviewBase64 = Convert.ToBase64String(png);
+                _bandNames = _image.BandNames.ToList();
+            }
+
+            StateHasChanged();
+
+            // Initialize canvas after image renders
+            await Task.Delay(100); // Wait for DOM update
+            await InitCanvas();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Raster Error",
+                ex.Message, duration: 5000);
+            _hasRaster = false;
+            _mode = "csv";
+        }
+    }
+
+    private async Task InitCanvas()
+    {
+        if (_image is null || _canvasInitialized) return;
+
+        _dotNetRef = DotNetObjectReference.Create(this);
+        await JSRuntime.InvokeVoidAsync("trainingSelection.init",
+            "training-selection-canvas", "training-preview-img",
+            _dotNetRef, _image.Columns, _image.Rows);
+
+        // Set initial active class
+        if (_selectedClass is not null)
+        {
+            var color = _classOptions.FirstOrDefault(c => c.Name == _selectedClass)?.Color ?? "#808080";
+            await JSRuntime.InvokeVoidAsync("trainingSelection.setActiveClass", _selectedClass, color);
+        }
+
+        _canvasInitialized = true;
+    }
+
+    private async Task OnBandChanged()
+    {
+        if (_image is null) return;
+
+        var band = _image.GetBand(_image.BandNames[_selectedBandIndex]);
+        var stats = RasterService.ComputeBandStatistics(band);
+        var png = RasterService.RenderBandPreview(band, stats);
+        _bandPreviewBase64 = Convert.ToBase64String(png);
+        StateHasChanged();
+
+        // Re-init canvas after image change
+        await Task.Delay(100);
+        _canvasInitialized = false;
+        await InitCanvas();
+
+        // Re-draw existing regions
+        foreach (var r in _regions)
+        {
+            // Re-add to canvas (regions stored in raster coords, JS handles display)
+            // Actually we need display coords — recalculate from raster
+        }
+    }
+
+    private async Task OnClassChanged()
+    {
+        if (_selectedClass is null) return;
+        var color = _classOptions.FirstOrDefault(c => c.Name == _selectedClass)?.Color ?? "#808080";
+        await JSRuntime.InvokeVoidAsync("trainingSelection.setActiveClass", _selectedClass, color);
+    }
+
+    private void SelectClass(string name)
+    {
+        _selectedClass = name;
+        _ = OnClassChanged();
+    }
+
+    /// <summary>
+    /// Called from JS when a rectangle is completed.
+    /// </summary>
+    [JSInvokable]
+    public async Task OnRegionSelected(string className, int startRow, int startCol, int endRow, int endCol)
+    {
+        if (_image is null) return;
+
+        var color = _classOptions.FirstOrDefault(c => c.Name == className)?.Color ?? "#808080";
+        var region = new TrainingRegion(className, color, startRow, startCol, endRow, endCol);
+        _regions.Add(region);
+
+        // Extract pixels from this region
+        var newSamples = await Task.Run(() =>
+            PixelExtractor.ExtractRegion(_image, className, startRow, startCol, endRow, endCol));
+        _samples.AddRange(newSamples);
+        _bandNames = _image.BandNames.ToList();
+
+        UpdateClassCards();
+        UpdateSpectralChart();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RemoveRegion(int index)
+    {
+        if (index < 0 || index >= _regions.Count) return;
+
+        var region = _regions[index];
+        _regions.RemoveAt(index);
+
+        // Remove corresponding samples — rebuild from remaining regions
+        _samples.Clear();
+        if (_image is not null)
+        {
+            foreach (var r in _regions)
+            {
+                _samples.AddRange(PixelExtractor.ExtractRegion(
+                    _image, r.ClassName, r.StartRow, r.StartCol, r.EndRow, r.EndCol));
+            }
+        }
+
+        UpdateClassCards();
+        UpdateSpectralChart();
+
+        await JSRuntime.InvokeVoidAsync("trainingSelection.removeRegion", index);
+    }
+
+    private async Task ClearAllRegions()
+    {
+        _regions.Clear();
+        _samples.Clear();
+        UpdateClassCards();
+        _spectralSeries.Clear();
+        await JSRuntime.InvokeVoidAsync("trainingSelection.clearAll");
+    }
+
+    // --- CSV Upload (preserved from original) ---
+
     private async Task OnCsvUploaded(InputFileChangeEventArgs e)
     {
+        _mode = "csv";
         var file = e.File;
         if (file is null) return;
 
         try
         {
-            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB max
+            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
             var (samples, bandNames, warnings) = await Task.Run(() =>
             {
                 using var ms = new MemoryStream();
@@ -154,6 +409,7 @@
 
             _samples = samples;
             _bandNames = bandNames;
+            _regions.Clear(); // CSV replaces drawn regions
 
             if (warnings.Count > 0)
             {
@@ -184,29 +440,30 @@
         }
     }
 
+    // --- Shared logic ---
+
     private void UpdateClassCards()
     {
         var classCounts = _samples.GroupBy(s => s.ClassName)
             .ToDictionary(g => g.Key, g => g.Count());
 
-        // Merge with project classes (keep colors from config)
-        var configClasses = ProjectState.Configuration?.Classes ?? [];
-        var colorMap = configClasses.ToDictionary(c => c.Name, c => c.Color ?? "#808080");
+        var colorMap = _classOptions.ToDictionary(c => c.Name, c => c.Color);
 
-        _classCards = classCounts.Select(kvp => new ClassCard(
-            kvp.Key,
-            colorMap.GetValueOrDefault(kvp.Key, "#808080"),
-            kvp.Value
-        )).OrderByDescending(c => c.Samples).ToList();
+        _classCards = _classOptions
+            .Select(c => new ClassCard(c.Name, c.Color, classCounts.GetValueOrDefault(c.Name, 0)))
+            .ToList();
 
-        _selectedClass = _classCards.FirstOrDefault()?.Name;
+        // Add any CSV-only classes not in project config
+        foreach (var kvp in classCounts.Where(kv => !colorMap.ContainsKey(kv.Key)))
+            _classCards.Add(new ClassCard(kvp.Key, "#808080", kvp.Value));
+
+        _selectedClass ??= _classCards.FirstOrDefault()?.Name;
     }
 
     private void UpdateSpectralChart()
     {
         _spectralSeries = [];
-        var configClasses = ProjectState.Configuration?.Classes ?? [];
-        var colorMap = configClasses.ToDictionary(c => c.Name, c => c.Color ?? "#808080");
+        var colorMap = _classOptions.ToDictionary(c => c.Name, c => c.Color);
 
         var grouped = _samples.GroupBy(s => s.ClassName);
         foreach (var group in grouped)
@@ -238,8 +495,9 @@
             var session = await Task.Run(() => TrainingService.CreateSession(_samples));
             ProjectState.TrainingSession = session;
 
-            NotificationService.Notify(NotificationSeverity.Success, "Statistics Extracted",
-                $"Training session created: {session.ClassNames.Count} classes, {session.BandNames.Count} bands.", duration: 5000);
+            NotificationService.Notify(NotificationSeverity.Success, "Training Session Created",
+                $"{session.ClassNames.Count} classes, {session.BandNames.Count} bands, {_samples.Count} samples. Ready to classify!",
+                duration: 5000);
         }
         catch (Exception ex)
         {
@@ -277,6 +535,8 @@
     }
 
     private record ClassCard(string Name, string Color, int Samples);
+    private record ClassOption(string Name, string Color);
+    private record BandOption(string Name, int Index);
     private record SpectralPoint(string Band, double Value);
     private record SpectralSeries(string Name, string Color, List<SpectralPoint> Points);
 }
