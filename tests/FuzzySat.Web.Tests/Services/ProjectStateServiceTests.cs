@@ -93,4 +93,42 @@ public class ProjectStateServiceTests
 
         count.Should().BeGreaterThanOrEqualTo(2);
     }
+
+    [Fact]
+    public void BatchUpdate_FiresExactlyOneEvent()
+    {
+        var count = 0;
+        _service.OnStateChanged += () => count++;
+
+        _service.BeginBatch();
+        _service.ExploreViewMode = "RGB";
+        _service.ExploreBands = new ExploreBandSelection(0, 2, 1, 0);
+        _service.TrainingRegions = [new TrainingRegion("Water", "#0000FF", 0, 0, 10, 10)];
+        _service.TrainingSamples = null;
+        _service.CachedImage = null;
+
+        count.Should().Be(0, "no events should fire during batch");
+
+        _service.EndBatch();
+
+        count.Should().Be(1, "exactly one event after EndBatch");
+    }
+
+    [Fact]
+    public void BatchUpdate_NestedBatches_FiresOnOuterEnd()
+    {
+        var count = 0;
+        _service.OnStateChanged += () => count++;
+
+        _service.BeginBatch();
+        _service.BeginBatch();
+        _service.ExploreViewMode = "Single";
+        _service.EndBatch();
+
+        count.Should().Be(0, "inner EndBatch should not fire");
+
+        _service.EndBatch();
+
+        count.Should().Be(1, "outer EndBatch fires once");
+    }
 }
