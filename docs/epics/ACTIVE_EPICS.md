@@ -1,6 +1,6 @@
 # EPICs Activos - FuzzySat
 
-> **Ultima actualizacion**: 2026-03-31 (post PR #29 — Epic #7 completado)
+> **Ultima actualizacion**: 2026-03-31 (post PR #30 — Epic #8 completado)
 > **Proposito**: Punto central de informacion de EPICs en desarrollo.
 > Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
 
@@ -10,10 +10,10 @@
 
 | Estado | Cantidad | EPICs |
 |--------|----------|-------|
-| Completado | 3 | #1 Core Engine MVP, #3 Advanced Features, #7 Classified Output |
+| Completado | 4 | #1 Core Engine MVP, #3 Advanced Features, #7 Classified Output, #8 Project Persistence |
 | Casi Completado | 2 | #2 I/O & CLI (~80%), #4 ML Hybrid (~90%) |
 | Parcial | 1 | #5 Blazor Web (~85%) |
-| En Desarrollo | 1 | #8 Project Persistence |
+| En Desarrollo | 1 | #10 Input UX Redesign & Homepage Overhaul |
 | Planificado | 1 | #9 Advanced ML Classifiers & Ensemble Methods |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 
@@ -138,16 +138,17 @@ color picker editable, ProjectStateService.ClassColors.
 
 ---
 
-## Epic #8 - Full Project Persistence — EN DESARROLLO
+## Epic #8 - Full Project Persistence — COMPLETADO
 
-- **Status**: **En Desarrollo**
+- **Status**: **COMPLETADO** (PR #30 mergeado 2026-03-31)
 - **Priority**: P0
 - **Folder**: [epic-008-project-persistence/](epic-008-project-persistence/)
-- **GitHub Issue**: [#28](https://github.com/ivanrlg/FuzzySat/issues/28) (open)
+- **GitHub Issue**: [#28](https://github.com/ivanrlg/FuzzySat/issues/28) (closed)
 - **Creado**: 2026-03-31
 
-**Objetivo**: Persistencia automatica completa de todos los artefactos del proyecto (regiones,
+**Completado**: Persistencia automatica completa de todos los artefactos del proyecto (regiones,
 muestras, sesion de entrenamiento, clasificacion, validacion). Zero data loss al cerrar navegador.
+Auto-save, auto-load, compatibilidad retroactiva con proyectos existentes.
 
 **Documentos**:
 - [00-overview.md](epic-008-project-persistence/00-overview.md) — Objetivo y alcance
@@ -182,3 +183,28 @@ de comparacion automatica de modelos. 6 PRs, ~24 micro-commits.
 - [00-overview.md](epic-009-ml-advanced-classifiers/00-overview.md) — Objetivo y alcance
 - [01-plan.md](epic-009-ml-advanced-classifiers/01-plan.md) — Plan de implementacion por fases
 - [02-technical-design.md](epic-009-ml-advanced-classifiers/02-technical-design.md) — Decisiones tecnicas
+
+---
+
+## Epic #10 - Input UX Redesign & Homepage Overhaul — EN DESARROLLO
+
+- **Status**: **En Desarrollo**
+- **Priority**: P1
+- **Folder**: [epic-010-input-ux-homepage/](epic-010-input-ux-homepage/)
+- **Creado**: 2026-03-31
+- **Prerequisito**: Epic #8 completado (PR #30)
+
+**Objetivo**: Redisenar el flujo de importacion raster (punto mas debil del UX actual) y
+reorganizar el homepage para enfocarse en el uso de la herramienta, moviendo datos de la
+tesis a una pagina dedicada.
+
+**4 Fases planificadas**:
+1. Componentizar ProjectSetup.razor (~900 lineas → componentes modulares)
+2. Smart Import Wizard (auto-detect sensor, preset sincronizado con bandas reales)
+3. Soporte imagenes pre-stacked + conversion in-app
+4. Homepage workflow-oriented + pagina Thesis dedicada
+
+**Documentos**:
+- [00-overview.md](epic-010-input-ux-homepage/00-overview.md) — Objetivo y alcance
+- [01-plan.md](epic-010-input-ux-homepage/01-plan.md) — Plan de implementacion por fases
+- [02-technical-design.md](epic-010-input-ux-homepage/02-technical-design.md) — Decisiones tecnicas
