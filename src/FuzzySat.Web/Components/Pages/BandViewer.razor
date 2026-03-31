@@ -204,12 +204,20 @@
     private MultispectralImage? _loadedImage;
 
     // All known presets (filtered at runtime by available band names)
+    // Includes aliases for common naming conventions (descriptive names AND Sentinel-2 codes)
     private static readonly CompositePreset[] AllPresets =
     [
+        // Descriptive band names (from S2Preprocess tool)
         new("True Color", "Red", "Green", "Blue"),
         new("False Color IR", "NIR", "Red", "Green"),
         new("SWIR Composite", "SWIR1", "NIR", "Red"),
         new("Vegetation", "NIR", "SWIR1", "Red"),
+        // Sentinel-2 standard codes (B02=Blue, B03=Green, B04=Red, B08=NIR, B11=SWIR1)
+        new("True Color (S2)", "B04", "B03", "B02"),
+        new("False Color IR (S2)", "B08", "B04", "B03"),
+        new("SWIR (S2)", "B11", "B08", "B04"),
+        // ASTER band names
+        new("VNIR (ASTER)", "VNIR2", "VNIR1", "SWIR1"),
     ];
 
     protected override async Task OnInitializedAsync()
@@ -226,6 +234,10 @@
                 _redBand = _bandNames.Count > 2 ? _bandNames[2] : _bandNames[0]; // Red band (index 2 for S2)
                 _greenBand = _bandNames.Count > 1 ? _bandNames[1] : _bandNames[0]; // Green
                 _blueBand = _bandNames[0]; // Blue
+
+                // Force Single mode if < 3 bands
+                if (_bandNames.Count < 3)
+                    _viewMode = "Single Band";
 
                 // Filter presets by available band names
                 var nameSet = new HashSet<string>(_bandNames, StringComparer.OrdinalIgnoreCase);
@@ -339,6 +351,15 @@
 
         try
         {
+            var info = ProjectState.RasterInfo;
+            if (info is not null && (long)info.Rows * info.Columns * info.BandCount > MaxPixels)
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Raster Too Large",
+                    $"Raster ({info.Columns}x{info.Rows}, {info.BandCount} bands) exceeds the {MaxPixels / 1_000_000}M pixel limit.",
+                    duration: 6000);
+                return;
+            }
+
             _loadedImage ??= await Task.Run(() =>
                 RasterService.ReadImage(ProjectState.Configuration.InputRasterPath, _bandNames));
 

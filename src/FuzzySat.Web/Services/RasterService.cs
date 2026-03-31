@@ -187,6 +187,11 @@ public sealed class RasterService
         ArgumentNullException.ThrowIfNull(greenStats);
         ArgumentNullException.ThrowIfNull(blueStats);
 
+        if (greenBand.Rows != redBand.Rows || greenBand.Columns != redBand.Columns ||
+            blueBand.Rows != redBand.Rows || blueBand.Columns != redBand.Columns)
+            throw new ArgumentException(
+                "All RGB bands must have identical dimensions for composite rendering.");
+
         var rows = redBand.Rows;
         var cols = redBand.Columns;
 

@@ -239,7 +239,7 @@
 
 @code {
     private string _mode = "draw"; // "draw" or "csv"
-    private string _viewMode = "RGB"; // "Single" or "RGB"
+    private string _viewMode = "Single"; // "Single" or "RGB" — default Single, switch to RGB after bands loaded
     private string? _selectedClass;
     private bool _isProcessing = false;
     private bool _isLoadingPreview = false;
@@ -361,13 +361,21 @@
             _bandPreviewBase64 = preview;
             _bandNames = bands;
 
-            // Clamp RGB indices to valid range
+            // Clamp RGB indices and force Single mode if < 3 bands
+            if (_bandOptions.Count < 3)
+            {
+                _viewMode = "Single";
+            }
             if (_bandOptions.Count > 0)
             {
                 _redBandIndex = Math.Clamp(_redBandIndex, 0, _bandOptions.Count - 1);
                 _greenBandIndex = Math.Clamp(_greenBandIndex, 0, _bandOptions.Count - 1);
                 _blueBandIndex = Math.Clamp(_blueBandIndex, 0, _bandOptions.Count - 1);
             }
+
+            // Auto-switch to RGB if ≥3 bands and first load
+            if (_bandOptions.Count >= 3 && _viewMode == "Single" && _bandPreviewBase64 is null)
+                _viewMode = "RGB";
 
             // Request canvas init on next render (after DOM has the new image)
             _canvasInitialized = false;

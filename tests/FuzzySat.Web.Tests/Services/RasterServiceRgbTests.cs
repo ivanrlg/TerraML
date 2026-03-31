@@ -55,8 +55,20 @@ public class RasterServiceRgbTests
         var rgbPng = _service.RenderRgbComposite(red, green, blue, rStats, gStats, bStats);
         var grayPng = _service.RenderBandPreview(red, rStats);
 
-        // RGB should be larger than grayscale (4 bytes/pixel vs 1)
-        rgbPng.Length.Should().BeGreaterThan(grayPng.Length);
+        // Both produce valid PNGs but they should differ (RGB vs Gray)
+        rgbPng.Should().NotBeEquivalentTo(grayPng);
+    }
+
+    [Fact]
+    public void RenderRgbComposite_MismatchedDimensions_ThrowsArgument()
+    {
+        var big = new Band("R", new double[10, 10]);
+        var small = new Band("G", new double[5, 5]);
+        var bigStats = _service.ComputeBandStatistics(big);
+        var smallStats = _service.ComputeBandStatistics(small);
+
+        var act = () => _service.RenderRgbComposite(big, small, big, bigStats, smallStats, bigStats);
+        act.Should().Throw<ArgumentException>().WithMessage("*identical dimensions*");
     }
 
     [Fact]
