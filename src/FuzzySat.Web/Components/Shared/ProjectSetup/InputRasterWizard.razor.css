@@ -307,3 +307,27 @@
     margin-top: 0.35rem;
     margin-bottom: 0;
 }
+
+/* Active filter button */
+.filter-btn-active {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: var(--fs-accent-blue);
+}
+
+/* Auto-build VRT status */
+.auto-build-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.65rem;
+    padding: 0.4rem 0.6rem;
+    background: rgba(59, 130, 246, 0.05);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    border-radius: var(--fs-radius-sm);
+}
+
+.auto-build-text {
+    font-size: 0.75rem;
+    color: var(--fs-text-secondary);
+    white-space: nowrap;
+}

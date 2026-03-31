@@ -70,11 +70,17 @@
                     @foreach (var res in _availableResolutions)
                     {
                         var count = _discoveredBands.Count(b => b.ResolutionMeters == res);
-                        <button type="button" class="filter-btn" @onclick="() => SelectImportByResolution(res)">
+                        var isActiveRes = !HasMixedImportResolutions() && _importSelectedBands.Count > 0
+                            && _discoveredBands.Where(b => _importSelectedBands.Contains(b.BandName))
+                                .All(b => b.ResolutionMeters == res)
+                            && _importSelectedBands.Count == count;
+                        <button type="button" class="filter-btn @(isActiveRes ? "filter-btn-active" : "")"
+                                @onclick="() => SelectImportByResolution(res)">
                             All @(res)m (@count)
                         </button>
                     }
-                    <button type="button" class="filter-btn" @onclick="SelectImportAll">All</button>
+                    <button type="button" class="filter-btn @(_importSelectedBands.Count == _discoveredBands.Count ? "filter-btn-active" : "")"
+                            @onclick="SelectImportAll">All</button>
                     <button type="button" class="filter-btn filter-btn-muted" @onclick="SelectImportNone">None</button>
                 </div>
 
@@ -106,36 +112,31 @@
                     </div>
                 }
 
+                @* Auto-build status (replaces manual Create VRT button) *@
                 @if (_importSelectedBands.Count > 0 && !HasMixedImportResolutions())
                 {
-                    <div class="import-output-row">
-                        <div class="field-group" style="flex: 1;">
-                            <label class="field-label">Output VRT Path</label>
-                            <RadzenTextBox @bind-Value="@_importOutputPath" Style="width: 100%;" Disabled="@_isImporting" />
-                        </div>
-                    </div>
-
-                    @if (!_importComplete)
+                    @if (_isImporting)
                     {
-                        <RadzenButton Text="@(_isImporting ? "Importing..." : "Create VRT")"
-                            Icon="@(_isImporting ? "hourglass_top" : "build")"
-                            ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
-                            Click="@RunSentinel2Import"
-                            Disabled="@_isImporting" class="rz-mt-2" />
-
-                        @if (_isImporting && _lastImportProgress is not null)
-                        {
-                            <div class="progress-area">
-                                <RadzenProgressBar Value="@ImportProgressPercent()" ShowValue="false" Style="height: 6px;" />
-                                <p class="progress-text">@_lastImportProgress.Status (@_lastImportProgress.CurrentBand / @_lastImportProgress.TotalBands)</p>
-                            </div>
-                        }
+                        <div class="auto-build-status">
+                            <RadzenProgressBar Value="@ImportProgressPercent()" ShowValue="false" Style="height: 4px; flex: 1;" />
+                            <span class="auto-build-text">
+                                Building VRT @(_lastImportProgress is not null ? $"({_lastImportProgress.CurrentBand}/{_lastImportProgress.TotalBands})" : "...")
+                            </span>
+                        </div>
                     }
-                    else
+                    else if (_importComplete)
                     {
                         <div class="import-success">
                             <span class="material-icons" style="color: var(--fs-accent-emerald);">check_circle</span>
-                            <span>VRT created with @_importSelectedBands.Count bands — path and bands auto-configured below</span>
+                            <span>VRT ready — @_importSelectedBands.Count bands configured</span>
+                        </div>
+                    }
+                    else
+                    {
+                        @* VRT not yet built — show info that it will auto-build *@
+                        <div class="auto-build-status">
+                            <span class="material-icons" style="font-size: 0.9rem; color: var(--fs-accent-blue);">info</span>
+                            <span class="auto-build-text">VRT will be created automatically when you save the project</span>
                         </div>
                     }
                 }
@@ -160,8 +161,11 @@
     [Parameter] public string? RasterError { get; set; }
     [Parameter] public EventCallback<string?> RasterErrorChanged { get; set; }
 
-    /// <summary>Fired after a successful Sentinel-2 import with the auto-configured bands.</summary>
+    /// <summary>Fired when bands are configured (after detect or selection change).</summary>
     [Parameter] public EventCallback<List<BandEntry>> OnBandsImported { get; set; }
+
+    /// <summary>Fired when a sensor is auto-detected (e.g., "Sentinel-2") so parent can set preset.</summary>
+    [Parameter] public EventCallback<string> OnSensorDetected { get; set; }
 
     // --- Internal import state ---
     private string _importFolderPath = "";
@@ -276,6 +280,7 @@
             _discoveredBands = bands;
             _availableResolutions = Sentinel2ImportService.GetAvailableResolutions(bands);
 
+            // Auto-select: all bands if same dimensions, otherwise finest resolution
             var allSameDimensions = bands.Count > 0
                 && bands.All(b => b.Width == bands[0].Width && b.Height == bands[0].Height);
             if (allSameDimensions)
@@ -299,6 +304,15 @@
 
             // Sync folder path back to parent
             await ImportFolderPathChanged.InvokeAsync(_importFolderPath);
+
+            // AUTO-DETECT: Set preset to Sentinel-2 automatically
+            await OnSensorDetected.InvokeAsync("Sentinel-2");
+
+            // AUTO-SYNC: Immediately configure bands from selected cards
+            await SyncBandsFromSelection();
+
+            // AUTO-BUILD: Start VRT creation in background
+            _ = AutoBuildVrt();
         }
         catch (ArgumentException ex)
         {
@@ -315,50 +329,29 @@
         }
     }
 
-    private void ToggleImportBand(string bandName)
+    /// <summary>Sync band configuration from current card selection to parent (immediate, no VRT needed).</summary>
+    private async Task SyncBandsFromSelection()
     {
-        if (!_importSelectedBands.Remove(bandName))
-            _importSelectedBands.Add(bandName);
-        _importComplete = false;
+        var selectedBandInfos = _discoveredBands
+            .Where(b => _importSelectedBands.Contains(b.BandName))
+            .ToList();
+
+        if (selectedBandInfos.Count == 0) return;
+
+        var importedBands = selectedBandInfos.Select((b, i) => new BandEntry(
+            b.BandName,
+            i,
+            S2BandDescriptions.GetValueOrDefault(b.BandName, "")
+        )).ToList();
+
+        await OnBandsImported.InvokeAsync(importedBands);
     }
 
-    private void SelectImportByResolution(int resolution)
+    /// <summary>Auto-build VRT in background after detection or band selection change.</summary>
+    private async Task AutoBuildVrt()
     {
-        _importSelectedBands = _discoveredBands
-            .Where(b => b.ResolutionMeters == resolution)
-            .Select(b => b.BandName)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _importComplete = false;
-    }
-
-    private void SelectImportAll()
-    {
-        _importSelectedBands = _discoveredBands.Select(b => b.BandName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _importComplete = false;
-    }
-
-    private void SelectImportNone()
-    {
-        _importSelectedBands.Clear();
-        _importComplete = false;
-    }
-
-    private bool HasMixedImportResolutions()
-    {
-        var selected = _discoveredBands.Where(b => _importSelectedBands.Contains(b.BandName)).ToList();
-        if (selected.Count <= 1) return false;
-        var first = (selected[0].Width, selected[0].Height);
-        return selected.Any(b => b.Width != first.Width || b.Height != first.Height);
-    }
-
-    private async Task RunSentinel2Import()
-    {
-        if (string.IsNullOrWhiteSpace(_importOutputPath))
-        {
-            NotificationService.Notify(NotificationSeverity.Warning, "Missing Output Path",
-                "Please specify an output VRT path.", duration: 4000);
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(_importOutputPath)) return;
+        if (HasMixedImportResolutions()) return;
 
         var selectedBandInfos = _discoveredBands
             .Where(b => _importSelectedBands.Contains(b.BandName))
@@ -368,7 +361,7 @@
         _isImporting = true;
         _importComplete = false;
         _lastImportProgress = null;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
 
         try
         {
@@ -383,7 +376,7 @@
             _importOutputPath = result;
             _importComplete = true;
 
-            // Notify parent: set input path and raster info
+            // Set input path to the VRT
             await InputPathChanged.InvokeAsync(result);
             try
             {
@@ -392,31 +385,72 @@
             }
             catch { /* raster info is optional here */ }
 
-            // Auto-populate bands from imported selection
-            var importedBands = selectedBandInfos.Select((b, i) => new BandEntry(
-                b.BandName,
-                i,
-                S2BandDescriptions.GetValueOrDefault(b.BandName, "")
-            )).ToList();
-            await OnBandsImported.InvokeAsync(importedBands);
-
-            NotificationService.Notify(NotificationSeverity.Success, "Import Complete",
-                $"VRT created with {selectedBandInfos.Count} bands. Bands auto-configured.", duration: 5000);
-        }
-        catch (InvalidOperationException ex)
-        {
-            NotificationService.Notify(NotificationSeverity.Error, "Import Failed", ex.Message, duration: 6000);
+            await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to build VRT from Sentinel-2 bands");
-            NotificationService.Notify(NotificationSeverity.Error, "Import Failed",
-                "An error occurred during import. Check the logs for details.", duration: 6000);
+            Logger.LogWarning(ex, "Auto-build VRT failed");
+            // Don't show error notification for auto-build — user can retry via re-detect
         }
         finally
         {
             _isImporting = false;
+            await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private async Task ToggleImportBand(string bandName)
+    {
+        if (!_importSelectedBands.Remove(bandName))
+            _importSelectedBands.Add(bandName);
+        _importComplete = false;
+        await OnBandSelectionChanged();
+    }
+
+    private async Task SelectImportByResolution(int resolution)
+    {
+        _importSelectedBands = _discoveredBands
+            .Where(b => b.ResolutionMeters == resolution)
+            .Select(b => b.BandName)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _importComplete = false;
+        await OnBandSelectionChanged();
+    }
+
+    private async Task SelectImportAll()
+    {
+        _importSelectedBands = _discoveredBands.Select(b => b.BandName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _importComplete = false;
+        await OnBandSelectionChanged();
+    }
+
+    private void SelectImportNone()
+    {
+        _importSelectedBands.Clear();
+        _importComplete = false;
+    }
+
+    /// <summary>Called after any band selection change — syncs bands to parent and rebuilds VRT.</summary>
+    private async Task OnBandSelectionChanged()
+    {
+        if (_importSelectedBands.Count == 0 || HasMixedImportResolutions()) return;
+
+        // Update VRT output path for new selection
+        _importOutputPath = Path.Combine(Path.GetFullPath(_importFolderPath), "sentinel2_stack.vrt");
+
+        // Immediately sync bands to parent
+        await SyncBandsFromSelection();
+
+        // Rebuild VRT in background
+        _ = AutoBuildVrt();
+    }
+
+    private bool HasMixedImportResolutions()
+    {
+        var selected = _discoveredBands.Where(b => _importSelectedBands.Contains(b.BandName)).ToList();
+        if (selected.Count <= 1) return false;
+        var first = (selected[0].Width, selected[0].Height);
+        return selected.Any(b => b.Width != first.Width || b.Height != first.Height);
     }
 
     private double ImportProgressPercent() =>
