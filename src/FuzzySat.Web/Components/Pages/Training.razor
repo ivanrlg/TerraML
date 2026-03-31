@@ -8,6 +8,7 @@
 @inject PixelExtractionService PixelExtractor
 @inject IJSRuntime JSRuntime
 @inject ILogger<Training> Logger
+@inject ProjectLoaderService ProjectLoader
 
 <PageTitle>Explore & Train - FuzzySat</PageTitle>
 
@@ -388,6 +389,18 @@
 
     protected override void OnInitialized()
     {
+        // Auto-load last project if no project in memory (e.g. after browser refresh)
+        if (!ProjectState.HasProject)
+        {
+            var lastProject = ProjectLoader.GetLastProject();
+            if (lastProject is not null)
+            {
+                var config = ProjectLoader.LoadProject(lastProject);
+                if (config is not null)
+                    ProjectState.Configuration = config;
+            }
+        }
+
         if (ProjectState.HasProject && ProjectState.Configuration?.Classes is not null)
         {
             _classOptions = ProjectState.Configuration.Classes
@@ -466,10 +479,13 @@
             var bIdx = _blueBandIndex;
             var isRgb = _viewMode == "RGB";
 
+            // Pass configured band names so GDAL uses them instead of generic "Band1", "Band2"
+            var configBandNames = ProjectState.Configuration?.Bands?.Select(b => b.Name).ToList();
+
             // All heavy work on background thread
             var (img, bandOpts, preview, bands, bandStats) = await Task.Run(() =>
             {
-                var image = _image ?? RasterService.ReadImage(path);
+                var image = _image ?? RasterService.ReadImage(path, configBandNames);
                 var opts = image.BandNames.Select((n, i) => new BandOption(n, i)).ToList();
                 byte[] png;
                 BandStatistics displayStats;
