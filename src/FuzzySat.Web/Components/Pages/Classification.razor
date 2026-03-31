@@ -180,6 +180,7 @@
 
         @if (_completed && _classCounts is not null)
         {
+            @* Classification Summary *@
             <div class="fs-card" style="margin-top: 1.5rem;">
                 <div class="section-header">
                     <span class="material-icons section-icon">pie_chart</span>
@@ -189,9 +190,76 @@
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin-top: 1rem;">
                     @foreach (var (className, count) in _classCounts)
                     {
-                        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0.75rem; background: var(--fs-bg-tertiary); border-radius: 8px;">
-                            <span style="color: var(--fs-text-secondary);">@className</span>
+                        var color = _colorMap.GetValueOrDefault(className, "#888");
+                        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--fs-bg-tertiary); border-radius: 8px;">
+                            <span style="width: 14px; height: 14px; border-radius: 3px; background: @color; flex-shrink: 0; cursor: pointer; border: 1px solid rgba(255,255,255,0.15);"
+                                  @onclick="() => OpenColorPicker(className)" title="Click to change color"></span>
+                            <span style="color: var(--fs-text-secondary); flex: 1;">@className</span>
                             <span class="mono-text" style="color: var(--fs-text-primary);">@count.ToString("N0")</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* Color Picker Dialog *@
+            @if (_editingColorClass is not null)
+            {
+                <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;"
+                     @onclick="() => _editingColorClass = null">
+                    <div class="fs-card" style="padding: 1.5rem; min-width: 280px;" @onclick:stopPropagation="true">
+                        <h4 style="margin: 0 0 1rem; color: var(--fs-text-primary);">Color for @_editingColorClass</h4>
+                        <RadzenColorPicker @bind-Value="@_editingColorValue" ShowHSV="true" ShowRGBA="true" ShowButton="false" />
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem; justify-content: flex-end;">
+                            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="() => _editingColorClass = null" Size="ButtonSize.Small" />
+                            <RadzenButton Text="Apply" ButtonStyle="ButtonStyle.Primary" Click="ApplyColorChange" Size="ButtonSize.Small" />
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @* Classified Image Viewer *@
+            <div class="fs-card" style="margin-top: 1.5rem;">
+                <div class="section-header">
+                    <span class="material-icons section-icon">satellite_alt</span>
+                    <span class="section-title">Classified Image</span>
+                    <div style="margin-left: auto; display: flex; gap: 0.25rem;">
+                        @foreach (var mode in _viewModes)
+                        {
+                            <button class="cv-mode-btn @(_viewMode == mode.Key ? "cv-mode-active" : "")"
+                                    @onclick="() => SetViewMode(mode.Key)">
+                                <span class="material-icons" style="font-size: 0.9rem;">@mode.Icon</span>
+                                @mode.Label
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.25rem; margin: 0.75rem 0;">
+                    <RadzenButton Text="" Icon="zoom_in" Size="ButtonSize.ExtraSmall" ButtonStyle="ButtonStyle.Light" Click="ZoomIn" />
+                    <RadzenButton Text="" Icon="zoom_out" Size="ButtonSize.ExtraSmall" ButtonStyle="ButtonStyle.Light" Click="ZoomOut" />
+                    <RadzenButton Text="" Icon="fit_screen" Size="ButtonSize.ExtraSmall" ButtonStyle="ButtonStyle.Light" Click="ResetView" />
+                    <span style="color: var(--fs-text-tertiary); font-size: 0.75rem; align-self: center; margin-left: 0.5rem;">Ctrl+drag to pan, scroll to zoom</span>
+                </div>
+
+                <div id="cv-viewer-container" style="display: flex; gap: 8px; position: relative; background: var(--fs-bg-tertiary); border-radius: 8px; overflow: hidden; min-height: 300px;">
+                    <div class="cv-canvas-wrapper" style="flex: 1; position: relative;">
+                        <span class="cv-canvas-label">Original</span>
+                        <canvas class="cv-canvas-left" style="width: 100%; display: block;"></canvas>
+                    </div>
+                    <div class="cv-canvas-wrapper" style="flex: 1; position: relative;">
+                        <span class="cv-canvas-label">Classified</span>
+                        <canvas class="cv-canvas-right" style="width: 100%; display: block;"></canvas>
+                    </div>
+                    <div class="cv-tooltip" style="display: none; position: absolute; background: rgba(13,17,23,0.92); color: #e6edf3; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; pointer-events: none; z-index: 10; white-space: nowrap;"></div>
+                </div>
+
+                @* Color Legend *@
+                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; padding: 0.5rem 0;">
+                    @foreach (var cls in _colorMap)
+                    {
+                        <div style="display: flex; align-items: center; gap: 0.35rem;">
+                            <span style="width: 12px; height: 12px; border-radius: 2px; background: @cls.Value; border: 1px solid rgba(255,255,255,0.15);"></span>
+                            <span style="color: var(--fs-text-secondary); font-size: 0.8rem;">@cls.Key</span>
                         </div>
                     }
                 </div>
@@ -213,17 +281,47 @@
     private CancellationTokenSource? _cts;
     private List<KeyValuePair<string, int>>? _classCounts;
 
+    // Image viewer state
+    private Dictionary<string, string> _colorMap = new();
+    private string _viewMode = "side-by-side";
+    private DotNetObjectReference<Classification>? _dotNetRef;
+    private bool _viewerInitialized = false;
+
+    // Color picker state
+    private string? _editingColorClass;
+    private string _editingColorValue = "#3498DB";
+
+    private static readonly ClassifiedImageRenderer _renderer = new();
+
     private bool HasTrainingSamples => ProjectState.TrainingSamples is { Count: > 0 };
 
     private bool CanRun => ProjectState.HasTrainingSession
                            && ProjectState.Configuration?.InputRasterPath is not null
                            && (_classificationMethod == "Pure Fuzzy" || HasTrainingSamples);
 
+    private static readonly List<ViewModeInfo> _viewModes =
+    [
+        new("side-by-side", "view_column", "Side by Side"),
+        new("original", "image", "Original"),
+        new("classified", "palette", "Classified"),
+        new("overlay", "layers", "Overlay")
+    ];
+
+    private record ViewModeInfo(string Key, string Icon, string Label);
+
     public void Dispose()
     {
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
+        _dotNetRef?.Dispose();
+        _dotNetRef = null;
+        _ = DisposeViewer();
+    }
+
+    private async Task DisposeViewer()
+    {
+        try { await JSRuntime.InvokeVoidAsync("classificationCanvas.dispose"); } catch { }
     }
 
     private List<string> _mfTypes = ["Gaussian", "Triangular", "Trapezoidal", "Bell"];
@@ -335,6 +433,15 @@
 
             NotificationService.Notify(NotificationSeverity.Success, "Classification Complete",
                 $"{result.Classes.Count} classes identified across {result.Rows * result.Columns:N0} pixels.", duration: 5000);
+
+            // Build color map and render classified image
+            _colorMap = ClassifiedImageRenderer.BuildColorMap(result.Classes, ProjectState.ClassColors);
+            ProjectState.ClassColors = new Dictionary<string, string>(_colorMap);
+            StateHasChanged();
+
+            // Render images after DOM update
+            await Task.Delay(100); // Let Blazor render the viewer markup
+            await InitializeViewer(result);
         }
         catch (OperationCanceledException)
         {
@@ -367,6 +474,121 @@
     private void CancelClassification()
     {
         _cts?.Cancel();
+    }
+
+    private async Task InitializeViewer(Core.Classification.ClassificationResult result)
+    {
+        try
+        {
+            _dotNetRef?.Dispose();
+            _dotNetRef = DotNetObjectReference.Create(this);
+
+            await JSRuntime.InvokeVoidAsync("classificationCanvas.init",
+                "cv-viewer-container", _dotNetRef, result.Columns, result.Rows);
+
+            // Render and send classified image
+            var classifiedPng = await Task.Run(() => _renderer.Render(result, _colorMap));
+            var classifiedBase64 = Convert.ToBase64String(classifiedPng);
+            await JSRuntime.InvokeVoidAsync("classificationCanvas.setClassifiedImage", classifiedBase64);
+
+            // Render and send original image (false color or grayscale)
+            var originalPng = await Task.Run(() => RenderOriginalImage());
+            if (originalPng is not null)
+            {
+                var originalBase64 = Convert.ToBase64String(originalPng);
+                await JSRuntime.InvokeVoidAsync("classificationCanvas.setOriginalImage", originalBase64);
+            }
+
+            _viewerInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Viewer",
+                $"Could not initialize image viewer: {ex.Message}", duration: 4000);
+        }
+    }
+
+    private byte[]? RenderOriginalImage()
+    {
+        var image = ProjectState.CachedImage;
+        if (image is null) return null;
+
+        // Try RGB composite if 3+ bands, otherwise grayscale of first band
+        if (image.BandNames.Count >= 3)
+        {
+            var r = image.GetBand(image.BandNames[0]);
+            var g = image.GetBand(image.BandNames[1]);
+            var b = image.GetBand(image.BandNames[2]);
+            return RasterService.RenderRgbComposite(r, g, b,
+                RasterService.ComputeBandStatistics(r), RasterService.ComputeBandStatistics(g),
+                RasterService.ComputeBandStatistics(b));
+        }
+        else
+        {
+            var band = image.GetBand(image.BandNames[0]);
+            return RasterService.RenderBandPreview(band, RasterService.ComputeBandStatistics(band));
+        }
+    }
+
+    private async Task SetViewMode(string mode)
+    {
+        _viewMode = mode;
+        if (_viewerInitialized)
+            await JSRuntime.InvokeVoidAsync("classificationCanvas.setViewMode", mode);
+    }
+
+    private async Task ZoomIn()
+    {
+        if (_viewerInitialized)
+            await JSRuntime.InvokeVoidAsync("classificationCanvas.zoomIn");
+    }
+
+    private async Task ZoomOut()
+    {
+        if (_viewerInitialized)
+            await JSRuntime.InvokeVoidAsync("classificationCanvas.zoomOut");
+    }
+
+    private async Task ResetView()
+    {
+        if (_viewerInitialized)
+            await JSRuntime.InvokeVoidAsync("classificationCanvas.resetView");
+    }
+
+    private void OpenColorPicker(string className)
+    {
+        _editingColorClass = className;
+        _editingColorValue = _colorMap.GetValueOrDefault(className, "#888888");
+    }
+
+    private async Task ApplyColorChange()
+    {
+        if (_editingColorClass is null) return;
+
+        _colorMap[_editingColorClass] = _editingColorValue;
+        ProjectState.ClassColors = new Dictionary<string, string>(_colorMap);
+        _editingColorClass = null;
+
+        // Re-render classified image with new colors
+        var result = ProjectState.ClassificationResult;
+        if (result is not null && _viewerInitialized)
+        {
+            var png = await Task.Run(() => _renderer.Render(result, _colorMap));
+            var base64 = Convert.ToBase64String(png);
+            await JSRuntime.InvokeVoidAsync("classificationCanvas.setClassifiedImage", base64);
+        }
+    }
+
+    [Microsoft.JSInterop.JSInvokable]
+    public string GetPixelInfo(int row, int col)
+    {
+        var result = ProjectState.ClassificationResult;
+        if (result is null || row < 0 || row >= result.Rows || col < 0 || col >= result.Columns)
+            return "";
+
+        var className = result.GetClass(row, col);
+        var confidence = result.GetConfidence(row, col);
+        return $"<b>{className}</b> ({confidence:P0})<br/>Pixel [{row}, {col}]";
     }
 
     private async Task ExportResult()

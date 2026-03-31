@@ -41,6 +41,7 @@ public sealed class ProjectStateService
     private List<TrainingRegion>? _trainingRegions;
     private List<LabeledPixelSample>? _trainingSamples;
     private MultispectralImage? _cachedImage;
+    private Dictionary<string, string>? _classColors;
 
     /// <summary>
     /// Fired when any state property changes. Subscribers must call
@@ -117,6 +118,13 @@ public sealed class ProjectStateService
         set { _trainingSamples = value; NotifyChanged(); }
     }
 
+    /// <summary>User-customized class colors (class name → hex string). Null = auto-assign.</summary>
+    public Dictionary<string, string>? ClassColors
+    {
+        get => _classColors;
+        set { _classColors = value; NotifyChanged(); }
+    }
+
     /// <summary>Cached in-memory raster to avoid re-reading from disk on navigation.</summary>
     public MultispectralImage? CachedImage
     {
@@ -150,6 +158,7 @@ public sealed class ProjectStateService
         _trainingRegions = null;
         _trainingSamples = null;
         _cachedImage = null;
+        _classColors = null;
         NotifyChanged();
     }
 
