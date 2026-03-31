@@ -31,8 +31,18 @@ window.trainingSelection = {
     _baseWidth: 0,
     _baseHeight: 0,
 
+    // Bound handler references (for removeEventListener)
+    _boundMouseDown: null,
+    _boundMouseMove: null,
+    _boundMouseUp: null,
+    _boundWheel: null,
+    _zoomNotifyTimer: null,
+
     // Initialize the canvas overlay on top of the band preview image
     init: function (canvasId, imgId, dotNetRef, rasterCols, rasterRows) {
+        // Clean up previous listeners if re-initializing
+        this._removeListeners();
+
         this._canvas = document.getElementById(canvasId);
         this._img = document.getElementById(imgId);
         this._dotNetRef = dotNetRef;
@@ -53,14 +63,20 @@ window.trainingSelection = {
         this._scaleX = rasterCols / rect.width;
         this._scaleY = rasterRows / rect.height;
 
+        // Store bound handlers so they can be removed later
+        this._boundMouseDown = this._onMouseDown.bind(this);
+        this._boundMouseMove = this._onMouseMove.bind(this);
+        this._boundMouseUp = this._onMouseUp.bind(this);
+        this._boundWheel = this._onWheel.bind(this);
+
         // Bind mouse events
-        this._canvas.addEventListener('mousedown', this._onMouseDown.bind(this));
-        this._canvas.addEventListener('mousemove', this._onMouseMove.bind(this));
-        this._canvas.addEventListener('mouseup', this._onMouseUp.bind(this));
+        this._canvas.addEventListener('mousedown', this._boundMouseDown);
+        this._canvas.addEventListener('mousemove', this._boundMouseMove);
+        this._canvas.addEventListener('mouseup', this._boundMouseUp);
 
         // Zoom via scroll wheel on the container
         if (this._container) {
-            this._container.addEventListener('wheel', this._onWheel.bind(this), { passive: false });
+            this._container.addEventListener('wheel', this._boundWheel, { passive: false });
         }
 
         // Reset zoom/pan on new init
@@ -121,11 +137,51 @@ window.trainingSelection = {
     },
 
     dispose: function () {
+        // Remove all event listeners
+        this._removeListeners();
+
+        // Clear zoom notify timer
+        if (this._zoomNotifyTimer) {
+            clearTimeout(this._zoomNotifyTimer);
+            this._zoomNotifyTimer = null;
+        }
+
+        // Reset CSS transforms
+        if (this._img && this._img.style) {
+            this._img.style.transform = '';
+            this._img.style.transformOrigin = '';
+        }
+        if (this._canvas && this._canvas.style) {
+            this._canvas.style.transform = '';
+            this._canvas.style.transformOrigin = '';
+            this._canvas.style.cursor = '';
+        }
+
+        // Clear state and DOM references
         this._regions = [];
         this._dotNetRef = null;
         this._zoom = 1;
         this._panX = 0;
         this._panY = 0;
+        this._ctx = null;
+        this._canvas = null;
+        this._img = null;
+        this._container = null;
+    },
+
+    _removeListeners: function () {
+        if (this._canvas) {
+            if (this._boundMouseDown) this._canvas.removeEventListener('mousedown', this._boundMouseDown);
+            if (this._boundMouseMove) this._canvas.removeEventListener('mousemove', this._boundMouseMove);
+            if (this._boundMouseUp) this._canvas.removeEventListener('mouseup', this._boundMouseUp);
+        }
+        if (this._container && this._boundWheel) {
+            this._container.removeEventListener('wheel', this._boundWheel);
+        }
+        this._boundMouseDown = null;
+        this._boundMouseMove = null;
+        this._boundMouseUp = null;
+        this._boundWheel = null;
     },
 
     // --- Zoom and Pan ---
@@ -150,10 +206,15 @@ window.trainingSelection = {
         this._applyTransform();
         this._redraw();
 
-        // Notify Blazor of zoom change
-        if (this._dotNetRef) {
-            this._dotNetRef.invokeMethodAsync('OnZoomChanged', Math.round(this._zoom * 100));
-        }
+        // Debounced Blazor notification (visual zoom is instant, badge update throttled)
+        var self = this;
+        if (this._zoomNotifyTimer) clearTimeout(this._zoomNotifyTimer);
+        this._zoomNotifyTimer = setTimeout(function () {
+            if (self._dotNetRef) {
+                self._dotNetRef.invokeMethodAsync('OnZoomChanged', Math.round(self._zoom * 100));
+            }
+            self._zoomNotifyTimer = null;
+        }, 100);
     },
 
     _applyTransform: function () {
