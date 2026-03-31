@@ -153,5 +153,25 @@ public sealed class ProjectStateService
         NotifyChanged();
     }
 
-    private void NotifyChanged() => OnStateChanged?.Invoke();
+    private int _batchCount;
+
+    /// <summary>
+    /// Suppresses OnStateChanged notifications until EndBatch is called.
+    /// Use for bulk updates that would otherwise fire multiple events.
+    /// </summary>
+    public void BeginBatch() => _batchCount++;
+
+    /// <summary>
+    /// Ends a batch update and fires a single OnStateChanged notification.
+    /// </summary>
+    public void EndBatch()
+    {
+        if (_batchCount > 0) _batchCount--;
+        if (_batchCount == 0) OnStateChanged?.Invoke();
+    }
+
+    private void NotifyChanged()
+    {
+        if (_batchCount == 0) OnStateChanged?.Invoke();
+    }
 }

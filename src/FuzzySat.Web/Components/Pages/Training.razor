@@ -356,6 +356,8 @@
     private List<SpectralSeries> _spectralSeries = [];
     private List<TrainingRegion> _regions = [];
 
+    private const long MaxPixels = 50_000_000;
+
     // Band preview & statistics
     private double _opacity = 100;
     private BandStatistics? _stats;
@@ -466,6 +468,16 @@
     private async Task LoadBandPreview()
     {
         if (!_hasRaster || ProjectState.Configuration?.InputRasterPath is null) return;
+
+        // Guard against loading rasters that would exceed server memory
+        var info = ProjectState.RasterInfo;
+        if (info is not null && (long)info.Rows * info.Columns * info.BandCount > MaxPixels)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Raster Too Large",
+                $"Raster ({info.Columns}x{info.Rows}, {info.BandCount} bands) exceeds the {MaxPixels / 1_000_000}M pixel limit.",
+                duration: 6000);
+            return;
+        }
 
         _isLoadingPreview = true;
         StateHasChanged();
@@ -899,12 +911,20 @@
 
     private void PersistExploreState()
     {
-        ProjectState.ExploreViewMode = _viewMode;
-        ProjectState.ExploreBands = new ExploreBandSelection(
-            _selectedBandIndex, _redBandIndex, _greenBandIndex, _blueBandIndex);
-        ProjectState.TrainingRegions = _regions.Count > 0 ? new List<TrainingRegion>(_regions) : null;
-        ProjectState.TrainingSamples = _samples.Count > 0 ? new List<LabeledPixelSample>(_samples) : null;
-        ProjectState.CachedImage = _image;
+        ProjectState.BeginBatch();
+        try
+        {
+            ProjectState.ExploreViewMode = _viewMode;
+            ProjectState.ExploreBands = new ExploreBandSelection(
+                _selectedBandIndex, _redBandIndex, _greenBandIndex, _blueBandIndex);
+            ProjectState.TrainingRegions = _regions.Count > 0 ? new List<TrainingRegion>(_regions) : null;
+            ProjectState.TrainingSamples = _samples.Count > 0 ? new List<LabeledPixelSample>(_samples) : null;
+            ProjectState.CachedImage = _image;
+        }
+        finally
+        {
+            ProjectState.EndBatch();
+        }
     }
 
     // Composite presets (filtered at runtime by available band names)
