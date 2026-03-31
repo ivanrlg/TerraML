@@ -195,6 +195,10 @@
                             <span class="class-samples mono-text">@cls.Samples pts</span>
                         </button>
                     }
+                    <button type="button" class="add-class-btn" @onclick="AddClassInline">
+                        <span class="material-icons" style="font-size: 0.9rem;">add</span>
+                        <span>Add Class</span>
+                    </button>
                 </div>
 
                 @* Band Info & Statistics (merged from BandViewer) *@
@@ -812,6 +816,42 @@
             NotificationService.Notify(NotificationSeverity.Error, "Export Failed",
                 ex.Message, duration: 5000);
         }
+    }
+
+    private static readonly string[] ClassColorPalette =
+    [
+        "#EF4444", "#3B82F6", "#10B981", "#F59E0B",
+        "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"
+    ];
+
+    private async Task AddClassInline()
+    {
+        if (ProjectState.Configuration is null) return;
+
+        var existingClasses = ProjectState.Configuration.Classes;
+        var nextCode = existingClasses.Count > 0 ? existingClasses.Max(c => c.Code) + 1 : 1;
+        var color = ClassColorPalette[(existingClasses.Count) % ClassColorPalette.Length];
+        var name = $"Class{nextCode}";
+
+        var newClass = new Core.Classification.LandCoverClass { Name = name, Code = nextCode, Color = color };
+        var updatedClasses = existingClasses.Append(newClass).ToList();
+
+        ProjectState.Configuration = new Core.Configuration.ClassifierConfiguration
+        {
+            ProjectName = ProjectState.Configuration.ProjectName,
+            Bands = ProjectState.Configuration.Bands,
+            Classes = updatedClasses,
+            TrainingDataPath = ProjectState.Configuration.TrainingDataPath,
+            InputRasterPath = ProjectState.Configuration.InputRasterPath,
+            OutputRasterPath = ProjectState.Configuration.OutputRasterPath,
+        };
+
+        _classOptions.Add(new ClassOption(name, color));
+        _classCards.Add(new ClassCard(name, color, 0));
+        _selectedClass = name;
+
+        if (_canvasInitialized)
+            await JSRuntime.InvokeVoidAsync("trainingSelection.setActiveClass", name, color);
     }
 
     private void PersistExploreState()

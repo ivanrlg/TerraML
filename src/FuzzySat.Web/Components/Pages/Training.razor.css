@@ -155,6 +155,28 @@
     color: var(--fs-text-tertiary);
 }
 
+/* Add Class Button */
+.add-class-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.65rem;
+    border: 1px dashed var(--fs-border);
+    background: none;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--fs-text-tertiary);
+    font-size: 0.8rem;
+    width: 100%;
+    transition: all 150ms ease;
+}
+
+.add-class-btn:hover {
+    border-color: var(--fs-accent-blue);
+    color: var(--fs-accent-blue);
+    background: rgba(59, 130, 246, 0.05);
+}
+
 /* Metadata Grid (merged from BandViewer) */
 .meta-grid {
     display: grid;
