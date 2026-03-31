@@ -943,13 +943,25 @@
         new("Urban", "SWIR2", "SWIR1", "Red"),
         new("Geology", "SWIR2", "NIR", "Red"),
         new("Water Bodies", "NIR", "SWIR1", "Green"),
-        // Sentinel-2
+        // Sentinel-2 (10m + 20m bands: B01-B09, B8A)
         new("True Color (S2)", "B04", "B03", "B02"),
         new("False Color IR (S2)", "B08", "B04", "B03"),
+        new("Vegetation Index (S2)", "B08", "B04", "B02"),
+        new("Healthy Vegetation (S2)", "B8A", "B04", "B03"),
+        new("Urban Areas (S2)", "B08", "B06", "B04"),
+        new("Water Bodies (S2)", "B08", "B03", "B02"),
+        new("Bathymetric (S2)", "B04", "B03", "B01"),
+        new("Land/Water (S2)", "B08", "B05", "B04"),
+        new("Vegetation Stress (S2)", "B07", "B05", "B04"),
+        new("Red Edge (S2)", "B07", "B06", "B05"),
+        new("Crop Health (S2)", "B8A", "B06", "B04"),
+        new("Bare Soil (S2)", "B06", "B04", "B02"),
+        new("Moisture (S2)", "B8A", "B07", "B04"),
+        new("Atmospheric (S2)", "B09", "B03", "B02"),
+        // Sentinel-2 (requires SWIR: B11, B12)
         new("SWIR (S2)", "B11", "B08", "B04"),
         new("Agriculture (S2)", "B11", "B08", "B02"),
         new("Geology (S2)", "B12", "B08", "B04"),
-        new("Bathymetric (S2)", "B04", "B03", "B01"),
         new("Vegetation (S2)", "B08", "B11", "B04"),
         // Landsat 8/9
         new("True Color (L8)", "B4", "B3", "B2"),
