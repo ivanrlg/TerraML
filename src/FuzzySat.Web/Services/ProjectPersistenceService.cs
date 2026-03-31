@@ -15,6 +15,7 @@ public sealed class ProjectPersistenceService : IDisposable
 {
     private readonly ProjectStateService _state;
     private readonly IProjectRepository _repo;
+    private readonly FileProjectRepository _fileRepo;
     private readonly TrainingService _training;
     private readonly ILogger<ProjectPersistenceService> _logger;
 
@@ -27,6 +28,7 @@ public sealed class ProjectPersistenceService : IDisposable
     private TrainingSession? _lastSession;
     private ClassificationResult? _lastClassResult;
     private ConfusionMatrix? _lastConfusionMatrix;
+    private ClassificationOptions? _lastClassOptions;
 
     private const int DebounceMs = 500;
 
@@ -38,6 +40,8 @@ public sealed class ProjectPersistenceService : IDisposable
     {
         _state = state;
         _repo = repo;
+        _fileRepo = repo as FileProjectRepository ?? throw new InvalidOperationException(
+            "ProjectPersistenceService requires FileProjectRepository for artifact deletion.");
         _training = training;
         _logger = logger;
 
@@ -55,9 +59,10 @@ public sealed class ProjectPersistenceService : IDisposable
         var sessionChanged = !ReferenceEquals(_lastSession, _state.TrainingSession);
         var classResultChanged = !ReferenceEquals(_lastClassResult, _state.ClassificationResult);
         var confusionChanged = !ReferenceEquals(_lastConfusionMatrix, _state.ConfusionMatrix);
+        var optionsChanged = !ReferenceEquals(_lastClassOptions, _state.ClassificationOptions);
 
         if (!regionsChanged && !samplesChanged && !sessionChanged &&
-            !classResultChanged && !confusionChanged)
+            !classResultChanged && !confusionChanged && !optionsChanged)
             return;
 
         // Snapshot current references
@@ -66,6 +71,7 @@ public sealed class ProjectPersistenceService : IDisposable
         var session = _state.TrainingSession;
         var classResult = _state.ClassificationResult;
         var confusion = _state.ConfusionMatrix;
+        var options = _state.ClassificationOptions;
         var config = _state.Configuration;
 
         // Update last references
@@ -74,16 +80,18 @@ public sealed class ProjectPersistenceService : IDisposable
         _lastSession = session;
         _lastClassResult = classResult;
         _lastConfusionMatrix = confusion;
+        _lastClassOptions = options;
 
         // Debounce: cancel previous pending save, schedule new one
+        CancellationTokenSource cts;
         lock (_lock)
         {
             _debounceCts?.Cancel();
             _debounceCts?.Dispose();
-            _debounceCts = new CancellationTokenSource();
+            _debounceCts = cts = new CancellationTokenSource();
         }
 
-        var ct = _debounceCts.Token;
+        var ct = cts.Token;
 
         _ = Task.Run(async () =>
         {
@@ -91,76 +99,133 @@ public sealed class ProjectPersistenceService : IDisposable
             {
                 await Task.Delay(DebounceMs, ct);
 
-                if (regionsChanged && regions is not null)
-                    await _repo.SaveTrainingRegionsAsync(projectName, regions);
-
-                if (samplesChanged && samples is { Count: > 0 } && config?.Bands is not null)
+                // Training regions
+                if (regionsChanged)
                 {
-                    var bandNames = config.Bands.Select(b => b.Name).ToList();
-                    var csv = _training.ExportSamplesCsv(samples, bandNames);
-                    await _repo.SaveTrainingSamplesCsvAsync(projectName, csv);
+                    if (regions is { Count: > 0 })
+                        await _repo.SaveTrainingRegionsAsync(projectName, regions);
+                    else
+                        _fileRepo.DeleteArtifact(projectName, "training-regions.json");
                 }
 
-                if (sessionChanged && session is not null)
+                // Training samples
+                if (samplesChanged)
                 {
-                    var dto = TrainingSessionDto.FromSession(session);
-                    await _repo.SaveTrainingSessionAsync(projectName, dto);
-                }
-
-                if (classResultChanged && classResult is not null)
-                {
-                    var metadata = new ClassificationResultDto
+                    if (samples is { Count: > 0 } && config?.Bands is not null)
                     {
-                        Rows = classResult.Rows,
-                        Columns = classResult.Columns,
-                        ClassNames = classResult.Classes.Select(c => c.Name).ToList(),
-                        ClassCodes = classResult.Classes.Select(c => c.Code).ToList(),
-                        ClassColors = classResult.Classes.Select(c => c.Color).ToList()
-                    };
+                        var bandNames = config.Bands.Select(b => b.Name).ToList();
+                        var csv = _training.ExportSamplesCsv(samples, bandNames);
+                        await _repo.SaveTrainingSamplesCsvAsync(projectName, csv);
+                    }
+                    else
+                    {
+                        _fileRepo.DeleteArtifact(projectName, "training-samples.csv");
+                    }
+                }
 
-                    // Extract maps from ClassificationResult
-                    var classMap = new string[classResult.Rows, classResult.Columns];
-                    var confidenceMap = new double[classResult.Rows, classResult.Columns];
-                    for (var r = 0; r < classResult.Rows; r++)
-                        for (var c = 0; c < classResult.Columns; c++)
+                // Training session
+                if (sessionChanged)
+                {
+                    if (session is not null)
+                    {
+                        var dto = TrainingSessionDto.FromSession(session);
+                        await _repo.SaveTrainingSessionAsync(projectName, dto);
+                    }
+                    else
+                    {
+                        _fileRepo.DeleteArtifact(projectName, "training-session.json");
+                    }
+                }
+
+                // Classification options
+                if (optionsChanged)
+                {
+                    if (options is not null)
+                    {
+                        var dto = new ClassificationOptionsDto
                         {
-                            classMap[r, c] = classResult.GetClass(r, c);
-                            confidenceMap[r, c] = classResult.GetConfidence(r, c);
+                            MembershipFunctionType = options.MembershipFunctionType,
+                            AndOperator = options.AndOperator,
+                            DefuzzifierType = options.DefuzzifierType,
+                            ClassificationMethod = options.ClassificationMethod
+                        };
+                        await _repo.SaveClassificationOptionsAsync(projectName, dto);
+                    }
+                    else
+                    {
+                        _fileRepo.DeleteArtifact(projectName, "classification-options.json");
+                    }
+                }
+
+                // Classification result
+                if (classResultChanged)
+                {
+                    if (classResult is not null)
+                    {
+                        var metadata = new ClassificationResultDto
+                        {
+                            Rows = classResult.Rows,
+                            Columns = classResult.Columns,
+                            ClassNames = classResult.Classes.Select(c => c.Name).ToList(),
+                            ClassCodes = classResult.Classes.Select(c => c.Code).ToList(),
+                            ClassColors = classResult.Classes.Select(c => c.Color).ToList()
+                        };
+
+                        var classMap = new string[classResult.Rows, classResult.Columns];
+                        var confidenceMap = new double[classResult.Rows, classResult.Columns];
+                        for (var r = 0; r < classResult.Rows; r++)
+                            for (var c = 0; c < classResult.Columns; c++)
+                            {
+                                classMap[r, c] = classResult.GetClass(r, c);
+                                confidenceMap[r, c] = classResult.GetConfidence(r, c);
+                            }
+
+                        await _repo.SaveClassificationResultAsync(projectName, metadata, classMap, confidenceMap);
+                    }
+                    else
+                    {
+                        _fileRepo.DeleteArtifact(projectName, "classification-meta.json");
+                        _fileRepo.DeleteArtifact(projectName, "classification-result.bin.gz");
+                    }
+                }
+
+                // Validation (confusion matrix)
+                if (confusionChanged)
+                {
+                    if (confusion is not null)
+                    {
+                        var n = confusion.ClassNames.Count;
+                        var matrix = new int[n][];
+                        for (var i = 0; i < n; i++)
+                        {
+                            matrix[i] = new int[n];
+                            for (var j = 0; j < n; j++)
+                                matrix[i][j] = confusion[confusion.ClassNames[i], confusion.ClassNames[j]];
                         }
 
-                    await _repo.SaveClassificationResultAsync(projectName, metadata, classMap, confidenceMap);
-                }
-
-                if (confusionChanged && confusion is not null)
-                {
-                    var n = confusion.ClassNames.Count;
-                    var matrix = new int[n][];
-                    for (var i = 0; i < n; i++)
-                    {
-                        matrix[i] = new int[n];
-                        for (var j = 0; j < n; j++)
-                            matrix[i][j] = confusion[confusion.ClassNames[i], confusion.ClassNames[j]];
-                    }
-
-                    var dto = new ValidationResultDto
-                    {
-                        ClassNames = confusion.ClassNames.ToList(),
-                        Matrix = matrix,
-                        OverallAccuracy = confusion.OverallAccuracy,
-                        KappaCoefficient = confusion.KappaCoefficient,
-                        TotalSamples = confusion.TotalSamples,
-                        CorrectCount = confusion.CorrectCount,
-                        PerClassMetrics = confusion.ClassNames.Select(cn => new ClassMetricDto
+                        var dto = new ValidationResultDto
                         {
-                            ClassName = cn,
-                            ProducersAccuracy = confusion.ProducersAccuracy(cn),
-                            UsersAccuracy = confusion.UsersAccuracy(cn),
-                            ActualCount = confusion.RowTotal(cn),
-                            PredictedCount = confusion.ColumnTotal(cn)
-                        }).ToList()
-                    };
-
-                    await _repo.SaveValidationResultAsync(projectName, dto);
+                            ClassNames = confusion.ClassNames.ToList(),
+                            Matrix = matrix,
+                            OverallAccuracy = confusion.OverallAccuracy,
+                            KappaCoefficient = confusion.KappaCoefficient,
+                            TotalSamples = confusion.TotalSamples,
+                            CorrectCount = confusion.CorrectCount,
+                            PerClassMetrics = confusion.ClassNames.Select(cn => new ClassMetricDto
+                            {
+                                ClassName = cn,
+                                ProducersAccuracy = confusion.ProducersAccuracy(cn),
+                                UsersAccuracy = confusion.UsersAccuracy(cn),
+                                ActualCount = confusion.RowTotal(cn),
+                                PredictedCount = confusion.ColumnTotal(cn)
+                            }).ToList()
+                        };
+                        await _repo.SaveValidationResultAsync(projectName, dto);
+                    }
+                    else
+                    {
+                        _fileRepo.DeleteArtifact(projectName, "validation-result.json");
+                    }
                 }
 
                 _logger.LogDebug("Auto-saved project '{Project}' artifacts", projectName);
@@ -178,16 +243,28 @@ public sealed class ProjectPersistenceService : IDisposable
 
     /// <summary>
     /// Restores all persisted artifacts into <see cref="ProjectStateService"/>.
-    /// Called when a project is loaded.
+    /// Called when a project is loaded. Resets state first to prevent cross-project contamination.
     /// </summary>
     public async Task RestoreProjectStateAsync(string projectName)
     {
-        if (!await _repo.HasPersistedDataAsync(projectName))
-            return;
-
         _state.BeginBatch();
         try
         {
+            // BLOQ-1 fix: Clear all prior project artifacts before restoring
+            _state.TrainingRegions = null;
+            _state.TrainingSamples = null;
+            _state.TrainingSession = null;
+            _state.ClassificationResult = null;
+            _state.ConfusionMatrix = null;
+            _state.ClassificationOptions = null;
+            _state.CachedImage = null;
+
+            if (!await _repo.HasPersistedDataAsync(projectName))
+            {
+                SyncTrackingReferences();
+                return;
+            }
+
             // Training regions
             var regions = await _repo.LoadTrainingRegionsAsync(projectName);
             if (regions is not null)
@@ -207,6 +284,15 @@ public sealed class ProjectPersistenceService : IDisposable
             var sessionDto = await _repo.LoadTrainingSessionAsync(projectName);
             if (sessionDto is not null)
                 _state.TrainingSession = sessionDto.ToSession();
+
+            // Classification options
+            var optionsDto = await _repo.LoadClassificationOptionsAsync(projectName);
+            if (optionsDto is not null)
+                _state.ClassificationOptions = new ClassificationOptions(
+                    optionsDto.ClassificationMethod,
+                    optionsDto.MembershipFunctionType,
+                    optionsDto.AndOperator,
+                    optionsDto.DefuzzifierType);
 
             // Classification result
             var classData = await _repo.LoadClassificationResultAsync(projectName);
@@ -232,13 +318,7 @@ public sealed class ProjectPersistenceService : IDisposable
                 _state.ConfusionMatrix = ConfusionMatrix.FromPersistedData(
                     validation.ClassNames, validation.ToMatrix());
 
-            // Sync tracking references so auto-save doesn't re-save what we just loaded
-            _lastRegions = _state.TrainingRegions;
-            _lastSamples = _state.TrainingSamples;
-            _lastSession = _state.TrainingSession;
-            _lastClassResult = _state.ClassificationResult;
-            _lastConfusionMatrix = _state.ConfusionMatrix;
-
+            SyncTrackingReferences();
             _logger.LogInformation("Restored persisted state for project '{Project}'", projectName);
         }
         catch (Exception ex)
@@ -249,6 +329,17 @@ public sealed class ProjectPersistenceService : IDisposable
         {
             _state.EndBatch();
         }
+    }
+
+    /// <summary>Sync tracking references so auto-save doesn't re-save what was just loaded.</summary>
+    private void SyncTrackingReferences()
+    {
+        _lastRegions = _state.TrainingRegions;
+        _lastSamples = _state.TrainingSamples;
+        _lastSession = _state.TrainingSession;
+        _lastClassResult = _state.ClassificationResult;
+        _lastConfusionMatrix = _state.ConfusionMatrix;
+        _lastClassOptions = _state.ClassificationOptions;
     }
 
     public void Dispose()

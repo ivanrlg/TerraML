@@ -11,6 +11,7 @@ namespace FuzzySat.Web.Services;
 /// File-based implementation of <see cref="IProjectRepository"/>.
 /// Stores project artifacts as JSON, CSV, and compressed binary files
 /// in a per-project subdirectory under the project storage path.
+/// All writes are atomic (write to .tmp, then move).
 /// </summary>
 public sealed class FileProjectRepository : IProjectRepository
 {
@@ -36,7 +37,7 @@ public sealed class FileProjectRepository : IProjectRepository
     {
         var path = ResolveDataPath(projectName, "training-regions.json");
         var json = JsonSerializer.Serialize(regions, JsonOptions);
-        await WriteFileAsync(path, json);
+        await WriteFileAtomicAsync(path, json);
     }
 
     public async Task<List<TrainingRegion>?> LoadTrainingRegionsAsync(string projectName)
@@ -50,7 +51,7 @@ public sealed class FileProjectRepository : IProjectRepository
     public async Task SaveTrainingSamplesCsvAsync(string projectName, string csvContent)
     {
         var path = ResolveDataPath(projectName, "training-samples.csv");
-        await WriteFileAsync(path, csvContent);
+        await WriteFileAtomicAsync(path, csvContent);
     }
 
     public async Task<string?> LoadTrainingSamplesCsvAsync(string projectName)
@@ -65,7 +66,7 @@ public sealed class FileProjectRepository : IProjectRepository
     {
         var path = ResolveDataPath(projectName, "training-session.json");
         var json = JsonSerializer.Serialize(session, JsonOptions);
-        await WriteFileAsync(path, json);
+        await WriteFileAtomicAsync(path, json);
     }
 
     public async Task<TrainingSessionDto?> LoadTrainingSessionAsync(string projectName)
@@ -84,39 +85,41 @@ public sealed class FileProjectRepository : IProjectRepository
     {
         var dir = EnsureDataDirectory(projectName);
 
-        // Save metadata as JSON
+        // Save metadata as JSON (atomic)
         var metaPath = Path.Combine(dir, "classification-meta.json");
         var metaJson = JsonSerializer.Serialize(metadata, JsonOptions);
-        await File.WriteAllTextAsync(metaPath, metaJson);
+        await WriteFileAtomicAsync(metaPath, metaJson);
 
-        // Save pixel data as compressed binary
+        // Save pixel data as compressed binary (atomic via tmp)
         var dataPath = Path.Combine(dir, "classification-result.bin.gz");
-        await using var fileStream = new FileStream(dataPath, FileMode.Create, FileAccess.Write);
-        await using var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal);
-        await using var writer = new BinaryWriter(gzipStream, Encoding.UTF8, leaveOpen: false);
+        var tmpPath = dataPath + ".tmp";
 
-        var rows = classMap.GetLength(0);
-        var cols = classMap.GetLength(1);
-        var classNames = metadata.ClassNames;
-
-        // Build class name -> index lookup
-        var classIndex = new Dictionary<string, byte>(StringComparer.Ordinal);
-        for (var i = 0; i < classNames.Count; i++)
-            classIndex[classNames[i]] = (byte)i;
-
-        writer.Write(rows);
-        writer.Write(cols);
-
-        for (var r = 0; r < rows; r++)
+        await using (var fileStream = new FileStream(tmpPath, FileMode.Create, FileAccess.Write))
+        await using (var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal))
+        await using (var writer = new BinaryWriter(gzipStream, Encoding.UTF8, leaveOpen: false))
         {
-            for (var c = 0; c < cols; c++)
-            {
-                var className = classMap[r, c];
-                var idx = classIndex.GetValueOrDefault(className, (byte)0);
-                writer.Write(idx);
-                writer.Write((float)confidenceMap[r, c]);
-            }
+            var rows = classMap.GetLength(0);
+            var cols = classMap.GetLength(1);
+            var classNames = metadata.ClassNames;
+
+            var classIndex = new Dictionary<string, byte>(StringComparer.Ordinal);
+            for (var i = 0; i < classNames.Count; i++)
+                classIndex[classNames[i]] = (byte)i;
+
+            writer.Write(rows);
+            writer.Write(cols);
+
+            for (var r = 0; r < rows; r++)
+                for (var c = 0; c < cols; c++)
+                {
+                    var className = classMap[r, c];
+                    var idx = classIndex.GetValueOrDefault(className, (byte)0);
+                    writer.Write(idx);
+                    writer.Write((float)confidenceMap[r, c]);
+                }
         }
+
+        File.Move(tmpPath, dataPath, overwrite: true);
     }
 
     public async Task<(ClassificationResultDto Metadata, string[,] ClassMap, double[,] ConfidenceMap)?>
@@ -145,17 +148,28 @@ public sealed class FileProjectRepository : IProjectRepository
 
             var classMap = new string[rows, cols];
             var confidenceMap = new double[rows, cols];
+            var outOfRangeCount = 0;
 
             for (var r = 0; r < rows; r++)
-            {
                 for (var c = 0; c < cols; c++)
                 {
                     var idx = reader.ReadByte();
                     var confidence = reader.ReadSingle();
-                    classMap[r, c] = idx < classNames.Count ? classNames[idx] : classNames[0];
+                    if (idx < classNames.Count)
+                    {
+                        classMap[r, c] = classNames[idx];
+                    }
+                    else
+                    {
+                        classMap[r, c] = classNames[0];
+                        outOfRangeCount++;
+                    }
                     confidenceMap[r, c] = confidence;
                 }
-            }
+
+            if (outOfRangeCount > 0)
+                _logger.LogWarning("Classification data for '{Project}' had {Count} pixels with out-of-range class index",
+                    projectName, outOfRangeCount);
 
             return (metadata, classMap, confidenceMap);
         }
@@ -172,7 +186,7 @@ public sealed class FileProjectRepository : IProjectRepository
     {
         var path = ResolveDataPath(projectName, "classification-options.json");
         var json = JsonSerializer.Serialize(options, JsonOptions);
-        await WriteFileAsync(path, json);
+        await WriteFileAtomicAsync(path, json);
     }
 
     public async Task<ClassificationOptionsDto?> LoadClassificationOptionsAsync(string projectName)
@@ -187,7 +201,7 @@ public sealed class FileProjectRepository : IProjectRepository
     {
         var path = ResolveDataPath(projectName, "validation-result.json");
         var json = JsonSerializer.Serialize(result, JsonOptions);
-        await WriteFileAsync(path, json);
+        await WriteFileAtomicAsync(path, json);
     }
 
     public async Task<ValidationResultDto?> LoadValidationResultAsync(string projectName)
@@ -196,14 +210,38 @@ public sealed class FileProjectRepository : IProjectRepository
         return await ReadJsonAsync<ValidationResultDto>(path);
     }
 
+    // --- Delete ---
+
+    /// <summary>Deletes a specific artifact file for the given project.</summary>
+    public void DeleteArtifact(string projectName, string fileName)
+    {
+        var path = ResolveDataPath(projectName, fileName);
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Failed to delete '{Path}'", path);
+        }
+    }
+
     // --- Utility ---
 
     public Task<bool> HasPersistedDataAsync(string projectName)
     {
-        var dir = ResolveDataDir(projectName);
-        var exists = Directory.Exists(dir) &&
-                     Directory.EnumerateFiles(dir).Any();
-        return Task.FromResult(exists);
+        try
+        {
+            var dir = ResolveDataDir(projectName);
+            var exists = Directory.Exists(dir) &&
+                         Directory.EnumerateFiles(dir).Any();
+            return Task.FromResult(exists);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Failed to check persisted data for '{Project}'", projectName);
+            return Task.FromResult(false);
+        }
     }
 
     // --- Private Helpers ---
@@ -211,7 +249,12 @@ public sealed class FileProjectRepository : IProjectRepository
     private string ResolveDataDir(string projectName)
     {
         ValidateProjectName(projectName);
-        return Path.GetFullPath(Path.Combine(_projectDir, projectName));
+        var dir = Path.GetFullPath(Path.Combine(_projectDir, projectName));
+        // Containment check: resolved path must be under _projectDir
+        var relative = Path.GetRelativePath(_projectDir, dir);
+        if (relative.StartsWith("..", StringComparison.Ordinal))
+            throw new ArgumentException("Invalid project name: path traversal detected.", nameof(projectName));
+        return dir;
     }
 
     private string ResolveDataPath(string projectName, string fileName)
@@ -227,10 +270,17 @@ public sealed class FileProjectRepository : IProjectRepository
         return dir;
     }
 
-    private async Task WriteFileAsync(string path, string content)
+    /// <summary>
+    /// Writes content to a temporary file, then atomically moves it to the target path.
+    /// This prevents data corruption if the process crashes mid-write.
+    /// </summary>
+    private static async Task WriteFileAtomicAsync(string path, string content)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        await File.WriteAllTextAsync(path, content);
+        var dir = Path.GetDirectoryName(path)!;
+        Directory.CreateDirectory(dir);
+        var tmpPath = path + ".tmp";
+        await File.WriteAllTextAsync(tmpPath, content);
+        File.Move(tmpPath, path, overwrite: true);
     }
 
     private async Task<T?> ReadJsonAsync<T>(string path) where T : class
@@ -274,8 +324,5 @@ public sealed class FileProjectRepository : IProjectRepository
         {
             throw new ArgumentException("Invalid project name: directory separators are not allowed.", nameof(name));
         }
-
-        if (name.Contains(".."))
-            throw new ArgumentException("Invalid project name: path traversal detected.", nameof(name));
     }
 }

@@ -355,6 +355,19 @@
 
     private bool HasTrainingSamples => ProjectState.TrainingSamples is { Count: > 0 };
 
+    protected override void OnInitialized()
+    {
+        // Restore classification options from persisted state if available
+        var saved = ProjectState.ClassificationOptions;
+        if (saved is not null)
+        {
+            _classificationMethod = saved.ClassificationMethod;
+            _mfType = saved.MembershipFunctionType;
+            _andOperator = saved.AndOperator;
+            _defuzzifier = saved.DefuzzifierType;
+        }
+    }
+
     private bool CanRun => ProjectState.HasTrainingSession
                            && ProjectState.Configuration?.InputRasterPath is not null
                            && (_classificationMethod == "Pure Fuzzy" || HasTrainingSamples);
@@ -473,8 +486,9 @@
                 return ClassificationSvc.Classify(image, session, options, progress, _cts!.Token);
             });
 
-            // Store result in project state
+            // Store result and options in project state
             ProjectState.ClassificationResult = result;
+            ProjectState.ClassificationOptions = options;
 
             // Compute class distribution
             var counts = new Dictionary<string, int>();

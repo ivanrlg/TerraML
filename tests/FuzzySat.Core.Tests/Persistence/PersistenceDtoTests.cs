@@ -32,8 +32,8 @@ public class PersistenceDtoTests
         deserialized.Should().NotBeNull();
         deserialized!.Rows.Should().Be(100);
         deserialized.Columns.Should().Be(200);
-        deserialized.ClassNames.Should().BeEquivalentTo(["Urban", "Water", "Forest"]);
-        deserialized.ClassCodes.Should().BeEquivalentTo([1, 2, 3]);
+        deserialized.ClassNames.Should().Equal("Urban", "Water", "Forest");
+        deserialized.ClassCodes.Should().Equal(1, 2, 3);
     }
 
     [Fact]
