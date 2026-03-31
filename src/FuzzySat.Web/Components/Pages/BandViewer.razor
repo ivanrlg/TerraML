@@ -100,6 +100,14 @@
                              style="max-width: 100%; max-height: 520px; border-radius: var(--fs-radius-md); opacity: @(_opacity / 100.0);" />
                     </div>
                 }
+                else if (_loadError is not null)
+                {
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 520px; background: var(--fs-bg-surface); border-radius: var(--fs-radius-lg); padding: 2rem; text-align: center;">
+                        <span class="material-icons" style="font-size: 3rem; color: var(--fs-accent-red); margin-bottom: 1rem;">error_outline</span>
+                        <h3 style="color: var(--fs-accent-red); margin: 0 0 0.5rem;">Failed to Load Raster</h3>
+                        <p style="color: var(--fs-text-secondary); max-width: 500px;">@_loadError</p>
+                    </div>
+                }
                 else
                 {
                     <MapPlaceholder Height="520px" Message="Select a band to preview" Icon="layers" />
@@ -191,6 +199,7 @@
     private string _stretch = "Min-Max";
     private double _opacity = 100;
     private bool _isLoading = false;
+    private string? _loadError;
     private CompositePreset? _selectedPreset;
 
     private List<string> _bandNames = [];
@@ -300,6 +309,7 @@
         if (_selectedBand is null || ProjectState.Configuration?.InputRasterPath is null) return;
 
         _isLoading = true;
+        _loadError = null;
         StateHasChanged();
 
         try
@@ -331,9 +341,15 @@
         }
         catch (Exception ex)
         {
+            _loadedImage = null; // Clear partial state so next attempt retries
             Logger.LogError(ex, "Failed to load band data for '{Band}'", _selectedBand);
-            NotificationService.Notify(NotificationSeverity.Error, "Load Error",
-                "Failed to load band data. Check logs for details.", duration: 5000);
+
+            var userMessage = ex is ApplicationException && ex.Message.Contains("IReadBlock failed")
+                ? $"Raster file appears to be corrupted or incomplete — GDAL cannot read the pixel data. Try re-downloading the image."
+                : $"Failed to load band data: {ex.Message}";
+
+            _loadError = userMessage;
+            NotificationService.Notify(NotificationSeverity.Error, "Load Error", userMessage, duration: 8000);
         }
         finally
         {
@@ -347,6 +363,7 @@
             ProjectState.Configuration?.InputRasterPath is null) return;
 
         _isLoading = true;
+        _loadError = null;
         StateHasChanged();
 
         try
@@ -385,9 +402,15 @@
         }
         catch (Exception ex)
         {
+            _loadedImage = null;
             Logger.LogError(ex, "Failed to load RGB composite");
-            NotificationService.Notify(NotificationSeverity.Error, "Load Error",
-                "Failed to render RGB composite. Check logs for details.", duration: 5000);
+
+            var userMessage = ex is ApplicationException && ex.Message.Contains("IReadBlock failed")
+                ? "Raster file appears to be corrupted or incomplete — GDAL cannot read the pixel data. Try re-downloading the image."
+                : $"Failed to render RGB composite: {ex.Message}";
+
+            _loadError = userMessage;
+            NotificationService.Notify(NotificationSeverity.Error, "Load Error", userMessage, duration: 8000);
         }
         finally
         {
