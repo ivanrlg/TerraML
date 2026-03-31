@@ -329,6 +329,12 @@
                     <RadzenButton Text="Extract & Train" Icon="calculate" ButtonStyle="ButtonStyle.Primary"
                                   Style="width: 100%;" Click="@ExtractStatistics"
                                   Disabled="@(_samples.Count == 0 || _isProcessing)" />
+                    <label style="width: 100%; margin: 0; position: relative; display: block;">
+                        <RadzenButton Text="Import CSV" Icon="upload_file" ButtonStyle="ButtonStyle.Secondary"
+                                      Style="width: 100%; pointer-events: none;" />
+                        <InputFile OnChange="@OnCsvUploaded" accept=".csv"
+                                   style="position: absolute; inset: 0; opacity: 0; cursor: pointer;" />
+                    </label>
                     <RadzenButton Text="Export CSV" Icon="table_chart" ButtonStyle="ButtonStyle.Secondary"
                                   Style="width: 100%;" Click="@ExportCsv"
                                   Disabled="@(_samples.Count == 0)" />
