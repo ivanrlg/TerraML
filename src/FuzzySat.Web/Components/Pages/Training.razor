@@ -95,10 +95,10 @@
                                         Change="@(_ => OnPresetChanged())" />
                     </div>
                 }
-                <div class="toolbar-group">
-                    <span style="color: var(--fs-text-tertiary); font-size: 0.8rem; margin-right: 0.25rem;">Opacity:</span>
-                    <RadzenSlider @bind-Value="@_opacity" Min="0" Max="100" Step="5" Style="width: 80px;" />
-                    <span class="mono-text" style="font-size: 0.75rem; color: var(--fs-text-secondary); min-width: 28px;">@_opacity%</span>
+                <div class="toolbar-group" style="gap: 0.5rem; align-items: center;">
+                    <span style="color: var(--fs-text-tertiary); font-size: 0.8rem; white-space: nowrap;">Opacity:</span>
+                    <RadzenSlider @bind-Value="@_opacity" Min="0" Max="100" Step="5" Style="width: 100px;" />
+                    <span class="mono-text" style="font-size: 0.75rem; color: var(--fs-text-secondary); min-width: 32px; text-align: right;">@_opacity%</span>
                 </div>
                 <div class="toolbar-divider"></div>
                 <div class="toolbar-group">
@@ -937,14 +937,31 @@
     // Composite presets (filtered at runtime by available band names)
     private static readonly CompositePreset[] AllPresets =
     [
+        // Generic band names
         new("True Color", "Red", "Green", "Blue"),
         new("False Color IR", "NIR", "Red", "Green"),
         new("SWIR Composite", "SWIR1", "NIR", "Red"),
         new("Vegetation", "NIR", "SWIR1", "Red"),
+        new("Agriculture", "SWIR1", "NIR", "Blue"),
+        new("Urban", "SWIR2", "SWIR1", "Red"),
+        new("Geology", "SWIR2", "NIR", "Red"),
+        new("Water Bodies", "NIR", "SWIR1", "Green"),
+        // Sentinel-2
         new("True Color (S2)", "B04", "B03", "B02"),
         new("False Color IR (S2)", "B08", "B04", "B03"),
         new("SWIR (S2)", "B11", "B08", "B04"),
+        new("Agriculture (S2)", "B11", "B08", "B02"),
+        new("Geology (S2)", "B12", "B08", "B04"),
+        new("Bathymetric (S2)", "B04", "B03", "B01"),
+        new("Vegetation (S2)", "B08", "B11", "B04"),
+        // Landsat 8/9
+        new("True Color (L8)", "B4", "B3", "B2"),
+        new("False Color IR (L8)", "B5", "B4", "B3"),
+        new("SWIR (L8)", "B6", "B5", "B4"),
+        new("Agriculture (L8)", "B6", "B5", "B2"),
+        // ASTER
         new("VNIR (ASTER)", "VNIR2", "VNIR1", "SWIR1"),
+        new("Geology (ASTER)", "SWIR4", "SWIR2", "VNIR2"),
     ];
 
     private async Task OnPresetChanged()
