@@ -7,6 +7,7 @@
 @inject RasterService RasterService
 @inject PixelExtractionService PixelExtractor
 @inject IJSRuntime JSRuntime
+@inject ILogger<Training> Logger
 
 <PageTitle>Training - FuzzySat</PageTitle>
 
@@ -84,6 +85,20 @@
                                         Style="width: 100px; height: 32px;" Change="@(_ => OnBandChanged())" />
                     </div>
                 }
+                @if (_viewMode == "RGB" && _availablePresets.Count > 0)
+                {
+                    <div class="toolbar-group">
+                        <span style="color: var(--fs-text-tertiary); font-size: 0.8rem; margin-right: 0.25rem;">Preset:</span>
+                        <RadzenDropDown @bind-Value="@_selectedPreset" Data="@_availablePresets"
+                                        TextProperty="Label" Style="width: 140px; height: 32px;"
+                                        Change="@(_ => OnPresetChanged())" />
+                    </div>
+                }
+                <div class="toolbar-group">
+                    <span style="color: var(--fs-text-tertiary); font-size: 0.8rem; margin-right: 0.25rem;">Opacity:</span>
+                    <RadzenSlider @bind-Value="@_opacity" Min="0" Max="100" Step="5" Style="width: 80px;" />
+                    <span class="mono-text" style="font-size: 0.75rem; color: var(--fs-text-secondary); min-width: 28px;">@_opacity%</span>
+                </div>
                 <div class="toolbar-divider"></div>
                 <div class="toolbar-group">
                     <span style="color: var(--fs-text-tertiary); font-size: 0.8rem; margin-right: 0.5rem;">Class:</span>
@@ -114,7 +129,7 @@
                         @if (!string.IsNullOrEmpty(_bandPreviewBase64))
                         {
                             <img id="training-preview-img" src="data:image/png;base64,@_bandPreviewBase64"
-                                 alt="Band preview" style="display: block; max-width: 100%; max-height: 520px;" />
+                                 alt="Band preview" style="display: block; max-width: 100%; max-height: 520px; opacity: @(_opacity / 100.0);" />
                             <canvas id="training-selection-canvas"
                                     style="position: absolute; top: 0; left: 0; cursor: crosshair; width: 100%; height: 100%;"></canvas>
                         }
@@ -181,6 +196,79 @@
                         </button>
                     }
                 </div>
+
+                @* Band Info & Statistics (merged from BandViewer) *@
+                @if (_hasRaster && _bandNames.Count > 0)
+                {
+                    <div class="panel-section">
+                        <div class="panel-header">
+                            <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-cyan);">info</span>
+                            <span>@(_viewMode == "RGB" ? "RGB Composite" : "Band Info")</span>
+                        </div>
+                        <div class="meta-grid">
+                            @if (_viewMode == "RGB")
+                            {
+                                <span class="meta-label">Red</span>
+                                <span class="meta-value mono-text" style="color: #EF4444;">@(_bandOptions.ElementAtOrDefault(_redBandIndex)?.Name ?? "—")</span>
+                                <span class="meta-label">Green</span>
+                                <span class="meta-value mono-text" style="color: #10B981;">@(_bandOptions.ElementAtOrDefault(_greenBandIndex)?.Name ?? "—")</span>
+                                <span class="meta-label">Blue</span>
+                                <span class="meta-value mono-text" style="color: #3B82F6;">@(_bandOptions.ElementAtOrDefault(_blueBandIndex)?.Name ?? "—")</span>
+                            }
+                            else
+                            {
+                                <span class="meta-label">Band</span>
+                                <span class="meta-value mono-text">@(_bandOptions.ElementAtOrDefault(_selectedBandIndex)?.Name ?? "None")</span>
+                            }
+                            <span class="meta-label">Dimensions</span>
+                            <span class="meta-value mono-text">@(ProjectState.RasterInfo is not null ? $"{ProjectState.RasterInfo.Columns} x {ProjectState.RasterInfo.Rows}" : "—")</span>
+                            <span class="meta-label">Data Type</span>
+                            <span class="meta-value mono-text">@(ProjectState.RasterInfo?.DataType ?? "—")</span>
+                            <span class="meta-label">Bands</span>
+                            <span class="meta-value mono-text">@(ProjectState.RasterInfo?.BandCount.ToString() ?? "—")</span>
+                        </div>
+                    </div>
+
+                    @if (_histogramData.Count > 0)
+                    {
+                        <div class="panel-section">
+                            <div class="panel-header">
+                                <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-blue);">bar_chart</span>
+                                <span>Histogram</span>
+                            </div>
+                            <RadzenChart Style="height: 150px;">
+                                <RadzenAreaSeries Data="@_histogramData" CategoryProperty="Bin" ValueProperty="Count"
+                                                  Stroke="#3B82F6" StrokeWidth="1.5" Fill="rgba(59, 130, 246, 0.15)">
+                                    <RadzenSeriesDataLabels Visible="false" />
+                                </RadzenAreaSeries>
+                                <RadzenCategoryAxis Visible="false" />
+                                <RadzenValueAxis Visible="false">
+                                    <RadzenGridLines Visible="false" />
+                                </RadzenValueAxis>
+                            </RadzenChart>
+                        </div>
+                    }
+
+                    @if (_stats is not null)
+                    {
+                        <div class="panel-section">
+                            <div class="panel-header">
+                                <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-emerald);">query_stats</span>
+                                <span>Statistics</span>
+                            </div>
+                            <div class="meta-grid">
+                                <span class="meta-label">Min</span>
+                                <span class="meta-value mono-text">@_stats.Min.ToString("F2")</span>
+                                <span class="meta-label">Max</span>
+                                <span class="meta-value mono-text">@_stats.Max.ToString("F2")</span>
+                                <span class="meta-label">Mean</span>
+                                <span class="meta-value mono-text">@_stats.Mean.ToString("F2")</span>
+                                <span class="meta-label">Std Dev</span>
+                                <span class="meta-value mono-text">@_stats.StdDev.ToString("F2")</span>
+                            </div>
+                        </div>
+                    }
+                }
 
                 @* Spectral Signature Chart *@
                 @if (_spectralSeries.Count > 0)
@@ -252,7 +340,12 @@
     private List<SpectralSeries> _spectralSeries = [];
     private List<TrainingRegion> _regions = [];
 
-    // Band preview
+    // Band preview & statistics
+    private double _opacity = 100;
+    private BandStatistics? _stats;
+    private List<HistBin> _histogramData = [];
+    private CompositePreset? _selectedPreset;
+    private List<CompositePreset> _availablePresets = [];
     private int _selectedBandIndex = 0;
     private int _redBandIndex = 2;   // Default: Red band (index 2 for S2 = B04/Red)
     private int _greenBandIndex = 1; // Default: Green band (index 1 for S2 = B03/Green)
@@ -290,6 +383,15 @@
 
             _hasRaster = !string.IsNullOrWhiteSpace(ProjectState.Configuration.InputRasterPath);
             if (!_hasRaster) _mode = "csv";
+
+            // Filter composite presets by available band names
+            if (ProjectState.Configuration.Bands is { Count: > 0 } bands)
+            {
+                var nameSet = new HashSet<string>(bands.Select(b => b.Name), StringComparer.OrdinalIgnoreCase);
+                _availablePresets = AllPresets
+                    .Where(p => nameSet.Contains(p.RedBand) && nameSet.Contains(p.GreenBand) && nameSet.Contains(p.BlueBand))
+                    .ToList();
+            }
         }
     }
 
@@ -326,11 +428,12 @@
             var isRgb = _viewMode == "RGB";
 
             // All heavy work on background thread
-            var (img, bandOpts, preview, bands) = await Task.Run(() =>
+            var (img, bandOpts, preview, bands, bandStats) = await Task.Run(() =>
             {
                 var image = _image ?? RasterService.ReadImage(path);
                 var opts = image.BandNames.Select((n, i) => new BandOption(n, i)).ToList();
                 byte[] png;
+                BandStatistics displayStats;
 
                 if (isRgb && image.BandNames.Count >= 3)
                 {
@@ -344,22 +447,25 @@
                     var gStats = RasterService.ComputeBandStatistics(gBand);
                     var bStats = RasterService.ComputeBandStatistics(bBand);
                     png = RasterService.RenderRgbComposite(rBand, gBand, bBand, rStats, gStats, bStats);
+                    displayStats = rStats; // Show red channel stats
                 }
                 else
                 {
                     var idx = Math.Clamp(bandIdx, 0, image.BandNames.Count - 1);
                     var band = image.GetBand(image.BandNames[idx]);
-                    var stats = RasterService.ComputeBandStatistics(band);
-                    png = RasterService.RenderBandPreview(band, stats);
+                    displayStats = RasterService.ComputeBandStatistics(band);
+                    png = RasterService.RenderBandPreview(band, displayStats);
                 }
 
-                return (image, opts, Convert.ToBase64String(png), image.BandNames.ToList());
+                return (image, opts, Convert.ToBase64String(png), image.BandNames.ToList(), displayStats);
             });
 
             _image = img;
             _bandOptions = bandOpts;
             _bandPreviewBase64 = preview;
             _bandNames = bands;
+            _stats = bandStats;
+            BuildHistogramData(bandStats);
 
             // Clamp RGB indices and force Single mode if < 3 bands
             if (_bandOptions.Count < 3)
@@ -438,6 +544,7 @@
 
     private async Task OnBandChanged()
     {
+        _selectedPreset = null;
         await LoadBandPreview();
     }
 
@@ -678,9 +785,47 @@
         }
     }
 
+    // Composite presets (filtered at runtime by available band names)
+    private static readonly CompositePreset[] AllPresets =
+    [
+        new("True Color", "Red", "Green", "Blue"),
+        new("False Color IR", "NIR", "Red", "Green"),
+        new("SWIR Composite", "SWIR1", "NIR", "Red"),
+        new("Vegetation", "NIR", "SWIR1", "Red"),
+        new("True Color (S2)", "B04", "B03", "B02"),
+        new("False Color IR (S2)", "B08", "B04", "B03"),
+        new("SWIR (S2)", "B11", "B08", "B04"),
+        new("VNIR (ASTER)", "VNIR2", "VNIR1", "SWIR1"),
+    ];
+
+    private async Task OnPresetChanged()
+    {
+        if (_selectedPreset is null || _bandOptions.Count == 0) return;
+        var nameToIndex = _bandOptions.ToDictionary(b => b.Name, b => b.Index, StringComparer.OrdinalIgnoreCase);
+        if (nameToIndex.TryGetValue(_selectedPreset.RedBand, out var ri)) _redBandIndex = ri;
+        if (nameToIndex.TryGetValue(_selectedPreset.GreenBand, out var gi)) _greenBandIndex = gi;
+        if (nameToIndex.TryGetValue(_selectedPreset.BlueBand, out var bi)) _blueBandIndex = bi;
+        _viewMode = "RGB";
+        await LoadBandPreview();
+    }
+
+    private void BuildHistogramData(BandStatistics stats)
+    {
+        _histogramData = [];
+        for (var i = 0; i < 256; i += 4)
+        {
+            long sum = 0;
+            for (var j = i; j < Math.Min(i + 4, 256); j++)
+                sum += stats.Histogram[j];
+            _histogramData.Add(new HistBin(i.ToString(), sum));
+        }
+    }
+
     private record ClassCard(string Name, string Color, int Samples);
     private record ClassOption(string Name, string Color);
     private record BandOption(string Name, int Index);
     private record SpectralPoint(string Band, double Value);
     private record SpectralSeries(string Name, string Color, List<SpectralPoint> Points);
+    private record HistBin(string Bin, long Count);
+    private record CompositePreset(string Label, string RedBand, string GreenBand, string BlueBand);
 }
