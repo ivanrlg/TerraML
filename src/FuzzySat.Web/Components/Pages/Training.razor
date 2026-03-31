@@ -50,17 +50,46 @@
             {
                 <div class="toolbar-divider"></div>
                 <div class="toolbar-group">
-                    <span style="color: var(--fs-text-tertiary); font-size: 0.8rem; margin-right: 0.5rem;">Band:</span>
-                    <RadzenDropDown @bind-Value="@_selectedBandIndex" Data="@_bandOptions"
-                                    TextProperty="Name" ValueProperty="Index"
-                                    Style="width: 140px; height: 32px;" Change="@(_ => OnBandChanged())" />
+                    <span style="color: var(--fs-text-tertiary); font-size: 0.8rem; margin-right: 0.5rem;">View:</span>
+                    <RadzenDropDown @bind-Value="@_viewMode" Data="@_viewModes"
+                                    Style="width: 120px; height: 32px;" Change="@(_ => OnViewModeChanged())" />
                 </div>
+                @if (_viewMode == "Single")
+                {
+                    <div class="toolbar-group">
+                        <span style="color: var(--fs-text-tertiary); font-size: 0.8rem; margin-right: 0.5rem;">Band:</span>
+                        <RadzenDropDown @bind-Value="@_selectedBandIndex" Data="@_bandOptions"
+                                        TextProperty="Name" ValueProperty="Index"
+                                        Style="width: 120px; height: 32px;" Change="@(_ => OnBandChanged())" />
+                    </div>
+                }
+                else
+                {
+                    <div class="toolbar-group">
+                        <span style="color: #EF4444; font-size: 0.8rem; margin-right: 0.25rem;">R</span>
+                        <RadzenDropDown @bind-Value="@_redBandIndex" Data="@_bandOptions"
+                                        TextProperty="Name" ValueProperty="Index"
+                                        Style="width: 100px; height: 32px;" Change="@(_ => OnBandChanged())" />
+                    </div>
+                    <div class="toolbar-group">
+                        <span style="color: #10B981; font-size: 0.8rem; margin-right: 0.25rem;">G</span>
+                        <RadzenDropDown @bind-Value="@_greenBandIndex" Data="@_bandOptions"
+                                        TextProperty="Name" ValueProperty="Index"
+                                        Style="width: 100px; height: 32px;" Change="@(_ => OnBandChanged())" />
+                    </div>
+                    <div class="toolbar-group">
+                        <span style="color: #3B82F6; font-size: 0.8rem; margin-right: 0.25rem;">B</span>
+                        <RadzenDropDown @bind-Value="@_blueBandIndex" Data="@_bandOptions"
+                                        TextProperty="Name" ValueProperty="Index"
+                                        Style="width: 100px; height: 32px;" Change="@(_ => OnBandChanged())" />
+                    </div>
+                }
                 <div class="toolbar-divider"></div>
                 <div class="toolbar-group">
                     <span style="color: var(--fs-text-tertiary); font-size: 0.8rem; margin-right: 0.5rem;">Class:</span>
                     <RadzenDropDown @bind-Value="@_selectedClass" Data="@_classOptions"
                                     TextProperty="Name" ValueProperty="Name"
-                                    Style="width: 140px; height: 32px;" Change="@(_ => OnClassChanged())" />
+                                    Style="width: 120px; height: 32px;" Change="@(_ => OnClassChanged())" />
                 </div>
             }
             <div class="toolbar-spacer"></div>
@@ -88,6 +117,13 @@
                                  alt="Band preview" style="display: block; max-width: 100%; max-height: 520px;" />
                             <canvas id="training-selection-canvas"
                                     style="position: absolute; top: 0; left: 0; cursor: crosshair; width: 100%; height: 100%;"></canvas>
+                        }
+                        else if (_isLoadingPreview)
+                        {
+                            <div style="display: flex; align-items: center; justify-content: center; height: 400px; color: var(--fs-text-tertiary);">
+                                <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
+                                <span style="margin-left: 0.5rem;">Loading preview...</span>
+                            </div>
                         }
                         else
                         {
@@ -171,11 +207,27 @@
                     </div>
                 }
 
+                @* Info Banner *@
+                @if (_hasRaster && _mode == "draw" && _bandNames.Count > 0)
+                {
+                    <div style="padding: 0.5rem 0.75rem; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 8px; margin-bottom: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <span class="material-icons" style="font-size: 0.9rem; color: var(--fs-accent-cyan);">info</span>
+                            <span style="color: var(--fs-accent-cyan); font-size: 0.8rem;">
+                                Each rectangle extracts pixel values from <strong>all @_bandNames.Count bands</strong>.
+                            </span>
+                        </div>
+                    </div>
+                }
+
                 @* Actions *@
                 <div class="panel-actions">
                     <RadzenButton Text="Extract & Train" Icon="calculate" ButtonStyle="ButtonStyle.Primary"
                                   Style="width: 100%;" Click="@ExtractStatistics"
                                   Disabled="@(_samples.Count == 0 || _isProcessing)" />
+                    <RadzenButton Text="Export CSV" Icon="table_chart" ButtonStyle="ButtonStyle.Secondary"
+                                  Style="width: 100%;" Click="@ExportCsv"
+                                  Disabled="@(_samples.Count == 0)" />
                     <RadzenButton Text="Export Session" Icon="file_download" ButtonStyle="ButtonStyle.Secondary"
                                   Style="width: 100%;" Click="@ExportSession"
                                   Disabled="@(!ProjectState.HasTrainingSession)" />
@@ -187,8 +239,10 @@
 
 @code {
     private string _mode = "draw"; // "draw" or "csv"
+    private string _viewMode = "Single"; // "Single" or "RGB" — default Single, switch to RGB after bands loaded
     private string? _selectedClass;
     private bool _isProcessing = false;
+    private bool _isLoadingPreview = false;
     private bool _hasRaster = false;
     private bool _canvasInitialized = false;
     private bool _needsCanvasInit = false;
@@ -200,10 +254,14 @@
 
     // Band preview
     private int _selectedBandIndex = 0;
+    private int _redBandIndex = 2;   // Default: Red band (index 2 for S2 = B04/Red)
+    private int _greenBandIndex = 1; // Default: Green band (index 1 for S2 = B03/Green)
+    private int _blueBandIndex = 0;  // Default: Blue band (index 0 for S2 = B02/Blue)
     private string? _bandPreviewBase64;
     private Core.Raster.MultispectralImage? _image;
     private List<BandOption> _bandOptions = [];
     private List<ClassOption> _classOptions = [];
+    private List<string> _viewModes = ["Single", "RGB"];
 
     private DotNetObjectReference<Training>? _dotNetRef;
 
@@ -255,20 +313,46 @@
     {
         if (!_hasRaster || ProjectState.Configuration?.InputRasterPath is null) return;
 
+        _isLoadingPreview = true;
+        StateHasChanged();
+
         try
         {
             var path = ProjectState.Configuration.InputRasterPath;
             var bandIdx = _selectedBandIndex;
+            var rIdx = _redBandIndex;
+            var gIdx = _greenBandIndex;
+            var bIdx = _blueBandIndex;
+            var isRgb = _viewMode == "RGB";
 
             // All heavy work on background thread
             var (img, bandOpts, preview, bands) = await Task.Run(() =>
             {
                 var image = _image ?? RasterService.ReadImage(path);
-                var idx = Math.Clamp(bandIdx, 0, image.BandNames.Count - 1);
-                var band = image.GetBand(image.BandNames[idx]);
-                var stats = RasterService.ComputeBandStatistics(band);
-                var png = RasterService.RenderBandPreview(band, stats);
                 var opts = image.BandNames.Select((n, i) => new BandOption(n, i)).ToList();
+                byte[] png;
+
+                if (isRgb && image.BandNames.Count >= 3)
+                {
+                    var ri = Math.Clamp(rIdx, 0, image.BandNames.Count - 1);
+                    var gi = Math.Clamp(gIdx, 0, image.BandNames.Count - 1);
+                    var bi = Math.Clamp(bIdx, 0, image.BandNames.Count - 1);
+                    var rBand = image.GetBand(image.BandNames[ri]);
+                    var gBand = image.GetBand(image.BandNames[gi]);
+                    var bBand = image.GetBand(image.BandNames[bi]);
+                    var rStats = RasterService.ComputeBandStatistics(rBand);
+                    var gStats = RasterService.ComputeBandStatistics(gBand);
+                    var bStats = RasterService.ComputeBandStatistics(bBand);
+                    png = RasterService.RenderRgbComposite(rBand, gBand, bBand, rStats, gStats, bStats);
+                }
+                else
+                {
+                    var idx = Math.Clamp(bandIdx, 0, image.BandNames.Count - 1);
+                    var band = image.GetBand(image.BandNames[idx]);
+                    var stats = RasterService.ComputeBandStatistics(band);
+                    png = RasterService.RenderBandPreview(band, stats);
+                }
+
                 return (image, opts, Convert.ToBase64String(png), image.BandNames.ToList());
             });
 
@@ -277,10 +361,25 @@
             _bandPreviewBase64 = preview;
             _bandNames = bands;
 
+            // Clamp RGB indices and force Single mode if < 3 bands
+            if (_bandOptions.Count < 3)
+            {
+                _viewMode = "Single";
+            }
+            if (_bandOptions.Count > 0)
+            {
+                _redBandIndex = Math.Clamp(_redBandIndex, 0, _bandOptions.Count - 1);
+                _greenBandIndex = Math.Clamp(_greenBandIndex, 0, _bandOptions.Count - 1);
+                _blueBandIndex = Math.Clamp(_blueBandIndex, 0, _bandOptions.Count - 1);
+            }
+
+            // Auto-switch to RGB if ≥3 bands and first load
+            if (_bandOptions.Count >= 3 && _viewMode == "Single" && _bandPreviewBase64 is null)
+                _viewMode = "RGB";
+
             // Request canvas init on next render (after DOM has the new image)
             _canvasInitialized = false;
             _needsCanvasInit = true;
-            StateHasChanged();
         }
         catch (Exception ex)
         {
@@ -289,6 +388,16 @@
             _hasRaster = false;
             _mode = "csv";
         }
+        finally
+        {
+            _isLoadingPreview = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnViewModeChanged()
+    {
+        await LoadBandPreview();
     }
 
     private async Task InitCanvas()
@@ -531,6 +640,18 @@
         {
             _isProcessing = false;
         }
+    }
+
+    private async Task ExportCsv()
+    {
+        if (_samples.Count == 0) return;
+
+        var csv = TrainingService.ExportSamplesCsv(_samples, _bandNames);
+        var fileName = $"training_samples_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", csv);
+
+        NotificationService.Notify(NotificationSeverity.Success, "Exported",
+            $"{_samples.Count} samples saved as {fileName}.", duration: 4000);
     }
 
     private async Task ExportSession()

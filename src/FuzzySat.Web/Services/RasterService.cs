@@ -171,6 +171,71 @@ public sealed class RasterService
         return data.ToArray();
     }
 
+    /// <summary>
+    /// Renders an RGB composite PNG from three bands (one per channel).
+    /// Each channel is independently normalized to 0-255 using its own min/max statistics.
+    /// </summary>
+    public byte[] RenderRgbComposite(
+        Band redBand, Band greenBand, Band blueBand,
+        BandStatistics redStats, BandStatistics greenStats, BandStatistics blueStats,
+        int maxWidth = 800, int maxHeight = 600)
+    {
+        ArgumentNullException.ThrowIfNull(redBand);
+        ArgumentNullException.ThrowIfNull(greenBand);
+        ArgumentNullException.ThrowIfNull(blueBand);
+        ArgumentNullException.ThrowIfNull(redStats);
+        ArgumentNullException.ThrowIfNull(greenStats);
+        ArgumentNullException.ThrowIfNull(blueStats);
+
+        if (greenBand.Rows != redBand.Rows || greenBand.Columns != redBand.Columns ||
+            blueBand.Rows != redBand.Rows || blueBand.Columns != redBand.Columns)
+            throw new ArgumentException(
+                "All RGB bands must have identical dimensions for composite rendering.");
+
+        var rows = redBand.Rows;
+        var cols = redBand.Columns;
+
+        var scale = Math.Min(1.0, Math.Min((double)maxWidth / cols, (double)maxHeight / rows));
+        var outW = Math.Max(1, (int)(cols * scale));
+        var outH = Math.Max(1, (int)(rows * scale));
+
+        var rRange = redStats.Max - redStats.Min;
+        var gRange = greenStats.Max - greenStats.Min;
+        var bRange = blueStats.Max - blueStats.Min;
+
+        using var bitmap = new SKBitmap(outW, outH, SKColorType.Rgba8888, SKAlphaType.Opaque);
+        var pixels = bitmap.GetPixelSpan();
+
+        for (var y = 0; y < outH; y++)
+        {
+            var srcRow = Math.Min((int)(y / scale), rows - 1);
+            for (var x = 0; x < outW; x++)
+            {
+                var srcCol = Math.Min((int)(x / scale), cols - 1);
+
+                var r = rRange > 0
+                    ? (byte)Math.Clamp((redBand[srcRow, srcCol] - redStats.Min) / rRange * 255, 0, 255)
+                    : (byte)128;
+                var g = gRange > 0
+                    ? (byte)Math.Clamp((greenBand[srcRow, srcCol] - greenStats.Min) / gRange * 255, 0, 255)
+                    : (byte)128;
+                var b = bRange > 0
+                    ? (byte)Math.Clamp((blueBand[srcRow, srcCol] - blueStats.Min) / bRange * 255, 0, 255)
+                    : (byte)128;
+
+                var offset = (y * outW + x) * 4; // RGBA = 4 bytes per pixel
+                pixels[offset] = r;
+                pixels[offset + 1] = g;
+                pixels[offset + 2] = b;
+                pixels[offset + 3] = 255; // Alpha
+            }
+        }
+
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 90);
+        return data.ToArray();
+    }
+
     private static void ValidateRasterPath(string filePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
