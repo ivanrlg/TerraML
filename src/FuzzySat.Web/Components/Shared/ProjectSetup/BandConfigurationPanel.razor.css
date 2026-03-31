@@ -1,0 +1,30 @@
+/* Form Sections */
+.form-section {
+    background: var(--fs-bg-surface);
+    border: 1px solid var(--fs-border);
+    border-radius: var(--fs-radius-md);
+    padding: 1.25rem;
+}
+
+.form-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--fs-text-primary);
+    margin-bottom: 1rem;
+}
+
+.section-icon {
+    font-size: 1.1rem;
+}
+
+.count-badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: var(--fs-text-tertiary);
+    background: var(--fs-bg-elevated);
+    padding: 2px 8px;
+    border-radius: 10px;
+}

@@ -1,0 +1,30 @@
+<div class="form-section">
+    <div class="form-section-header">
+        <span class="material-icons section-icon" style="color: var(--fs-accent-emerald);">layers</span>
+        <span>Band Configuration</span>
+        <span class="count-badge mono-text">@Bands.Count bands</span>
+    </div>
+    <RadzenDataGrid Data="@Bands" TItem="BandEntry" AllowColumnResize="true" Density="Density.Compact">
+        <Columns>
+            <RadzenDataGridColumn TItem="BandEntry" Property="Name" Title="Band Name" />
+            <RadzenDataGridColumn TItem="BandEntry" Property="Index" Title="Index" Width="80px">
+                <Template Context="item">
+                    <span class="mono-text">@item.Index</span>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="BandEntry" Property="Description" Title="Description" />
+        </Columns>
+    </RadzenDataGrid>
+    <RadzenButton Text="Add Band" Icon="add" Click="@AddBand" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" class="rz-mt-2" />
+</div>
+
+@code {
+    [Parameter] public List<BandEntry> Bands { get; set; } = [];
+    [Parameter] public EventCallback<List<BandEntry>> BandsChanged { get; set; }
+
+    private async Task AddBand()
+    {
+        Bands = [.. Bands, new($"Band{Bands.Count + 1}", Bands.Count, "")];
+        await BandsChanged.InvokeAsync(Bands);
+    }
+}
