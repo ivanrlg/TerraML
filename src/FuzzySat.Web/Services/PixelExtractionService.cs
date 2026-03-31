@@ -32,7 +32,9 @@ public sealed class PixelExtractionService
         startCol = Math.Clamp(startCol, 0, image.Columns - 1);
         endCol = Math.Clamp(endCol, 0, image.Columns - 1);
 
-        var samples = new List<LabeledPixelSample>();
+        var rowCount = endRow - startRow + 1;
+        var colCount = endCol - startCol + 1;
+        var samples = new List<LabeledPixelSample>(rowCount * colCount);
 
         for (var row = startRow; row <= endRow; row++)
         {

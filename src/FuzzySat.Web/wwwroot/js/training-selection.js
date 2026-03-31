@@ -50,9 +50,18 @@ window.trainingSelection = {
         this._activeColor = color;
     },
 
-    // Add a completed region (called from Blazor to restore state)
-    addRegion: function (x1, y1, x2, y2, color, label) {
-        this._regions.push({ x1, y1, x2, y2, color, label });
+    // Add a completed region from Blazor (raster pixel coordinates → display coordinates)
+    addRegion: function (rasterCol1, rasterRow1, rasterCol2, rasterRow2, color, label) {
+        var scaleX = this._scaleX || 1;
+        var scaleY = this._scaleY || 1;
+        this._regions.push({
+            x1: rasterCol1 / scaleX,
+            y1: rasterRow1 / scaleY,
+            x2: rasterCol2 / scaleX,
+            y2: rasterRow2 / scaleY,
+            color: color,
+            label: label
+        });
         this._redraw();
     },
 
