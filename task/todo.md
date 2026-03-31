@@ -8,13 +8,13 @@
 
 ## Estado Actual
 
-> **Proyecto al ~68% global** (subio de 65% tras Fase 3C)
+> **Proyecto al ~72% global** (subio de 68% tras Fase 3D)
 > - Core Engine: **100%** (PCA implementado, 242 Core tests)
 > - CLI: **80%** funcional (4 comandos wired, falta VisualizeCommand)
 > - API: 0% (template default)
-> - Web: **70%** (Classification + Validation con datos reales, PR #22 merged)
+> - Web: **78%** (Interactive Training Tool + Classification + Validation, PR #23 merged)
 > - CI/CD: 30% (solo build+test)
-> - Tests totales: **283** (242 Core + 41 Web)
+> - Tests totales: **293** (242 Core + 51 Web)
 
 ---
 
@@ -148,11 +148,13 @@
 - [x] PR review fixes: ProductAnd+defuzzifier, ReadImage off UI thread, CSV escaping
 - [x] 41 Web tests (17 nuevos: ClassificationService + ValidationService)
 
-### Fase 3D — Interactive Training Tool (Siguiente)
-- [ ] PixelExtractionService (extrae pixeles de region rectangular del raster)
-- [ ] training-selection.js (canvas overlay, dibujar rectangulo con mouse)
-- [ ] Training page: preview de banda + seleccion interactiva de areas
-- [ ] Crear TrainingSession desde areas seleccionadas (sin CSV manual)
+### Fase 3D — Interactive Training Tool (PR #23) — COMPLETADA
+- [x] PixelExtractionService (extrae pixeles de region rectangular del raster)
+- [x] training-selection.js (canvas overlay, dibujar rectangulo con mouse, raster↔display coords)
+- [x] Training page: preview de banda + seleccion interactiva de areas + dual mode (draw/csv)
+- [x] Crear TrainingSession desde areas seleccionadas (sin CSV manual)
+- [x] PR review fixes: band sync, UI thread offload, IAsyncDisposable, deferred canvas init
+- [x] 51 Web tests (10 nuevos: PixelExtractionService)
 
 ### Fase 3E — Leaflet Maps (Deferred)
 - [ ] leaflet-interop.js + LeafletMap.razor

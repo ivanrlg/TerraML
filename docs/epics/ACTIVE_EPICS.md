@@ -1,6 +1,6 @@
 # EPICs Activos - FuzzySat
 
-> **Ultima actualizacion**: 2026-03-30
+> **Ultima actualizacion**: 2026-03-30 (post PR #23)
 > **Proposito**: Punto central de informacion de EPICs en desarrollo.
 > Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
 
@@ -77,21 +77,22 @@ SDCA MaximumEntropy), KMeansClusterer, 13 tests ML.
 
 ## Epic #5 - Blazor Web App — EN PROGRESO
 
-- **Status**: **~70% completado** (subio de 60% tras Fase 3C)
+- **Status**: **~78% completado** (subio de 70% tras Fase 3D)
 - **Priority**: P3
 - **Folder**: [epic-005-blazor-web/](epic-005-blazor-web/)
 - **Security**: UNC rejection, OOM guard (50M px), path traversal, raster whitelist
-- **Tests Web**: 41 tests (ProjectLoader + Raster + Classification + Validation)
+- **Tests Web**: 51 tests (ProjectLoader + Raster + Classification + Validation + PixelExtraction)
 
 **Completado**: Blazor setup, Layout, Home, ProjectSetup (save/load/RasterInfo),
 ConfusionMatrixHeatmap (colores dinamicos), DI services, BandViewer (real stats/histogram/preview
-via SkiaSharp), Training (CSV upload, spectral chart, extract/export session),
-TrainingService, ClassificationService (async, 4 MF types, Product AND, progress reporting),
-ValidationService (ConfusionMatrix from CSV samples, CSV export), Classification page con
-FuzzyClassifier real, Validation page con confusion matrix real + CSV upload,
-file-download.js interop.
-**Siguiente**: Interactive Training Tool (seleccion de areas con mouse sobre imagen).
-**Pendiente**: leaflet-interop.js, History page, API controllers.
+via SkiaSharp), Training interactivo (dibujar rectangulos sobre imagen de banda, dual mode
+draw/csv, spectral chart, extract/export session), PixelExtractionService,
+training-selection.js (canvas overlay), TrainingService, ClassificationService (async, 4 MF
+types, Product AND, progress reporting), ValidationService (ConfusionMatrix from CSV samples,
+CSV export), Classification page con FuzzyClassifier real, Validation page con confusion matrix
+real + CSV upload, file-download.js interop.
+**Pendiente**: Leaflet maps, History page, API controllers.
+**Herramientas**: S2Preprocess (Sentinel-2 SAFE → multiband GeoTIFF).
 
 ---
 
