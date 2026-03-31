@@ -88,6 +88,35 @@ public sealed class TrainingService
         => TrainingSession.CreateFromSamples(samples);
 
     /// <summary>
+    /// Exports labeled samples to CSV format (class,band1,band2,...).
+    /// Round-trip compatible with LoadSamplesFromCsv.
+    /// </summary>
+    public string ExportSamplesCsv(IReadOnlyList<LabeledPixelSample> samples, IReadOnlyList<string> bandNames)
+    {
+        ArgumentNullException.ThrowIfNull(samples);
+        ArgumentNullException.ThrowIfNull(bandNames);
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append("class");
+        foreach (var band in bandNames)
+            sb.Append(',').Append(band);
+        sb.AppendLine();
+
+        foreach (var sample in samples)
+        {
+            sb.Append(ValidationService.CsvEscape(sample.ClassName));
+            foreach (var band in bandNames)
+            {
+                var value = sample.BandValues.GetValueOrDefault(band, 0);
+                sb.Append(',').Append(value.ToString(CultureInfo.InvariantCulture));
+            }
+            sb.AppendLine();
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// Exports a TrainingSession to JSON string.
     /// </summary>
     public string ExportSessionJson(TrainingSession session)
