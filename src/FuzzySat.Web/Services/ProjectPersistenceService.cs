@@ -32,6 +32,11 @@ public sealed class ProjectPersistenceService : IDisposable
     private ExploreBandSelection? _lastExploreBands;
     private string? _lastExploreViewMode;
 
+    // Accumulative dirty flags — survive across debounce resets
+    private bool _dirtyRegions, _dirtySamples, _dirtySession;
+    private bool _dirtyClassResult, _dirtyConfusion, _dirtyOptions;
+    private bool _dirtyExploreBands, _dirtyExploreView;
+
     private const int DebounceMs = 500;
 
     public ProjectPersistenceService(
@@ -55,22 +60,32 @@ public sealed class ProjectPersistenceService : IDisposable
         var projectName = _state.Configuration?.ProjectName;
         if (string.IsNullOrWhiteSpace(projectName)) return;
 
-        // Detect what changed by comparing references
-        var regionsChanged = !ReferenceEquals(_lastRegions, _state.TrainingRegions);
-        var samplesChanged = !ReferenceEquals(_lastSamples, _state.TrainingSamples);
-        var sessionChanged = !ReferenceEquals(_lastSession, _state.TrainingSession);
-        var classResultChanged = !ReferenceEquals(_lastClassResult, _state.ClassificationResult);
-        var confusionChanged = !ReferenceEquals(_lastConfusionMatrix, _state.ConfusionMatrix);
-        var optionsChanged = !ReferenceEquals(_lastClassOptions, _state.ClassificationOptions);
-        var exploreBandsChanged = !ReferenceEquals(_lastExploreBands, _state.ExploreBands);
-        var exploreViewChanged = _lastExploreViewMode != _state.ExploreViewMode;
+        // Detect what changed and accumulate dirty flags
+        if (!ReferenceEquals(_lastRegions, _state.TrainingRegions)) _dirtyRegions = true;
+        if (!ReferenceEquals(_lastSamples, _state.TrainingSamples)) _dirtySamples = true;
+        if (!ReferenceEquals(_lastSession, _state.TrainingSession)) _dirtySession = true;
+        if (!ReferenceEquals(_lastClassResult, _state.ClassificationResult)) _dirtyClassResult = true;
+        if (!ReferenceEquals(_lastConfusionMatrix, _state.ConfusionMatrix)) _dirtyConfusion = true;
+        if (!ReferenceEquals(_lastClassOptions, _state.ClassificationOptions)) _dirtyOptions = true;
+        if (!ReferenceEquals(_lastExploreBands, _state.ExploreBands)) _dirtyExploreBands = true;
+        if (_lastExploreViewMode != _state.ExploreViewMode) _dirtyExploreView = true;
 
-        if (!regionsChanged && !samplesChanged && !sessionChanged &&
-            !classResultChanged && !confusionChanged && !optionsChanged &&
-            !exploreBandsChanged && !exploreViewChanged)
+        if (!_dirtyRegions && !_dirtySamples && !_dirtySession &&
+            !_dirtyClassResult && !_dirtyConfusion && !_dirtyOptions &&
+            !_dirtyExploreBands && !_dirtyExploreView)
             return;
 
-        // Snapshot current references
+        // Update last references
+        _lastRegions = _state.TrainingRegions;
+        _lastSamples = _state.TrainingSamples;
+        _lastSession = _state.TrainingSession;
+        _lastClassResult = _state.ClassificationResult;
+        _lastConfusionMatrix = _state.ConfusionMatrix;
+        _lastClassOptions = _state.ClassificationOptions;
+        _lastExploreBands = _state.ExploreBands;
+        _lastExploreViewMode = _state.ExploreViewMode;
+
+        // Snapshot current state for the save task
         var regions = _state.TrainingRegions;
         var samples = _state.TrainingSamples;
         var session = _state.TrainingSession;
@@ -81,15 +96,15 @@ public sealed class ProjectPersistenceService : IDisposable
         var exploreBands = _state.ExploreBands;
         var exploreViewMode = _state.ExploreViewMode;
 
-        // Update last references
-        _lastRegions = regions;
-        _lastSamples = samples;
-        _lastSession = session;
-        _lastClassResult = classResult;
-        _lastConfusionMatrix = confusion;
-        _lastClassOptions = options;
-        _lastExploreBands = exploreBands;
-        _lastExploreViewMode = exploreViewMode;
+        // Capture dirty flags for this save round
+        var saveRegions = _dirtyRegions;
+        var saveSamples = _dirtySamples;
+        var saveSession = _dirtySession;
+        var saveClassResult = _dirtyClassResult;
+        var saveConfusion = _dirtyConfusion;
+        var saveOptions = _dirtyOptions;
+        var saveExploreBands = _dirtyExploreBands;
+        var saveExploreView = _dirtyExploreView;
 
         // Debounce: cancel previous pending save, schedule new one
         CancellationTokenSource cts;
@@ -109,7 +124,7 @@ public sealed class ProjectPersistenceService : IDisposable
                 await Task.Delay(DebounceMs, ct);
 
                 // Training regions
-                if (regionsChanged)
+                if (saveRegions)
                 {
                     if (regions is { Count: > 0 })
                         await _repo.SaveTrainingRegionsAsync(projectName, regions);
@@ -118,7 +133,7 @@ public sealed class ProjectPersistenceService : IDisposable
                 }
 
                 // Training samples
-                if (samplesChanged)
+                if (saveSamples)
                 {
                     if (samples is { Count: > 0 } && config?.Bands is not null)
                     {
@@ -133,7 +148,7 @@ public sealed class ProjectPersistenceService : IDisposable
                 }
 
                 // Training session
-                if (sessionChanged)
+                if (saveSession)
                 {
                     if (session is not null)
                     {
@@ -147,7 +162,7 @@ public sealed class ProjectPersistenceService : IDisposable
                 }
 
                 // Classification options
-                if (optionsChanged)
+                if (saveOptions)
                 {
                     if (options is not null)
                     {
@@ -167,9 +182,9 @@ public sealed class ProjectPersistenceService : IDisposable
                 }
 
                 // Classification result
-                if (classResultChanged)
+                if (saveClassResult)
                 {
-                    _logger.LogInformation("ClassificationResult changed: {IsNull}, Rows={Rows}",
+                    _logger.LogInformation("Saving ClassificationResult: {IsNull}, Rows={Rows}",
                         classResult is null, classResult?.Rows ?? 0);
                     if (classResult is not null)
                     {
@@ -192,6 +207,7 @@ public sealed class ProjectPersistenceService : IDisposable
                             }
 
                         await _repo.SaveClassificationResultAsync(projectName, metadata, classMap, confidenceMap);
+                        _logger.LogInformation("ClassificationResult saved: {Rows}x{Cols}", classResult.Rows, classResult.Columns);
                     }
                     else
                     {
@@ -201,7 +217,7 @@ public sealed class ProjectPersistenceService : IDisposable
                 }
 
                 // Validation (confusion matrix)
-                if (confusionChanged)
+                if (saveConfusion)
                 {
                     if (confusion is not null)
                     {
@@ -240,7 +256,7 @@ public sealed class ProjectPersistenceService : IDisposable
                 }
 
                 // Explore band selection + view mode
-                if (exploreBandsChanged || exploreViewChanged)
+                if (saveExploreBands || saveExploreView)
                 {
                     var exploreState = new ExploreStateDto
                     {
@@ -252,6 +268,11 @@ public sealed class ProjectPersistenceService : IDisposable
                     };
                     await _fileRepo.SaveExploreStateAsync(projectName, exploreState);
                 }
+
+                // Clear dirty flags after successful save
+                _dirtyRegions = _dirtySamples = _dirtySession = false;
+                _dirtyClassResult = _dirtyConfusion = _dirtyOptions = false;
+                _dirtyExploreBands = _dirtyExploreView = false;
 
                 _logger.LogDebug("Auto-saved project '{Project}' artifacts", projectName);
             }
