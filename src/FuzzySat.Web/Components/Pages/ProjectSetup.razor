@@ -222,9 +222,17 @@
         "LPT1","LPT2","LPT3","LPT4","LPT5","LPT6","LPT7","LPT8","LPT9"
     };
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         _existingProjects = ProjectLoader.ListProjects().ToList();
+
+        // Pick up raster path from Sentinel-2 Import tool
+        if (!string.IsNullOrWhiteSpace(ProjectState.ImportedRasterPath))
+        {
+            _inputPath = ProjectState.ImportedRasterPath;
+            ProjectState.ImportedRasterPath = null; // consume once
+            await OnInputPathChanged(_inputPath);
+        }
     }
 
     private async Task OnInputPathChanged(string newPath)

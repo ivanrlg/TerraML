@@ -1,0 +1,398 @@
+@page "/sentinel-import"
+@rendermode InteractiveServer
+@using FuzzySat.Web.Services
+@inject Sentinel2ImportService ImportService
+@inject ProjectStateService ProjectState
+@inject NotificationService NotificationService
+@inject NavigationManager Navigation
+@inject ILogger<SentinelImport> Logger
+
+<PageTitle>Sentinel-2 Import - FuzzySat</PageTitle>
+
+<div class="import-page fs-fade-in">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Sentinel-2 Import</h1>
+            <p class="page-subtitle">Import Sentinel-2 band files and stack them into a multi-band raster for classification.</p>
+        </div>
+        <span class="fs-badge fs-badge-cyan">Tool</span>
+    </div>
+
+    @* Step 1: Source Selection *@
+    <div class="form-section @(_currentStep >= 1 ? "" : "section-disabled")">
+        <div class="form-section-header">
+            <span class="step-number @(_currentStep > 1 ? "step-done" : _currentStep == 1 ? "step-active" : "")">1</span>
+            <span class="material-icons section-icon" style="color: var(--fs-accent-cyan);">folder_open</span>
+            <span>Select Source</span>
+            @if (_detectedFormat is not null)
+            {
+                <span class="format-badge">@FormatLabel(_detectedFormat.Value)</span>
+            }
+        </div>
+
+        <div class="field-group">
+            <label class="field-label">Path to folder with Sentinel-2 band files</label>
+            <div class="path-input">
+                <RadzenTextBox @bind-Value="@_inputPath"
+                    Placeholder="e.g., C:\Downloads\Browser_images\" Style="width: 100%;"
+                    Disabled="@_isProcessing" />
+                <button type="button" class="detect-btn" @onclick="DetectSource" disabled="@_isProcessing"
+                    title="Detect format and discover bands">
+                    <span class="material-icons">search</span>
+                    <span>Detect</span>
+                </button>
+            </div>
+            @if (_sourceError is not null)
+            {
+                <p class="field-error">@_sourceError</p>
+            }
+        </div>
+
+        @if (_detectedFormat == Sentinel2ImportService.InputFormat.SafePackage)
+        {
+            <div class="info-banner info-warning">
+                <span class="material-icons">info</span>
+                <span>.SAFE package support is coming soon. For now, use the individual band TIFFs from a Copernicus Browser download.</span>
+            </div>
+        }
+        @if (_detectedFormat == Sentinel2ImportService.InputFormat.ZipArchive)
+        {
+            <div class="info-banner info-warning">
+                <span class="material-icons">info</span>
+                <span>Please extract the .zip file first, then point to the extracted folder.</span>
+            </div>
+        }
+    </div>
+
+    @* Step 2: Band Selection *@
+    @if (_currentStep >= 2)
+    {
+        <div class="form-section">
+            <div class="form-section-header">
+                <span class="step-number @(_currentStep > 2 ? "step-done" : "step-active")">2</span>
+                <span class="material-icons section-icon" style="color: var(--fs-accent-emerald);">layers</span>
+                <span>Select Bands</span>
+                <span class="count-badge mono-text">@_selectedBands.Count of @_discoveredBands.Count selected</span>
+            </div>
+
+            @* Quick filter buttons *@
+            <div class="quick-filters">
+                @foreach (var res in _availableResolutions)
+                {
+                    var count = _discoveredBands.Count(b => b.ResolutionMeters == res);
+                    <button type="button" class="filter-btn" @onclick="() => SelectByResolution(res)">
+                        All @(res)m (@count)
+                    </button>
+                }
+                <button type="button" class="filter-btn" @onclick="SelectAll">All</button>
+                <button type="button" class="filter-btn filter-btn-muted" @onclick="SelectNone">None</button>
+            </div>
+
+            @* Band grid *@
+            <div class="band-grid">
+                @foreach (var band in _discoveredBands)
+                {
+                    var isSelected = _selectedBands.Contains(band.BandName);
+                    <button type="button"
+                            class="band-card @(isSelected ? "band-selected" : "")"
+                            @onclick="() => ToggleBand(band.BandName)">
+                        <div class="band-card-top">
+                            <span class="band-name">@band.BandName</span>
+                            <span class="band-res">@(band.ResolutionMeters)m</span>
+                        </div>
+                        <div class="band-card-detail">
+                            <span>@band.Width x @band.Height</span>
+                            <span>@band.DataType</span>
+                        </div>
+                    </button>
+                }
+            </div>
+
+            @if (_selectedBands.Count > 0 && HasMixedResolutions())
+            {
+                <div class="info-banner info-warning">
+                    <span class="material-icons">warning</span>
+                    <span>Selected bands have different resolutions. All bands must have the same dimensions to create a VRT. Select bands from a single resolution group.</span>
+                </div>
+            }
+        </div>
+    }
+
+    @* Step 3: Output & Run *@
+    @if (_currentStep >= 2 && _selectedBands.Count > 0 && !HasMixedResolutions())
+    {
+        <div class="form-section">
+            <div class="form-section-header">
+                <span class="step-number @(_importComplete ? "step-done" : "step-active")">3</span>
+                <span class="material-icons section-icon" style="color: var(--fs-accent-blue);">output</span>
+                <span>Output</span>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label">Output VRT Path</label>
+                <RadzenTextBox @bind-Value="@_outputPath" Style="width: 100%;" Disabled="@_isProcessing" />
+            </div>
+
+            @if (!_importComplete)
+            {
+                <div class="action-row">
+                    <RadzenButton Text="@(_isProcessing ? "Importing..." : "Create VRT")"
+                        Icon="@(_isProcessing ? "hourglass_top" : "build")"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Click="@RunImport"
+                        Disabled="@_isProcessing" />
+                </div>
+
+                @if (_isProcessing && _lastProgress is not null)
+                {
+                    <div class="progress-area">
+                        <RadzenProgressBar Value="@ProgressPercent()" ShowValue="false" Style="height: 6px;" />
+                        <p class="progress-text">@_lastProgress.Status (@_lastProgress.CurrentBand / @_lastProgress.TotalBands)</p>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="success-area">
+                    <div class="success-header">
+                        <span class="material-icons" style="color: var(--fs-accent-emerald);">check_circle</span>
+                        <span>VRT created successfully with @_selectedBands.Count bands</span>
+                    </div>
+                    <p class="mono-text success-path">@_outputPath</p>
+
+                    <div class="action-row">
+                        <RadzenButton Text="Set as Project Input"
+                            Icon="arrow_forward"
+                            ButtonStyle="ButtonStyle.Primary"
+                            Click="@SetAsProjectInput" />
+                        <RadzenButton Text="Import Another"
+                            Icon="refresh"
+                            ButtonStyle="ButtonStyle.Secondary"
+                            Click="@ResetWizard" />
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private int _currentStep = 1;
+    private string _inputPath = "";
+    private string _outputPath = "";
+    private string? _sourceError;
+    private Sentinel2ImportService.InputFormat? _detectedFormat;
+    private List<Sentinel2ImportService.Sentinel2BandInfo> _discoveredBands = [];
+    private HashSet<string> _selectedBands = [];
+    private IReadOnlyList<int> _availableResolutions = [];
+    private bool _isProcessing;
+    private bool _importComplete;
+    private Sentinel2ImportService.ImportProgress? _lastProgress;
+
+    private async Task DetectSource()
+    {
+        _sourceError = null;
+        _detectedFormat = null;
+        _discoveredBands = [];
+        _selectedBands = [];
+        _availableResolutions = [];
+        _currentStep = 1;
+        _importComplete = false;
+
+        if (string.IsNullOrWhiteSpace(_inputPath))
+        {
+            _sourceError = "Please enter a path.";
+            return;
+        }
+
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            var format = await Task.Run(() => ImportService.DetectFormat(_inputPath));
+            _detectedFormat = format;
+
+            if (format == Sentinel2ImportService.InputFormat.Unknown)
+            {
+                _sourceError = "No supported Sentinel-2 data found at this path.";
+                return;
+            }
+
+            if (format == Sentinel2ImportService.InputFormat.SafePackage)
+            {
+                _sourceError = ".SAFE package support is coming in a future update. Extract band TIFFs or use Copernicus Browser download.";
+                return;
+            }
+
+            if (format == Sentinel2ImportService.InputFormat.ZipArchive)
+            {
+                _sourceError = "Please extract the .zip file first, then select the extracted folder.";
+                return;
+            }
+
+            // BandFolder — discover bands
+            var bands = await Task.Run(() => ImportService.DiscoverBands(_inputPath));
+            if (bands.Count == 0)
+            {
+                _sourceError = "No Sentinel-2 band files found (expected filenames like B02.tif, B04_10m.tif, etc.)";
+                return;
+            }
+
+            _discoveredBands = bands;
+            _availableResolutions = Sentinel2ImportService.GetAvailableResolutions(bands);
+
+            // Auto-select all bands at the finest resolution
+            var finest = _availableResolutions.FirstOrDefault();
+            if (finest > 0)
+            {
+                _selectedBands = bands
+                    .Where(b => b.ResolutionMeters == finest)
+                    .Select(b => b.BandName)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            }
+
+            // Suggest output path
+            _outputPath = Path.Combine(Path.GetFullPath(_inputPath), "sentinel2_stack.vrt");
+
+            _currentStep = 2;
+        }
+        catch (ArgumentException ex)
+        {
+            _sourceError = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            _sourceError = "Failed to read source directory.";
+            Logger.LogWarning(ex, "Failed to detect Sentinel-2 source at '{Path}'", _inputPath);
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private void ToggleBand(string bandName)
+    {
+        if (!_selectedBands.Remove(bandName))
+            _selectedBands.Add(bandName);
+        _importComplete = false;
+    }
+
+    private void SelectByResolution(int resolution)
+    {
+        _selectedBands = _discoveredBands
+            .Where(b => b.ResolutionMeters == resolution)
+            .Select(b => b.BandName)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _importComplete = false;
+    }
+
+    private void SelectAll()
+    {
+        _selectedBands = _discoveredBands
+            .Select(b => b.BandName)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _importComplete = false;
+    }
+
+    private void SelectNone()
+    {
+        _selectedBands.Clear();
+        _importComplete = false;
+    }
+
+    private bool HasMixedResolutions()
+    {
+        var selected = _discoveredBands.Where(b => _selectedBands.Contains(b.BandName)).ToList();
+        if (selected.Count <= 1) return false;
+        var firstDim = (selected[0].Width, selected[0].Height);
+        return selected.Any(b => b.Width != firstDim.Width || b.Height != firstDim.Height);
+    }
+
+    private async Task RunImport()
+    {
+        if (string.IsNullOrWhiteSpace(_outputPath))
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Missing Output Path",
+                "Please specify an output VRT path.", duration: 4000);
+            return;
+        }
+
+        var selectedBandInfos = _discoveredBands
+            .Where(b => _selectedBands.Contains(b.BandName))
+            .ToList();
+
+        if (selectedBandInfos.Count == 0) return;
+
+        _isProcessing = true;
+        _importComplete = false;
+        _lastProgress = null;
+        StateHasChanged();
+
+        try
+        {
+            var options = new Sentinel2ImportService.ImportOptions(selectedBandInfos, _outputPath);
+            var progress = new Progress<Sentinel2ImportService.ImportProgress>(p =>
+            {
+                _lastProgress = p;
+                InvokeAsync(StateHasChanged);
+            });
+
+            var result = await ImportService.BuildVrtAsync(options, progress);
+            _outputPath = result;
+            _importComplete = true;
+
+            NotificationService.Notify(NotificationSeverity.Success, "Import Complete",
+                $"VRT created with {selectedBandInfos.Count} bands.", duration: 5000);
+        }
+        catch (InvalidOperationException ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Import Failed", ex.Message, duration: 6000);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to build VRT from Sentinel-2 bands");
+            NotificationService.Notify(NotificationSeverity.Error, "Import Failed",
+                "An error occurred during import. Check the logs for details.", duration: 6000);
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private void SetAsProjectInput()
+    {
+        ProjectState.ImportedRasterPath = _outputPath;
+        Navigation.NavigateTo("/project-setup");
+    }
+
+    private void ResetWizard()
+    {
+        _currentStep = 1;
+        _inputPath = "";
+        _outputPath = "";
+        _sourceError = null;
+        _detectedFormat = null;
+        _discoveredBands = [];
+        _selectedBands = [];
+        _availableResolutions = [];
+        _isProcessing = false;
+        _importComplete = false;
+        _lastProgress = null;
+    }
+
+    private double ProgressPercent() =>
+        _lastProgress is null || _lastProgress.TotalBands == 0
+            ? 0
+            : (double)_lastProgress.CurrentBand / _lastProgress.TotalBands * 100;
+
+    private static string FormatLabel(Sentinel2ImportService.InputFormat format) => format switch
+    {
+        Sentinel2ImportService.InputFormat.BandFolder => "Band Folder",
+        Sentinel2ImportService.InputFormat.SafePackage => ".SAFE Package",
+        Sentinel2ImportService.InputFormat.ZipArchive => "ZIP Archive",
+        _ => "Unknown"
+    };
+}

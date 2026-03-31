@@ -26,6 +26,7 @@ public sealed class ProjectStateService
     private TrainingSession? _trainingSession;
     private ClassificationResult? _classificationResult;
     private ConfusionMatrix? _confusionMatrix;
+    private string? _importedRasterPath;
 
     /// <summary>
     /// Fired when any state property changes. Subscribers must call
@@ -64,6 +65,16 @@ public sealed class ProjectStateService
         set { _confusionMatrix = value; NotifyChanged(); }
     }
 
+    /// <summary>
+    /// Path to a raster imported via the Sentinel-2 Import tool.
+    /// Consumed by ProjectSetup to pre-fill the input raster path.
+    /// </summary>
+    public string? ImportedRasterPath
+    {
+        get => _importedRasterPath;
+        set { _importedRasterPath = value; NotifyChanged(); }
+    }
+
     /// <summary>Whether a project is loaded with a valid configuration.</summary>
     public bool HasProject => _configuration is not null;
 
@@ -84,6 +95,7 @@ public sealed class ProjectStateService
         _trainingSession = null;
         _classificationResult = null;
         _confusionMatrix = null;
+        _importedRasterPath = null;
         NotifyChanged();
     }
 
