@@ -8,13 +8,13 @@
 
 ## Estado Actual
 
-> **Proyecto al ~74% global** (subio de 72% tras PR #24)
+> **Proyecto al ~76% global** (subio de 74% tras PR #25 + Phase 3F)
 > - Core Engine: **100%** (PCA implementado, 242 Core tests)
 > - CLI: **80%** funcional (4 comandos wired, falta VisualizeCommand)
 > - API: 0% (template default)
-> - Web: **82%** (False color composites + CSV export, PR #24 merged)
+> - Web: **86%** (Explore & Train merge, zoom, state persistence, inline classes)
 > - CI/CD: 30% (solo build+test)
-> - Tests totales: **327** (242 Core + 85 Web)
+> - Tests totales: **333** (242 Core + 91 Web)
 
 ---
 
@@ -164,6 +164,23 @@
 - [x] Training page: Export CSV button
 - [x] PR review fixes: band validation, <3 bands guard, presets
 - [x] 6 nuevos Web tests (RasterServiceRgbTests + TrainingServiceCsvExportTests)
+
+### Fase 3E+ — Sentinel-2 Import Tool (PR #25) — COMPLETADA
+- [x] Sentinel2ImportService (DetectFormat, DiscoverBands, BuildVrtAsync)
+- [x] ProjectSetup: Sentinel-2 import wizard (detect → select → create VRT)
+- [x] BandViewer: corrupted raster error handling (IReadBlock)
+- [x] Security: UNC path rejection, InvariantCulture, logging, DoS guard
+- [x] 85 Web tests (34 nuevos: Sentinel2ImportServiceTests)
+
+### Fase 3F — Merge BandViewer + Training (PR #26) — COMPLETADA
+- [x] ProjectStateService: ExploreViewMode, ExploreBands, TrainingRegions, TrainingSamples, CachedImage
+- [x] Training: merged presets, stats panel, histogram from BandViewer
+- [x] NavMenu: 5→4 steps, BandViewer redirects to /training
+- [x] State persistence: survive navigation between pages
+- [x] Inline class creation: "+ Add Class" button in Training
+- [x] Zoom & pan: scroll wheel + Ctrl+drag, coordinate-aware
+- [x] All-bands auto-select: same dimensions = select all (Copernicus Browser)
+- [x] 91 Web tests (6 nuevos: ProjectStateServiceTests)
 
 ### Fase 3E — Leaflet Maps (Deferred)
 - [ ] leaflet-interop.js + LeafletMap.razor

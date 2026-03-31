@@ -19,7 +19,7 @@
             <h1 class="page-title">Project Setup</h1>
             <p class="page-subtitle">Configure your classification project: define bands, land cover classes, and input paths.</p>
         </div>
-        <span class="fs-badge fs-badge-blue">Step 1 of 5</span>
+        <span class="fs-badge fs-badge-blue">Step 1 of 4</span>
     </div>
 
     <div class="setup-layout">
@@ -387,6 +387,17 @@
             ProjectState.ImportedRasterPath = null;
             await OnInputPathChanged(_inputPath);
         }
+
+        // Auto-load last used project if no project is currently loaded
+        if (!ProjectState.HasProject)
+        {
+            var lastProject = ProjectLoader.GetLastProject();
+            if (lastProject is not null && _existingProjects.Contains(lastProject, StringComparer.OrdinalIgnoreCase))
+            {
+                _selectedProject = lastProject;
+                await LoadSelectedProject();
+            }
+        }
     }
 
     // --- Input Raster (Direct Path mode) ---
@@ -466,14 +477,25 @@
             _discoveredBands = bands;
             _availableResolutions = Sentinel2ImportService.GetAvailableResolutions(bands);
 
-            // Auto-select finest resolution
-            var finest = _availableResolutions.FirstOrDefault();
-            if (finest > 0)
+            // Auto-select: all bands if same dimensions (e.g. Copernicus Browser resampled),
+            // otherwise only finest resolution
+            var allSameDimensions = bands.Count > 0
+                && bands.All(b => b.Width == bands[0].Width && b.Height == bands[0].Height);
+            if (allSameDimensions)
             {
-                _importSelectedBands = bands
-                    .Where(b => b.ResolutionMeters == finest)
-                    .Select(b => b.BandName)
+                _importSelectedBands = bands.Select(b => b.BandName)
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            }
+            else
+            {
+                var finest = _availableResolutions.FirstOrDefault();
+                if (finest > 0)
+                {
+                    _importSelectedBands = bands
+                        .Where(b => b.ResolutionMeters == finest)
+                        .Select(b => b.BandName)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                }
             }
 
             _importOutputPath = Path.Combine(Path.GetFullPath(_importFolderPath), "sentinel2_stack.vrt");
@@ -696,6 +718,7 @@
             }
 
             await ProjectLoader.SaveProjectAsync(safeName, config);
+            await ProjectLoader.SaveLastProjectAsync(safeName);
 
             ProjectState.Configuration = config;
             if (_rasterInfo is not null)

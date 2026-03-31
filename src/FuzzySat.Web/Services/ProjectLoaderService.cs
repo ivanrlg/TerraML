@@ -87,6 +87,41 @@ public sealed class ProjectLoaderService
     }
 
     /// <summary>
+    /// Saves the name of the last active project for auto-load on next visit.
+    /// </summary>
+    public async Task SaveLastProjectAsync(string projectName)
+    {
+        try
+        {
+            Directory.CreateDirectory(_projectDir);
+            await File.WriteAllTextAsync(Path.Combine(_projectDir, ".last-project"), projectName);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Failed to save last project marker");
+        }
+    }
+
+    /// <summary>
+    /// Gets the name of the last active project, or null if none.
+    /// </summary>
+    public string? GetLastProject()
+    {
+        try
+        {
+            var path = Path.Combine(_projectDir, ".last-project");
+            if (!File.Exists(path)) return null;
+            var name = File.ReadAllText(path).Trim();
+            return string.IsNullOrWhiteSpace(name) ? null : name;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Failed to read last project marker");
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Resolves a project name to a file path within the project directory.
     /// Throws if the resolved path escapes the project directory (path traversal).
     /// </summary>
