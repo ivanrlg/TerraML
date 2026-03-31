@@ -2,6 +2,10 @@
 @rendermode InteractiveServer
 @implements IDisposable
 @inject NotificationService NotificationService
+@inject ProjectStateService ProjectState
+@inject RasterService RasterService
+@inject ClassificationService ClassificationSvc
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Classification - FuzzySat</PageTitle>
 
@@ -14,109 +18,145 @@
         <span class="fs-badge fs-badge-blue">Step 4 of 5</span>
     </div>
 
-    @* Configuration Cards *@
-    <div class="config-grid">
-        <div class="config-card @(_mfType == "Gaussian" ? "config-active" : "")">
-            <div class="config-card-header">
-                <span class="material-icons config-icon" style="color: var(--fs-accent-blue);">functions</span>
-                <span class="config-label">Membership Function</span>
+    @if (!ProjectState.HasTrainingSession)
+    {
+        <div class="fs-card" style="text-align: center; padding: 3rem;">
+            <span class="material-icons" style="font-size: 3rem; color: var(--fs-text-tertiary); margin-bottom: 1rem;">model_training</span>
+            <h3 style="color: var(--fs-text-secondary);">No Training Session</h3>
+            <p style="color: var(--fs-text-tertiary);">
+                Upload training samples in <a href="/training" style="color: var(--fs-accent-blue);">Training</a> first,
+                then return here to classify.
+            </p>
+        </div>
+    }
+    else
+    {
+        @* Configuration Cards *@
+        <div class="config-grid">
+            <div class="config-card @(_mfType == "Gaussian" ? "config-active" : "")">
+                <div class="config-card-header">
+                    <span class="material-icons config-icon" style="color: var(--fs-accent-blue);">functions</span>
+                    <span class="config-label">Membership Function</span>
+                </div>
+                <div class="mf-preview">
+                    @switch (_mfType)
+                    {
+                        case "Gaussian":
+                            <svg viewBox="0 0 120 50" class="mf-svg">
+                                <path d="M 5 45 Q 20 45 35 40 Q 50 30 60 8 Q 70 30 75 40 Q 90 45 115 45" fill="none" stroke="#3B82F6" stroke-width="2"/>
+                                <line x1="5" y1="45" x2="115" y2="45" stroke="#2A3558" stroke-width="1"/>
+                            </svg>
+                            break;
+                        case "Triangular":
+                            <svg viewBox="0 0 120 50" class="mf-svg">
+                                <polyline points="5,45 60,5 115,45" fill="none" stroke="#06B6D4" stroke-width="2"/>
+                                <line x1="5" y1="45" x2="115" y2="45" stroke="#2A3558" stroke-width="1"/>
+                            </svg>
+                            break;
+                        case "Trapezoidal":
+                            <svg viewBox="0 0 120 50" class="mf-svg">
+                                <polyline points="5,45 30,5 90,5 115,45" fill="none" stroke="#10B981" stroke-width="2"/>
+                                <line x1="5" y1="45" x2="115" y2="45" stroke="#2A3558" stroke-width="1"/>
+                            </svg>
+                            break;
+                        case "Bell":
+                            <svg viewBox="0 0 120 50" class="mf-svg">
+                                <path d="M 5 45 Q 5 45 25 44 Q 40 42 48 30 Q 55 10 60 8 Q 65 10 72 30 Q 80 42 95 44 Q 115 45 115 45" fill="none" stroke="#8B5CF6" stroke-width="2"/>
+                                <line x1="5" y1="45" x2="115" y2="45" stroke="#2A3558" stroke-width="1"/>
+                            </svg>
+                            break;
+                    }
+                </div>
+                <RadzenDropDown @bind-Value="@_mfType" Data="@_mfTypes" Style="width: 100%;" Disabled="@_isRunning" />
             </div>
-            <div class="mf-preview">
-                @switch (_mfType)
+
+            <div class="config-card">
+                <div class="config-card-header">
+                    <span class="material-icons config-icon" style="color: var(--fs-accent-emerald);">join_inner</span>
+                    <span class="config-label">AND Operator</span>
+                </div>
+                <div class="mf-preview">
+                    <div class="mf-text-display">
+                        <span class="mf-formula mono-text">@(_andOperator == "Minimum" ? "min(a, b)" : "a × b")</span>
+                        <span class="mf-hint">@(_andOperator == "Minimum" ? "Weakest link rule" : "Algebraic product")</span>
+                    </div>
+                </div>
+                <RadzenDropDown @bind-Value="@_andOperator" Data="@_andOperators" Style="width: 100%;" Disabled="@_isRunning" />
+            </div>
+
+            <div class="config-card">
+                <div class="config-card-header">
+                    <span class="material-icons config-icon" style="color: var(--fs-accent-amber);">output</span>
+                    <span class="config-label">Defuzzifier</span>
+                </div>
+                <div class="mf-preview">
+                    <div class="mf-text-display">
+                        <span class="mf-formula mono-text">@(_defuzzifier == "Max Weight" ? "argmax(w)" : "\u03A3(w\u00B7c)/\u03A3w")</span>
+                        <span class="mf-hint">@(_defuzzifier == "Max Weight" ? "Highest strength wins" : "Weighted combination")</span>
+                    </div>
+                </div>
+                <RadzenDropDown @bind-Value="@_defuzzifier" Data="@_defuzzifiers" Style="width: 100%;" Disabled="@_isRunning" />
+            </div>
+        </div>
+
+        @* Progress Section *@
+        <div class="progress-section">
+            <div class="progress-header">
+                <span class="material-icons" style="color: var(--fs-accent-blue); font-size: 1.1rem;">speed</span>
+                <span class="progress-title">Classification Progress</span>
+                <span class="progress-pct mono-text">@($"{_progress:F0}%")</span>
+            </div>
+
+            <div class="progress-stages">
+                @foreach (var stage in _stages)
                 {
-                    case "Gaussian":
-                        <svg viewBox="0 0 120 50" class="mf-svg">
-                            <path d="M 5 45 Q 20 45 35 40 Q 50 30 60 8 Q 70 30 75 40 Q 90 45 115 45" fill="none" stroke="#3B82F6" stroke-width="2"/>
-                            <line x1="5" y1="45" x2="115" y2="45" stroke="#2A3558" stroke-width="1"/>
-                        </svg>
-                        break;
-                    case "Triangular":
-                        <svg viewBox="0 0 120 50" class="mf-svg">
-                            <polyline points="5,45 60,5 115,45" fill="none" stroke="#06B6D4" stroke-width="2"/>
-                            <line x1="5" y1="45" x2="115" y2="45" stroke="#2A3558" stroke-width="1"/>
-                        </svg>
-                        break;
-                    case "Trapezoidal":
-                        <svg viewBox="0 0 120 50" class="mf-svg">
-                            <polyline points="5,45 30,5 90,5 115,45" fill="none" stroke="#10B981" stroke-width="2"/>
-                            <line x1="5" y1="45" x2="115" y2="45" stroke="#2A3558" stroke-width="1"/>
-                        </svg>
-                        break;
-                    case "Bell":
-                        <svg viewBox="0 0 120 50" class="mf-svg">
-                            <path d="M 5 45 Q 5 45 25 44 Q 40 42 48 30 Q 55 10 60 8 Q 65 10 72 30 Q 80 42 95 44 Q 115 45 115 45" fill="none" stroke="#8B5CF6" stroke-width="2"/>
-                            <line x1="5" y1="45" x2="115" y2="45" stroke="#2A3558" stroke-width="1"/>
-                        </svg>
-                        break;
+                    var stageClass = GetStageClass(stage.Order);
+                    <div class="stage @stageClass">
+                        <span class="stage-icon material-icons">@(stageClass == "stage-done" ? "check_circle" : stageClass == "stage-active" ? "pending" : "radio_button_unchecked")</span>
+                        <span class="stage-name">@stage.Name</span>
+                    </div>
                 }
             </div>
-            <RadzenDropDown @bind-Value="@_mfType" Data="@_mfTypes" Style="width: 100%;" />
+
+            <RadzenProgressBar Value="@_progress" ShowValue="false" Style="height: 6px;" class="rz-mt-2" />
+            <p class="status-msg">@_statusMessage</p>
         </div>
 
-        <div class="config-card">
-            <div class="config-card-header">
-                <span class="material-icons config-icon" style="color: var(--fs-accent-emerald);">join_inner</span>
-                <span class="config-label">AND Operator</span>
-            </div>
-            <div class="mf-preview">
-                <div class="mf-text-display">
-                    <span class="mf-formula mono-text">@(_andOperator == "Minimum" ? "min(a, b)" : "a × b")</span>
-                    <span class="mf-hint">@(_andOperator == "Minimum" ? "Weakest link rule" : "Algebraic product")</span>
-                </div>
-            </div>
-            <RadzenDropDown @bind-Value="@_andOperator" Data="@_andOperators" Style="width: 100%;" />
-        </div>
-
-        <div class="config-card">
-            <div class="config-card-header">
-                <span class="material-icons config-icon" style="color: var(--fs-accent-amber);">output</span>
-                <span class="config-label">Defuzzifier</span>
-            </div>
-            <div class="mf-preview">
-                <div class="mf-text-display">
-                    <span class="mf-formula mono-text">@(_defuzzifier == "Max Weight" ? "argmax(w)" : "\u03A3(w\u00B7c)/\u03A3w")</span>
-                    <span class="mf-hint">@(_defuzzifier == "Max Weight" ? "Highest strength wins" : "Weighted combination")</span>
-                </div>
-            </div>
-            <RadzenDropDown @bind-Value="@_defuzzifier" Data="@_defuzzifiers" Style="width: 100%;" />
-        </div>
-    </div>
-
-    @* Progress Section *@
-    <div class="progress-section">
-        <div class="progress-header">
-            <span class="material-icons" style="color: var(--fs-accent-blue); font-size: 1.1rem;">speed</span>
-            <span class="progress-title">Classification Progress</span>
-            <span class="progress-pct mono-text">@($"{_progress:F0}%")</span>
-        </div>
-
-        <div class="progress-stages">
-            @foreach (var stage in _stages)
+        @* Action Buttons *@
+        <div class="action-row">
+            @if (_isRunning)
             {
-                var stageClass = GetStageClass(stage.Order);
-                <div class="stage @stageClass">
-                    <span class="stage-icon material-icons">@(stageClass == "stage-done" ? "check_circle" : stageClass == "stage-active" ? "pending" : "radio_button_unchecked")</span>
-                    <span class="stage-name">@stage.Name</span>
-                </div>
+                <RadzenButton Text="Cancel" Icon="stop" ButtonStyle="ButtonStyle.Danger" Click="@CancelClassification" />
             }
+            else
+            {
+                <RadzenButton Text="Run Classification" Icon="play_arrow" ButtonStyle="ButtonStyle.Primary"
+                              Click="@RunClassification" class="run-btn"
+                              Disabled="@(!CanRun)" />
+            }
+            <RadzenButton Text="Export Result" Icon="download" ButtonStyle="ButtonStyle.Secondary"
+                          Disabled="@(!_completed)" Click="@ExportResult" />
         </div>
 
-        <RadzenProgressBar Value="@_progress" ShowValue="false" Style="height: 6px;" class="rz-mt-2" />
-        <p class="status-msg">@_statusMessage</p>
-    </div>
-
-    @* Action Buttons *@
-    <div class="action-row">
-        @if (_isRunning)
+        @if (_completed && _classCounts is not null)
         {
-            <RadzenButton Text="Cancel" Icon="stop" ButtonStyle="ButtonStyle.Danger" Click="@CancelClassification" />
+            <div class="fs-card" style="margin-top: 1.5rem;">
+                <div class="section-header">
+                    <span class="material-icons section-icon">pie_chart</span>
+                    <span class="section-title">Classification Summary</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin-top: 1rem;">
+                    @foreach (var (className, count) in _classCounts)
+                    {
+                        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0.75rem; background: var(--fs-bg-tertiary); border-radius: 8px;">
+                            <span style="color: var(--fs-text-secondary);">@className</span>
+                            <span class="mono-text" style="color: var(--fs-text-primary);">@count.ToString("N0")</span>
+                        </div>
+                    }
+                </div>
+            </div>
         }
-        else
-        {
-            <RadzenButton Text="Run Classification" Icon="play_arrow" ButtonStyle="ButtonStyle.Primary" Click="@RunClassification" class="run-btn" />
-        }
-        <RadzenButton Text="Export Result" Icon="download" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!_completed)" Click="@ExportResult" />
-    </div>
+    }
 </div>
 
 @code {
@@ -129,6 +169,10 @@
     private bool _isRunning = false;
     private int _currentStage = 0;
     private CancellationTokenSource? _cts;
+    private List<KeyValuePair<string, int>>? _classCounts;
+
+    private bool CanRun => ProjectState.HasTrainingSession
+                           && ProjectState.Configuration?.InputRasterPath is not null;
 
     public void Dispose()
     {
@@ -158,34 +202,98 @@
 
     private async Task RunClassification()
     {
+        if (!CanRun) return;
+
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
         _isRunning = true;
         _completed = false;
         _progress = 0;
         _currentStage = 1;
-
-        var stageMessages = new[] { "Loading raster bands...", "Computing membership functions...", "Running fuzzy inference on pixels...", "Writing classified output..." };
+        _classCounts = null;
+        _statusMessage = "Loading raster bands...";
+        StateHasChanged();
 
         try
         {
-            for (var i = 0; i <= 100; i += 5)
+            // Load raster image
+            var rasterPath = ProjectState.Configuration!.InputRasterPath!;
+            var bandNames = ProjectState.TrainingSession!.BandNames;
+            var image = RasterService.ReadImage(rasterPath, bandNames);
+
+            _currentStage = 2;
+            _progress = 10;
+            _statusMessage = $"Loaded raster ({image.Rows}x{image.Columns}, {image.BandNames.Count} bands). Computing MFs...";
+            StateHasChanged();
+
+            // Build options
+            var options = new ClassificationOptions(_mfType, _andOperator, _defuzzifier);
+
+            // Create progress handler on Blazor thread
+            var progress = new Progress<ClassificationProgress>(p =>
             {
-                _progress = i;
-                _currentStage = i switch { < 20 => 1, < 45 => 2, < 85 => 3, _ => 4 };
-                _statusMessage = stageMessages[_currentStage - 1] + $" ({i}%)";
-                StateHasChanged();
-                await Task.Delay(150, _cts.Token);
-            }
+                _progress = p.Percentage;
+                _currentStage = p.Stage switch
+                {
+                    "Building membership functions" => 2,
+                    "Initializing inference engine" => 2,
+                    "Classifying pixels" => 3,
+                    "Building result" => 4,
+                    "Complete" => 5,
+                    _ => _currentStage
+                };
+                _statusMessage = p.Stage == "Classifying pixels"
+                    ? $"Classifying row {p.CurrentRow}/{p.TotalRows} ({p.Percentage:F0}%)"
+                    : $"{p.Stage} ({p.Percentage:F0}%)";
+                InvokeAsync(StateHasChanged);
+            });
+
+            // Run classification on background thread
+            var result = await Task.Run(() =>
+                ClassificationSvc.Classify(image, ProjectState.TrainingSession!, options, progress, _cts.Token));
+
+            // Store result in project state
+            ProjectState.ClassificationResult = result;
+
+            // Compute class distribution
+            var counts = new Dictionary<string, int>();
+            for (var r = 0; r < result.Rows; r++)
+                for (var c = 0; c < result.Columns; c++)
+                {
+                    var cls = result.GetClass(r, c);
+                    counts[cls] = counts.GetValueOrDefault(cls) + 1;
+                }
+            _classCounts = counts.OrderByDescending(kv => kv.Value).ToList();
 
             _progress = 100;
             _currentStage = 5;
-            _statusMessage = "Classification complete. 7 classes identified.";
+            _statusMessage = $"Classification complete. {result.Classes.Count} classes, {result.Rows * result.Columns:N0} pixels classified.";
             _completed = true;
+
+            NotificationService.Notify(NotificationSeverity.Success, "Classification Complete",
+                $"{result.Classes.Count} classes identified across {result.Rows * result.Columns:N0} pixels.", duration: 5000);
         }
         catch (OperationCanceledException)
         {
-            _statusMessage = "Classification cancelled.";
+            _statusMessage = "Classification cancelled by user.";
+            _currentStage = 0;
+            _progress = 0;
+        }
+        catch (FileNotFoundException ex)
+        {
+            _statusMessage = "Raster file not found.";
+            _currentStage = 0;
+            _progress = 0;
+            NotificationService.Notify(NotificationSeverity.Error, "File Not Found",
+                $"Could not find raster: {ex.FileName}", duration: 6000);
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error: {ex.Message}";
+            _currentStage = 0;
+            _progress = 0;
+            NotificationService.Notify(NotificationSeverity.Error, "Classification Failed",
+                ex.Message, duration: 6000);
         }
         finally
         {
@@ -198,10 +306,30 @@
         _cts?.Cancel();
     }
 
-    private void ExportResult()
+    private async Task ExportResult()
     {
-        NotificationService.Notify(NotificationSeverity.Info, "Coming Soon",
-            "GeoTIFF export will be available once connected to real raster classification.", duration: 4000);
+        if (_classCounts is null) return;
+
+        var lines = new System.Text.StringBuilder();
+        lines.AppendLine("Class,Pixel Count,Percentage");
+
+        var total = _classCounts.Sum(kv => kv.Value);
+        foreach (var (className, count) in _classCounts)
+        {
+            var pct = total > 0 ? (double)count / total * 100 : 0;
+            lines.AppendLine($"{className},{count},{pct:F2}");
+        }
+        lines.AppendLine();
+        lines.AppendLine($"Total,{total},100.00");
+        lines.AppendLine($"MF Type,{_mfType}");
+        lines.AppendLine($"AND Operator,{_andOperator}");
+        lines.AppendLine($"Defuzzifier,{_defuzzifier}");
+
+        var fileName = $"classification_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", lines.ToString());
+
+        NotificationService.Notify(NotificationSeverity.Success, "Exported",
+            $"Classification summary saved as {fileName}.", duration: 4000);
     }
 
     private record StageInfo(int Order, string Name);
