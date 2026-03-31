@@ -210,6 +210,21 @@ public sealed class FileProjectRepository : IProjectRepository
         return await ReadJsonAsync<ValidationResultDto>(path);
     }
 
+    // --- Explore State (band selection + view mode) ---
+
+    public async Task SaveExploreStateAsync(string projectName, ExploreStateDto state)
+    {
+        var path = ResolveDataPath(projectName, "explore-state.json");
+        var json = JsonSerializer.Serialize(state, JsonOptions);
+        await WriteFileAtomicAsync(path, json);
+    }
+
+    public async Task<ExploreStateDto?> LoadExploreStateAsync(string projectName)
+    {
+        var path = ResolveDataPath(projectName, "explore-state.json");
+        return await ReadJsonAsync<ExploreStateDto>(path);
+    }
+
     // --- Delete ---
 
     /// <summary>Deletes a specific artifact file for the given project.</summary>
@@ -325,4 +340,14 @@ public sealed class FileProjectRepository : IProjectRepository
             throw new ArgumentException("Invalid project name: directory separators are not allowed.", nameof(name));
         }
     }
+}
+
+/// <summary>DTO for persisting the Explore &amp; Train page band selection and view mode.</summary>
+public sealed class ExploreStateDto
+{
+    public string? ViewMode { get; set; }
+    public int? SelectedBandIndex { get; set; }
+    public int? RedBandIndex { get; set; }
+    public int? GreenBandIndex { get; set; }
+    public int? BlueBandIndex { get; set; }
 }

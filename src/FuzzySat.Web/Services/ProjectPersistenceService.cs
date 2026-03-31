@@ -29,6 +29,8 @@ public sealed class ProjectPersistenceService : IDisposable
     private ClassificationResult? _lastClassResult;
     private ConfusionMatrix? _lastConfusionMatrix;
     private ClassificationOptions? _lastClassOptions;
+    private ExploreBandSelection? _lastExploreBands;
+    private string? _lastExploreViewMode;
 
     private const int DebounceMs = 500;
 
@@ -60,9 +62,12 @@ public sealed class ProjectPersistenceService : IDisposable
         var classResultChanged = !ReferenceEquals(_lastClassResult, _state.ClassificationResult);
         var confusionChanged = !ReferenceEquals(_lastConfusionMatrix, _state.ConfusionMatrix);
         var optionsChanged = !ReferenceEquals(_lastClassOptions, _state.ClassificationOptions);
+        var exploreBandsChanged = !ReferenceEquals(_lastExploreBands, _state.ExploreBands);
+        var exploreViewChanged = _lastExploreViewMode != _state.ExploreViewMode;
 
         if (!regionsChanged && !samplesChanged && !sessionChanged &&
-            !classResultChanged && !confusionChanged && !optionsChanged)
+            !classResultChanged && !confusionChanged && !optionsChanged &&
+            !exploreBandsChanged && !exploreViewChanged)
             return;
 
         // Snapshot current references
@@ -73,6 +78,8 @@ public sealed class ProjectPersistenceService : IDisposable
         var confusion = _state.ConfusionMatrix;
         var options = _state.ClassificationOptions;
         var config = _state.Configuration;
+        var exploreBands = _state.ExploreBands;
+        var exploreViewMode = _state.ExploreViewMode;
 
         // Update last references
         _lastRegions = regions;
@@ -81,6 +88,8 @@ public sealed class ProjectPersistenceService : IDisposable
         _lastClassResult = classResult;
         _lastConfusionMatrix = confusion;
         _lastClassOptions = options;
+        _lastExploreBands = exploreBands;
+        _lastExploreViewMode = exploreViewMode;
 
         // Debounce: cancel previous pending save, schedule new one
         CancellationTokenSource cts;
@@ -228,6 +237,20 @@ public sealed class ProjectPersistenceService : IDisposable
                     }
                 }
 
+                // Explore band selection + view mode
+                if (exploreBandsChanged || exploreViewChanged)
+                {
+                    var exploreState = new ExploreStateDto
+                    {
+                        ViewMode = exploreViewMode,
+                        SelectedBandIndex = exploreBands?.SelectedBandIndex,
+                        RedBandIndex = exploreBands?.RedBandIndex,
+                        GreenBandIndex = exploreBands?.GreenBandIndex,
+                        BlueBandIndex = exploreBands?.BlueBandIndex
+                    };
+                    await _fileRepo.SaveExploreStateAsync(projectName, exploreState);
+                }
+
                 _logger.LogDebug("Auto-saved project '{Project}' artifacts", projectName);
             }
             catch (TaskCanceledException)
@@ -318,6 +341,19 @@ public sealed class ProjectPersistenceService : IDisposable
                 _state.ConfusionMatrix = ConfusionMatrix.FromPersistedData(
                     validation.ClassNames, validation.ToMatrix());
 
+            // Explore band selection + view mode
+            var exploreState = await _fileRepo.LoadExploreStateAsync(projectName);
+            if (exploreState is not null)
+            {
+                _state.ExploreViewMode = exploreState.ViewMode;
+                if (exploreState.SelectedBandIndex is not null)
+                    _state.ExploreBands = new ExploreBandSelection(
+                        exploreState.SelectedBandIndex.Value,
+                        exploreState.RedBandIndex ?? 2,
+                        exploreState.GreenBandIndex ?? 1,
+                        exploreState.BlueBandIndex ?? 0);
+            }
+
             SyncTrackingReferences();
             _logger.LogInformation("Restored persisted state for project '{Project}'", projectName);
         }
@@ -340,6 +376,8 @@ public sealed class ProjectPersistenceService : IDisposable
         _lastClassResult = _state.ClassificationResult;
         _lastConfusionMatrix = _state.ConfusionMatrix;
         _lastClassOptions = _state.ClassificationOptions;
+        _lastExploreBands = _state.ExploreBands;
+        _lastExploreViewMode = _state.ExploreViewMode;
     }
 
     public void Dispose()
