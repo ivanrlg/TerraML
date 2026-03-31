@@ -1,0 +1,59 @@
+<div class="form-section">
+    <div class="form-section-header">
+        <span class="material-icons section-icon" style="color: var(--fs-accent-cyan);">satellite_alt</span>
+        <span>Sensor Preset</span>
+    </div>
+    <div class="preset-grid">
+        @foreach (var preset in Presets)
+        {
+            <button type="button" class="preset-btn @(SelectedPreset == preset.Name ? "preset-active" : "")"
+                    @onclick="() => SelectPreset(preset)">
+                <span class="preset-name">@preset.Name</span>
+                <span class="preset-detail">@preset.Bands bands @@ @preset.Resolution</span>
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? SelectedPreset { get; set; }
+    [Parameter] public EventCallback<string?> SelectedPresetChanged { get; set; }
+
+    /// <summary>Fired when a preset is applied, with the resulting band list.</summary>
+    [Parameter] public EventCallback<List<BandEntry>> OnPresetApplied { get; set; }
+
+    [Parameter] public List<SensorPreset> Presets { get; set; } = [];
+
+    private async Task SelectPreset(SensorPreset preset)
+    {
+        SelectedPreset = preset.Name;
+        await SelectedPresetChanged.InvokeAsync(preset.Name);
+
+        var bands = BuildBandsForPreset(preset.Name);
+        await OnPresetApplied.InvokeAsync(bands);
+    }
+
+    private static List<BandEntry> BuildBandsForPreset(string presetName) => presetName switch
+    {
+        "ASTER" =>
+        [
+            new("VNIR1", 0, "Visible NIR 1"), new("VNIR2", 1, "Visible NIR 2"),
+            new("SWIR1", 2, "Shortwave IR 1"), new("SWIR2", 3, "Shortwave IR 2")
+        ],
+        "Sentinel-2" =>
+        [
+            new("B1", 0, "Coastal Aerosol"), new("B2", 1, "Blue"), new("B3", 2, "Green"), new("B4", 3, "Red"),
+            new("B5", 4, "Red Edge 1"), new("B6", 5, "Red Edge 2"), new("B7", 6, "Red Edge 3"),
+            new("B8", 7, "NIR"), new("B8A", 8, "NIR Narrow"), new("B9", 9, "Water Vapour"),
+            new("B10", 10, "Cirrus"), new("B11", 11, "SWIR 1"), new("B12", 12, "SWIR 2")
+        ],
+        "Landsat 8" =>
+        [
+            new("B1", 0, "Coastal/Aerosol"), new("B2", 1, "Blue"), new("B3", 2, "Green"), new("B4", 3, "Red"),
+            new("B5", 4, "NIR"), new("B6", 5, "SWIR 1"), new("B7", 6, "SWIR 2"),
+            new("B8", 7, "Panchromatic"), new("B9", 8, "Cirrus"), new("B10", 9, "TIR 1"), new("B11", 10, "TIR 2")
+        ],
+        "Custom" => [],
+        _ => []
+    };
+}

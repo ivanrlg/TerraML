@@ -1,0 +1,67 @@
+/* Form Sections */
+.form-section {
+    background: var(--fs-bg-surface);
+    border: 1px solid var(--fs-border);
+    border-radius: var(--fs-radius-md);
+    padding: 1.25rem;
+}
+
+.form-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--fs-text-primary);
+    margin-bottom: 1rem;
+}
+
+.section-icon {
+    font-size: 1.1rem;
+}
+
+/* Sensor Presets */
+.preset-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+
+.preset-btn {
+    padding: 0.65rem 0.5rem;
+    border: 1px solid var(--fs-border);
+    background: var(--fs-bg-elevated);
+    border-radius: var(--fs-radius-sm);
+    cursor: pointer;
+    text-align: center;
+    transition: all 200ms ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    color: var(--fs-text-primary);
+}
+
+.preset-btn:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.preset-active {
+    border-color: var(--fs-accent-blue);
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.preset-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.preset-detail {
+    font-size: 0.65rem;
+    color: var(--fs-text-tertiary);
+}
+
+@media (max-width: 900px) {
+    .preset-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
