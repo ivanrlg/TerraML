@@ -66,14 +66,16 @@
                 RasterInfoChanged="@(r => _rasterInfo = r)"
                 RasterError="@_rasterError"
                 RasterErrorChanged="@(e => _rasterError = e)"
-                OnBandsImported="@OnBandsImported" />
+                OnBandsImported="@OnBandsImported"
+                OnSensorDetected="@OnSensorDetected" />
 
             @* Sensor Preset *@
             <SensorPresetSelector
                 SelectedPreset="@_selectedPreset"
-                SelectedPresetChanged="@(p => _selectedPreset = p)"
+                SelectedPresetChanged="@(p => { _selectedPreset = p; _presetAutoDetected = false; })"
                 Presets="@_presets"
-                OnPresetApplied="@(bands => _bands = bands)" />
+                AutoDetected="@_presetAutoDetected"
+                OnPresetApplied="@OnPresetApplied" />
 
             @* Bands *@
             <BandConfigurationPanel
@@ -152,6 +154,7 @@
     private string _inputPath = "";
     private string _importFolderPath = "";
     private string? _selectedPreset = "ASTER";
+    private bool _presetAutoDetected = false;
     private InputMode _inputMode = InputMode.DirectPath;
     private bool _isSaving = false;
     private RasterInfo? _rasterInfo;
@@ -247,7 +250,47 @@
     private void OnBandsImported(List<BandEntry> bands)
     {
         _bands = bands;
-        _selectedPreset = null;
+        // Update dynamic preset to reflect actual band count
+        UpdateDynamicPreset();
+    }
+
+    private void OnSensorDetected(string sensorName)
+    {
+        _selectedPreset = sensorName;
+        _presetAutoDetected = true;
+        UpdateDynamicPreset();
+    }
+
+    private void OnPresetApplied(List<BandEntry> bands)
+    {
+        _bands = bands;
+        _presetAutoDetected = false;
+    }
+
+    /// <summary>Update the Sentinel-2 preset entry to show actual imported band count.</summary>
+    private void UpdateDynamicPreset()
+    {
+        if (_selectedPreset == "Sentinel-2" && _bands.Count > 0 && _bands.Count != 13)
+        {
+            // Determine resolution label from band count
+            var resLabel = _bands.Count switch
+            {
+                4 => "10m",
+                6 => "20m",
+                _ => "mixed"
+            };
+            // Update the Sentinel-2 preset entry to show actual count
+            var idx = _presets.FindIndex(p => p.Name == "Sentinel-2");
+            if (idx >= 0)
+                _presets[idx] = new SensorPreset("Sentinel-2", _bands.Count, resLabel);
+        }
+        else if (_selectedPreset == "Sentinel-2")
+        {
+            // Restore default Sentinel-2 preset
+            var idx = _presets.FindIndex(p => p.Name == "Sentinel-2");
+            if (idx >= 0)
+                _presets[idx] = new SensorPreset("Sentinel-2", 13, "10m");
+        }
     }
 
     // --- Load / Save / Reset ---
@@ -378,8 +421,17 @@
         _projectName = "";
         _inputPath = "";
         _selectedPreset = "ASTER";
+        _presetAutoDetected = false;
         _inputMode = InputMode.DirectPath;
         _importFolderPath = "";
+        // Restore default presets
+        _presets =
+        [
+            new("ASTER", 4, "15m"),
+            new("Sentinel-2", 13, "10m"),
+            new("Landsat 8", 11, "30m"),
+            new("Custom", 0, "-")
+        ];
         _rasterInfo = null;
         _rasterError = null;
         _bands = [new("VNIR1", 0, "Visible NIR 1"), new("VNIR2", 1, "Visible NIR 2"), new("SWIR1", 2, "Shortwave IR 1"), new("SWIR2", 3, "Shortwave IR 2")];
