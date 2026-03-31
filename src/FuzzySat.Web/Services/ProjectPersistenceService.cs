@@ -169,6 +169,8 @@ public sealed class ProjectPersistenceService : IDisposable
                 // Classification result
                 if (classResultChanged)
                 {
+                    _logger.LogInformation("ClassificationResult changed: {IsNull}, Rows={Rows}",
+                        classResult is null, classResult?.Rows ?? 0);
                     if (classResult is not null)
                     {
                         var metadata = new ClassificationResultDto
@@ -282,7 +284,9 @@ public sealed class ProjectPersistenceService : IDisposable
             _state.ClassificationOptions = null;
             _state.CachedImage = null;
 
-            if (!await _repo.HasPersistedDataAsync(projectName))
+            var hasData = await _repo.HasPersistedDataAsync(projectName);
+            _logger.LogInformation("Restore '{Project}': hasPersistedData={HasData}", projectName, hasData);
+            if (!hasData)
             {
                 SyncTrackingReferences();
                 return;
@@ -319,6 +323,8 @@ public sealed class ProjectPersistenceService : IDisposable
 
             // Classification result
             var classData = await _repo.LoadClassificationResultAsync(projectName);
+            _logger.LogInformation("Restore classification for '{Project}': hasData={HasData}",
+                projectName, classData is not null);
             if (classData is not null)
             {
                 var (meta, classMap, confidenceMap) = classData.Value;
