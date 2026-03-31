@@ -442,7 +442,8 @@
             if (ProjectState.TrainingSamples is { Count: > 0 })
             {
                 _samples = new List<LabeledPixelSample>(ProjectState.TrainingSamples);
-                _bandNames = _samples[0].BandValues.Keys.ToList();
+                _bandNames = ProjectState.Configuration?.Bands?.Select(b => b.Name).ToList()
+                    ?? _samples[0].BandValues.Keys.ToList();
                 UpdateClassCards();
                 UpdateSpectralChart();
             }
