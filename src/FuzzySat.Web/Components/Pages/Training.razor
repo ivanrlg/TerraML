@@ -422,14 +422,7 @@
             _hasRaster = !string.IsNullOrWhiteSpace(ProjectState.Configuration.InputRasterPath);
             if (!_hasRaster) _mode = "csv";
 
-            // Filter composite presets by available band names
-            if (ProjectState.Configuration.Bands is { Count: > 0 } bands)
-            {
-                var nameSet = new HashSet<string>(bands.Select(b => b.Name), StringComparer.OrdinalIgnoreCase);
-                _availablePresets = AllPresets
-                    .Where(p => nameSet.Contains(p.RedBand) && nameSet.Contains(p.GreenBand) && nameSet.Contains(p.BlueBand))
-                    .ToList();
-            }
+            // Presets are filtered after image load (in LoadBandPreview) using actual raster band names
 
             // Restore persisted explore state
             if (ProjectState.ExploreViewMode is not null)
@@ -540,6 +533,12 @@
             _bandNames = bands;
             _stats = bandStats;
             BuildHistogramData(bandStats);
+
+            // Filter composite presets by actual raster band names
+            var rasterNameSet = new HashSet<string>(bands, StringComparer.OrdinalIgnoreCase);
+            _availablePresets = AllPresets
+                .Where(p => rasterNameSet.Contains(p.RedBand) && rasterNameSet.Contains(p.GreenBand) && rasterNameSet.Contains(p.BlueBand))
+                .ToList();
 
             // Clamp RGB indices and force Single mode if < 3 bands
             if (_bandOptions.Count < 3)
