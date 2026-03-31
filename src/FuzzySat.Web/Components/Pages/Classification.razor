@@ -651,7 +651,7 @@
         if (result is null || row < 0 || row >= result.Rows || col < 0 || col >= result.Columns)
             return "";
 
-        var className = result.GetClass(row, col);
+        var className = System.Net.WebUtility.HtmlEncode(result.GetClass(row, col));
         var confidence = result.GetConfidence(row, col);
         return $"<b>{className}</b> ({confidence:P0})<br/>Pixel [{row}, {col}]";
     }
