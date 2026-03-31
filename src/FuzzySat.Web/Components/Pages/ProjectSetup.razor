@@ -387,6 +387,17 @@
             ProjectState.ImportedRasterPath = null;
             await OnInputPathChanged(_inputPath);
         }
+
+        // Auto-load last used project if no project is currently loaded
+        if (!ProjectState.HasProject)
+        {
+            var lastProject = ProjectLoader.GetLastProject();
+            if (lastProject is not null && _existingProjects.Contains(lastProject, StringComparer.OrdinalIgnoreCase))
+            {
+                _selectedProject = lastProject;
+                await LoadSelectedProject();
+            }
+        }
     }
 
     // --- Input Raster (Direct Path mode) ---
@@ -707,6 +718,7 @@
             }
 
             await ProjectLoader.SaveProjectAsync(safeName, config);
+            await ProjectLoader.SaveLastProjectAsync(safeName);
 
             ProjectState.Configuration = config;
             if (_rasterInfo is not null)
