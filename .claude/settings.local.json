@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(unzip -l \"/c/Users/ivanr/Downloads/Browser_images \\(1\\).zip\")",
+      "Bash(gdalinfo --version)",
+      "Bash(find ~/.nuget/packages/maxrev.gdal.core/3.12.2.472 -name gdal_csharp.dll -o -name OSGeo*.dll)",
+      "Bash(find ~/.nuget/packages/maxrev.gdal.windowsruntime.minimal -name *.dll)",
+      "Bash(ls -la \"/c/Users/ivanr/Downloads/Browser_images \\(1\\).zip\")",
+      "Bash(ls /c/Users/ivanr/Downloads/Browser_images*)",
+      "Bash(ls -la \"/c/Users/ivanr/Downloads/Barinas_S2/\"*B04*)",
+      "Bash(ls -la /c/Users/ivanr/Downloads/Barinas_S2/*.tiff)",
+      "Read(//c/Users/ivanr/source/repos/ivanrlg/FuzzySat/**)",
+      "Bash(ls -la /c/Users/ivanr/Downloads/Browser_images/*.tiff)",
+      "Bash(ls -d \"/c/Users/ivanr/Downloads/Browser\"*)",
+      "Bash(unzip -l \"/c/Users/ivanr/Downloads/Browser_images.zip\")",
+      "Bash(rm -rf \"/c/Users/ivanr/Downloads/Barinas_S2\")",
+      "Bash(mkdir -p \"/c/Users/ivanr/Downloads/Barinas_S2\")",
+      "Bash(find /c/Users/ivanr/source/repos/ivanrlg/FuzzySat -name *.json -path */projects/* -o -name *.json -path *ApplicationData*)",
+      "Bash(xargs ls:*)",
+      "Bash(xargs wc:*)",
+      "Bash(grep -v \"^\\\\s*//\")",
+      "Bash(grep -r \"DbContext\\\\|Entity\\\\|DbSet\\\\|SQLite\\\\|SqlServer\" /c/Users/ivanr/source/repos/ivanrlg/FuzzySat/src --include=*.cs)",
+      "Bash(xargs basename:*)",
+      "Bash(gh repo:*)",
+      "Bash(gh label:*)",
+      "Bash(git log:*)",
+      "Bash(gh issue:*)",
+      "Bash(gh pr:*)",
+      "Bash(find src/FuzzySat.Web/Services -name *.cs -type f)",
+      "Bash(find src/FuzzySat.Core -name *.cs -type f)",
+      "Bash(grep -n \"ResolveSafePath\\\\|path.*traversal\\\\|GetFullPath\\\\|GetRelativePath\" src/FuzzySat.Web/Services/*.cs)",
+      "Bash(find src/FuzzySat -name *.cs -type f -exec grep -l IProjectRepository {})",
+      "Bash(find src/FuzzySat -name *Repository.cs -type f)"
+    ]
+  }
+}

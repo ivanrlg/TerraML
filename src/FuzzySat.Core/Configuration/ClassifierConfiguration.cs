@@ -25,4 +25,10 @@ public sealed class ClassifierConfiguration
 
     /// <summary>Gets or sets the path for the output classification raster. Optional.</summary>
     public string? OutputRasterPath { get; init; }
+
+    /// <summary>Gets or sets the Sentinel-2 import folder path. Optional.</summary>
+    public string? ImportFolderPath { get; init; }
+
+    /// <summary>Gets or sets the input mode ("DirectPath" or "ImportSentinel2"). Optional.</summary>
+    public string? InputMode { get; init; }
 }

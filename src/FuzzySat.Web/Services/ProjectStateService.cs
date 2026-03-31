@@ -42,6 +42,7 @@ public sealed class ProjectStateService
     private List<LabeledPixelSample>? _trainingSamples;
     private MultispectralImage? _cachedImage;
     private Dictionary<string, string>? _classColors;
+    private ClassificationOptions? _classificationOptions;
 
     /// <summary>
     /// Fired when any state property changes. Subscribers must call
@@ -125,6 +126,13 @@ public sealed class ProjectStateService
         set { _classColors = value; NotifyChanged(); }
     }
 
+    /// <summary>Classification options used in the last run (MF type, AND op, defuzzifier, method).</summary>
+    public ClassificationOptions? ClassificationOptions
+    {
+        get => _classificationOptions;
+        set { _classificationOptions = value; NotifyChanged(); }
+    }
+
     /// <summary>Cached in-memory raster to avoid re-reading from disk on navigation.</summary>
     public MultispectralImage? CachedImage
     {
@@ -159,6 +167,7 @@ public sealed class ProjectStateService
         _trainingSamples = null;
         _cachedImage = null;
         _classColors = null;
+        _classificationOptions = null;
         NotifyChanged();
     }
 

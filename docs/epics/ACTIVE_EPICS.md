@@ -13,6 +13,8 @@
 | Completado | 3 | #1 Core Engine MVP, #3 Advanced Features, #7 Classified Output |
 | Casi Completado | 2 | #2 I/O & CLI (~80%), #4 ML Hybrid (~90%) |
 | Parcial | 1 | #5 Blazor Web (~85%) |
+| En Desarrollo | 1 | #8 Project Persistence |
+| Planificado | 1 | #9 Advanced ML Classifiers & Ensemble Methods |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 
 ---
@@ -133,3 +135,50 @@ color picker editable, ProjectStateService.ClassColors.
 - [00-overview.md](epic-007-classified-output/00-overview.md) — Objetivo y alcance
 - [01-plan.md](epic-007-classified-output/01-plan.md) — Plan de implementacion por fases
 - [02-technical-design.md](epic-007-classified-output/02-technical-design.md) — Decisiones tecnicas
+
+---
+
+## Epic #8 - Full Project Persistence — EN DESARROLLO
+
+- **Status**: **En Desarrollo**
+- **Priority**: P0
+- **Folder**: [epic-008-project-persistence/](epic-008-project-persistence/)
+- **GitHub Issue**: [#28](https://github.com/ivanrlg/FuzzySat/issues/28) (open)
+- **Creado**: 2026-03-31
+
+**Objetivo**: Persistencia automatica completa de todos los artefactos del proyecto (regiones,
+muestras, sesion de entrenamiento, clasificacion, validacion). Zero data loss al cerrar navegador.
+
+**Documentos**:
+- [00-overview.md](epic-008-project-persistence/00-overview.md) — Objetivo y alcance
+- [01-plan.md](epic-008-project-persistence/01-plan.md) — Plan de implementacion por fases
+- [02-technical-design.md](epic-008-project-persistence/02-technical-design.md) — Decisiones tecnicas
+
+---
+
+## Epic #9 - Advanced ML Classifiers & Ensemble Methods — PLANIFICADO
+
+- **Status**: **Planificado**
+- **Priority**: P2
+- **Folder**: [epic-009-ml-advanced-classifiers/](epic-009-ml-advanced-classifiers/)
+- **GitHub Issue**: [#31](https://github.com/ivanrlg/FuzzySat/issues/31) (open)
+- **Creado**: 2026-03-31
+- **Prerequisito**: Epic #8 completado
+
+**Objetivo**: Agregar clasificadores avanzados (LightGBM, SVM, Logistic Regression, MLP Neural
+Network via TorchSharp), metodos ensemble (Voting, Stacking), cross-validation k-fold, y framework
+de comparacion automatica de modelos. 6 PRs, ~24 micro-commits.
+
+**Nuevos metodos**:
+- LightGBM (gradient boosting) — `Microsoft.ML.LightGbm`
+- SVM (LinearSvm/OVA) — incluido en ML.NET
+- Logistic Regression (LbfgsMaximumEntropy) — incluido en ML.NET
+- MLP Neural Network (3 capas) — `TorchSharp`
+- Ensemble Voting (majority + weighted)
+- Ensemble Stacking (meta-learner)
+- Model Comparison Framework (k-fold CV + ranking)
+
+**Documentos**:
+- [00-overview.md](epic-009-ml-advanced-classifiers/00-overview.md) — Objetivo y alcance
+- [01-plan.md](epic-009-ml-advanced-classifiers/01-plan.md) — Plan de implementacion por fases
+- [02-technical-design.md](epic-009-ml-advanced-classifiers/02-technical-design.md) — Decisiones tecnicas

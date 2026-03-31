@@ -355,6 +355,60 @@
 
     private bool HasTrainingSamples => ProjectState.TrainingSamples is { Count: > 0 };
 
+    private bool _needsViewerInit;
+
+    protected override void OnInitialized()
+    {
+        // Restore classification options from persisted state if available
+        var saved = ProjectState.ClassificationOptions;
+        if (saved is not null)
+        {
+            _classificationMethod = saved.ClassificationMethod;
+            _mfType = saved.MembershipFunctionType;
+            _andOperator = saved.AndOperator;
+            _defuzzifier = saved.DefuzzifierType;
+        }
+
+        // Restore classification result from persisted state
+        var result = ProjectState.ClassificationResult;
+        if (result is not null)
+        {
+            // Recompute class distribution
+            var counts = new Dictionary<string, int>();
+            for (var r = 0; r < result.Rows; r++)
+                for (var c = 0; c < result.Columns; c++)
+                {
+                    var cls = result.GetClass(r, c);
+                    counts[cls] = counts.GetValueOrDefault(cls) + 1;
+                }
+            _classCounts = counts.OrderByDescending(kv => kv.Value).ToList();
+
+            // Recompute area statistics
+            var geoTransform = ProjectState.RasterInfo?.GeoTransform;
+            _hasGeoTransform = geoTransform is { Length: >= 6 } && Math.Abs(geoTransform[1]) > 0;
+            _areaStats = Core.Classification.AreaCalculator.Calculate(result, geoTransform);
+
+            // Build color map
+            _colorMap = ClassifiedImageRenderer.BuildColorMap(result.Classes, ProjectState.ClassColors);
+
+            _progress = 100;
+            _currentStage = 5;
+            _statusMessage = $"Classification restored ({_classificationMethod}). {result.Classes.Count} classes, {result.Rows * result.Columns:N0} pixels.";
+            _completed = true;
+            _needsViewerInit = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _needsViewerInit && ProjectState.ClassificationResult is not null)
+        {
+            _needsViewerInit = false;
+            await InitializeViewer(ProjectState.ClassificationResult);
+            StateHasChanged();
+        }
+    }
+
     private bool CanRun => ProjectState.HasTrainingSession
                            && ProjectState.Configuration?.InputRasterPath is not null
                            && (_classificationMethod == "Pure Fuzzy" || HasTrainingSamples);
@@ -473,8 +527,9 @@
                 return ClassificationSvc.Classify(image, session, options, progress, _cts!.Token);
             });
 
-            // Store result in project state
+            // Store result and options in project state
             ProjectState.ClassificationResult = result;
+            ProjectState.ClassificationOptions = options;
 
             // Compute class distribution
             var counts = new Dictionary<string, int>();

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using FuzzySat.Core.Raster;
+using FuzzySat.Core.Training;
 using FuzzySat.Web.Services;
 
 namespace FuzzySat.Web.Tests.Services;

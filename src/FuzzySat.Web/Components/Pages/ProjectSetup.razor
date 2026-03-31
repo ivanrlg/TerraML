@@ -10,6 +10,7 @@
 @inject RasterService RasterService
 @inject ProjectLoaderService ProjectLoader
 @inject Sentinel2ImportService ImportService
+@inject ProjectPersistenceService PersistenceService
 
 <PageTitle>Project Setup - FuzzySat</PageTitle>
 
@@ -388,9 +389,25 @@
             await OnInputPathChanged(_inputPath);
         }
 
-        // Auto-load last used project if no project is currently loaded
-        if (!ProjectState.HasProject)
+        if (ProjectState.HasProject)
         {
+            // Project already loaded (e.g., by MainLayout auto-load) — populate UI fields
+            var config = ProjectState.Configuration!;
+            _projectName = config.ProjectName ?? "";
+            _inputPath = config.InputRasterPath ?? "";
+            _bands = config.Bands?.Select(b => new BandEntry(b.Name, b.SourceIndex, b.Description ?? "")).ToList() ?? [];
+            _classes = config.Classes?.Select(c => new ClassEntry(c.Name, c.Code, c.Color ?? "#808080")).ToList() ?? [];
+            _inputMode = config.InputMode == "ImportSentinel2" ? InputMode.ImportSentinel2 : InputMode.DirectPath;
+            _importFolderPath = config.ImportFolderPath ?? "";
+            _selectedProject = _existingProjects.FirstOrDefault(
+                p => p.Equals(config.ProjectName, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(_inputPath))
+                await OnInputPathChanged(_inputPath);
+        }
+        else
+        {
+            // Auto-load last used project
             var lastProject = ProjectLoader.GetLastProject();
             if (lastProject is not null && _existingProjects.Contains(lastProject, StringComparer.OrdinalIgnoreCase))
             {
@@ -646,17 +663,27 @@
         _bands = config.Bands?.Select(b => new BandEntry(b.Name, b.SourceIndex, b.Description ?? "")).ToList() ?? [];
         _classes = config.Classes?.Select(c => new ClassEntry(c.Name, c.Code, c.Color ?? "#808080")).ToList() ?? [];
         _selectedPreset = null;
-        _inputMode = InputMode.DirectPath;
+
+        // Restore input mode and Sentinel-2 folder path
+        _inputMode = config.InputMode == "ImportSentinel2" ? InputMode.ImportSentinel2 : InputMode.DirectPath;
+        _importFolderPath = config.ImportFolderPath ?? "";
 
         ProjectState.Configuration = config;
+
+        // Restore persisted project state (training, classification, validation)
+        await PersistenceService.RestoreProjectStateAsync(_selectedProject);
 
         _rasterInfo = null;
         _rasterError = null;
         if (!string.IsNullOrWhiteSpace(_inputPath))
             await OnInputPathChanged(_inputPath);
 
+        var hasData = ProjectState.HasTrainingSession || ProjectState.HasClassificationResult;
         NotificationService.Notify(NotificationSeverity.Success, "Project Loaded",
-            $"Loaded '{_projectName}'.", duration: 3000);
+            hasData
+                ? $"Loaded '{_projectName}' with saved training and classification data."
+                : $"Loaded '{_projectName}'.",
+            duration: 3000);
     }
 
     private async Task SaveConfiguration()
@@ -691,6 +718,8 @@
             {
                 ProjectName = _projectName.Trim(),
                 InputRasterPath = string.IsNullOrWhiteSpace(_inputPath) ? null : _inputPath.Trim(),
+                ImportFolderPath = string.IsNullOrWhiteSpace(_importFolderPath) ? null : _importFolderPath.Trim(),
+                InputMode = _inputMode == InputMode.ImportSentinel2 ? "ImportSentinel2" : "DirectPath",
                 Bands = _bands.Select(b => new BandConfiguration
                 {
                     Name = b.Name,

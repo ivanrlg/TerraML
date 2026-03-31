@@ -98,6 +98,73 @@ public sealed class ConfusionMatrix
             KappaCoefficient = (OverallAccuracy - pe) / (1.0 - pe);
     }
 
+    /// <summary>
+    /// Reconstructs a confusion matrix from persisted data (class names and matrix values).
+    /// </summary>
+    /// <param name="classNames">Ordered class names.</param>
+    /// <param name="matrix">The confusion matrix [actual, predicted].</param>
+    public static ConfusionMatrix FromPersistedData(
+        IReadOnlyList<string> classNames,
+        int[,] matrix)
+    {
+        ArgumentNullException.ThrowIfNull(classNames);
+        ArgumentNullException.ThrowIfNull(matrix);
+
+        if (classNames.Count == 0)
+            throw new ArgumentException("At least one class name is required.", nameof(classNames));
+
+        var count = classNames.Count;
+        if (matrix.GetLength(0) != count || matrix.GetLength(1) != count)
+            throw new ArgumentException(
+                $"Matrix dimensions ({matrix.GetLength(0)}x{matrix.GetLength(1)}) " +
+                $"must match class count ({count}).", nameof(matrix));
+
+        return new ConfusionMatrix(classNames, matrix);
+    }
+
+    /// <summary>Private constructor for reconstruction from persisted data.</summary>
+    private ConfusionMatrix(IReadOnlyList<string> classNames, int[,] matrix)
+    {
+        var count = classNames.Count;
+        ClassNames = classNames.ToList().AsReadOnly();
+
+        _classIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var i = 0; i < count; i++)
+            _classIndex[classNames[i]] = i;
+
+        _matrix = (int[,])matrix.Clone();
+
+        _rowTotals = new int[count];
+        _colTotals = new int[count];
+        var correctCount = 0;
+        for (var i = 0; i < count; i++)
+        {
+            for (var j = 0; j < count; j++)
+            {
+                _rowTotals[i] += _matrix[i, j];
+                _colTotals[j] += _matrix[i, j];
+            }
+            correctCount += _matrix[i, i];
+        }
+
+        TotalSamples = _rowTotals.Sum();
+        CorrectCount = correctCount;
+        OverallAccuracy = TotalSamples == 0 ? 0.0 : (double)correctCount / TotalSamples;
+
+        var n = (double)TotalSamples;
+        var pe = 0.0;
+        if (n > 0)
+        {
+            for (var i = 0; i < count; i++)
+                pe += ((double)_rowTotals[i] * _colTotals[i]) / (n * n);
+        }
+
+        if (Math.Abs(1.0 - pe) < 1e-15)
+            KappaCoefficient = OverallAccuracy >= 1.0 - 1e-15 ? 1.0 : 0.0;
+        else
+            KappaCoefficient = (OverallAccuracy - pe) / (1.0 - pe);
+    }
+
     /// <summary>Gets the count at [actualClass, predictedClass].</summary>
     public int this[string actualClass, string predictedClass]
     {
