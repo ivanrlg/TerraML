@@ -35,7 +35,9 @@
       "Bash(find /c/Users/ivanr/source/repos/ivanrlg/FuzzySat/src/FuzzySat.Web -type f \\\\\\(-name *.js -o -name *.ts \\\\\\))",
       "Bash(ls -la *.sln)",
       "Bash(find /c/Users/ivanr/source/repos/ivanrlg/FuzzySat/src/FuzzySat.Web -type f -name *.cs)",
-      "Bash(find /c/Users/ivanr/source/repos/ivanrlg/FuzzySat/docs -name *.md)"
+      "Bash(find /c/Users/ivanr/source/repos/ivanrlg/FuzzySat/docs -name *.md)",
+      "Bash(find /c/Users/ivanr/source/repos/ivanrlg/FuzzySat/src/FuzzySat.Web/Services -type f -name *.cs)",
+      "Read(//tmp/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\ivanr\\.claude\\plans"
