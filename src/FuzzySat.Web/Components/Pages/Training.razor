@@ -125,7 +125,17 @@
             <div class="map-col">
                 @if (_hasRaster && _mode == "draw")
                 {
-                    <div class="band-preview-container" style="position: relative; display: inline-block;">
+                    <div class="zoom-container">
+                        @if (_zoomPercent != 100)
+                        {
+                            <div class="zoom-badge">
+                                <span class="mono-text">@_zoomPercent%</span>
+                                <button type="button" class="zoom-reset-btn" title="Reset zoom" @onclick="ResetZoom">
+                                    <span class="material-icons" style="font-size: 0.8rem;">zoom_out_map</span>
+                                </button>
+                            </div>
+                        }
+                        <div class="band-preview-container" style="position: relative; display: inline-block;">
                         @if (!string.IsNullOrEmpty(_bandPreviewBase64))
                         {
                             <img id="training-preview-img" src="data:image/png;base64,@_bandPreviewBase64"
@@ -147,6 +157,7 @@
                                 Loading band preview...
                             </div>
                         }
+                        </div>
                     </div>
                     @if (_regions.Count > 0)
                     {
@@ -359,6 +370,8 @@
     private List<BandOption> _bandOptions = [];
     private List<ClassOption> _classOptions = [];
     private List<string> _viewModes = ["Single", "RGB"];
+
+    private int _zoomPercent = 100;
 
     private DotNetObjectReference<Training>? _dotNetRef;
 
@@ -596,6 +609,20 @@
         _mode = "draw";
         if (_bandPreviewBase64 is null && _hasRaster)
             await LoadBandPreview();
+    }
+
+    [JSInvokable]
+    public void OnZoomChanged(int zoomPercent)
+    {
+        _zoomPercent = zoomPercent;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ResetZoom()
+    {
+        _zoomPercent = 100;
+        if (_canvasInitialized)
+            await JSRuntime.InvokeVoidAsync("trainingSelection.resetZoom");
     }
 
     /// <summary>
