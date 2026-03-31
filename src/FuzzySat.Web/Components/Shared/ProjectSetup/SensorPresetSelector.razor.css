@@ -60,6 +60,21 @@
     color: var(--fs-text-tertiary);
 }
 
+/* Auto-detected badge */
+.auto-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: auto;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--fs-accent-emerald);
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
 @media (max-width: 900px) {
     .preset-grid {
         grid-template-columns: repeat(2, 1fr);
