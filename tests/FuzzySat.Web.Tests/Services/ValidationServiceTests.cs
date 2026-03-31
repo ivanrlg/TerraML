@@ -38,7 +38,7 @@ public class ValidationServiceTests
     public void ValidateFromSamples_WithGoodData_ProducesHighAccuracy()
     {
         var (samples, session) = CreateTestData();
-        var options = new ClassificationOptions("Gaussian", "Minimum", "Max Weight");
+        var options = new ClassificationOptions(MembershipFunctionType: "Gaussian", AndOperator: "Minimum", DefuzzifierType: "Max Weight");
 
         var (matrix, metrics) = _service.ValidateFromSamples(samples, session, options);
 
@@ -107,7 +107,7 @@ public class ValidationServiceTests
 
         foreach (var mfType in new[] { "Gaussian", "Triangular", "Trapezoidal", "Bell" })
         {
-            var options = new ClassificationOptions(mfType, "Minimum", "Max Weight");
+            var options = new ClassificationOptions(MembershipFunctionType: mfType, AndOperator: "Minimum", DefuzzifierType: "Max Weight");
             var (matrix, _) = _service.ValidateFromSamples(samples, session, options);
             matrix.TotalSamples.Should().Be(4);
         }
@@ -117,7 +117,7 @@ public class ValidationServiceTests
     public void ValidateFromSamples_ProductAnd_IsHonored()
     {
         var (samples, session) = CreateTestData();
-        var options = new ClassificationOptions("Gaussian", "Product", "Max Weight");
+        var options = new ClassificationOptions(MembershipFunctionType: "Gaussian", AndOperator: "Product", DefuzzifierType: "Max Weight");
 
         var (matrix, _) = _service.ValidateFromSamples(samples, session, options);
 
@@ -130,7 +130,7 @@ public class ValidationServiceTests
     public void ValidateFromSamples_ProductAnd_WeightedAverage_ProducesValidResult()
     {
         var (samples, session) = CreateTestData();
-        var options = new ClassificationOptions("Gaussian", "Product", "Weighted Average");
+        var options = new ClassificationOptions(MembershipFunctionType: "Gaussian", AndOperator: "Product", DefuzzifierType: "Weighted Average");
 
         var (matrix, _) = _service.ValidateFromSamples(samples, session, options);
 
