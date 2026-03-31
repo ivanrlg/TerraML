@@ -15,6 +15,8 @@ builder.Services.Configure<ProjectStorageOptions>(
 builder.Services.AddSingleton<RasterService>();
 builder.Services.AddSingleton<ProjectLoaderService>();
 builder.Services.AddSingleton<TrainingService>();
+builder.Services.AddSingleton<ClassificationService>();
+builder.Services.AddSingleton<ValidationService>();
 builder.Services.AddScoped<ProjectStateService>();
 
 var app = builder.Build();

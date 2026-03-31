@@ -56,8 +56,9 @@
 @code {
     [Parameter] public List<string> ClassNames { get; set; } = [];
     [Parameter] public int[,] Matrix { get; set; } = new int[0, 0];
+    [Parameter] public Dictionary<string, string>? ClassColors { get; set; }
 
-    private static readonly Dictionary<string, string> ClassColors = new()
+    private static readonly Dictionary<string, string> DefaultClassColors = new()
     {
         ["Urban"] = "#EF4444",
         ["Water"] = "#3B82F6",
@@ -68,8 +69,22 @@
         ["Shadow"] = "#6B7280"
     };
 
-    private string GetClassColor(string className) =>
-        ClassColors.GetValueOrDefault(className, "#8B95B0");
+    private static readonly string[] FallbackPalette =
+    [
+        "#EF4444", "#3B82F6", "#10B981", "#F59E0B", "#D97706",
+        "#8B5CF6", "#EC4899", "#06B6D4", "#6B7280", "#84CC16"
+    ];
+
+    private string GetClassColor(string className)
+    {
+        if (ClassColors is not null && ClassColors.TryGetValue(className, out var color))
+            return color;
+        if (DefaultClassColors.TryGetValue(className, out var defaultColor))
+            return defaultColor;
+        // Generate a deterministic color from the palette based on index
+        var idx = ClassNames.IndexOf(className);
+        return idx >= 0 ? FallbackPalette[idx % FallbackPalette.Length] : "#8B95B0";
+    }
 
     private string GetShortName(string name) =>
         name.Length > 6 ? name[..6] + "." : name;

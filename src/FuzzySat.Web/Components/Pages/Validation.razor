@@ -1,6 +1,10 @@
 @page "/validation"
 @rendermode InteractiveServer
 @inject NotificationService NotificationService
+@inject ProjectStateService ProjectState
+@inject TrainingService TrainingService
+@inject ValidationService ValidationSvc
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Validation - FuzzySat</PageTitle>
 
@@ -11,209 +15,387 @@
             <p class="page-subtitle">Classification accuracy metrics and confusion matrix analysis</p>
         </div>
         <div class="header-actions">
-            <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@ExportCsv" />
+            <RadzenButton Text="Export CSV" Icon="download" ButtonStyle="ButtonStyle.Secondary"
+                          Size="ButtonSize.Small" Click="@ExportCsv" Disabled="@(!_hasResults)" />
         </div>
     </div>
 
-    @* KPI Cards Row *@
-    <div class="kpi-row">
-        <div class="kpi-card fs-scale-in" style="animation-delay: 0.1s;">
-            <div class="kpi-icon-area" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2);">
-                <span class="material-icons" style="color: var(--fs-accent-emerald);">verified</span>
+    @if (!ProjectState.HasTrainingSession)
+    {
+        <div class="fs-card" style="text-align: center; padding: 3rem;">
+            <span class="material-icons" style="font-size: 3rem; color: var(--fs-text-tertiary); margin-bottom: 1rem;">school</span>
+            <h3 style="color: var(--fs-text-secondary);">No Training Session</h3>
+            <p style="color: var(--fs-text-tertiary);">
+                Upload training samples in <a href="/training" style="color: var(--fs-accent-blue);">Training</a> first,
+                then run <a href="/classification" style="color: var(--fs-accent-blue);">Classification</a>,
+                and return here to validate.
+            </p>
+        </div>
+    }
+    else if (!_hasResults)
+    {
+        @* Upload validation samples *@
+        <div class="fs-card" style="text-align: center; padding: 2rem;">
+            <span class="material-icons" style="font-size: 2.5rem; color: var(--fs-accent-blue); margin-bottom: 1rem;">fact_check</span>
+            <h3 style="color: var(--fs-text-secondary); margin-bottom: 0.5rem;">Upload Validation Samples</h3>
+            <p style="color: var(--fs-text-tertiary); margin-bottom: 1.5rem; max-width: 500px; margin-left: auto; margin-right: auto;">
+                Upload a CSV with independent validation samples to compute the confusion matrix.
+                Use the same format as training: <code style="color: var(--fs-accent-cyan);">class,band1,band2,...</code>
+            </p>
+            <div class="drawing-toolbar" style="justify-content: center;">
+                <label class="tool-btn tool-btn-active" title="Import validation samples from CSV" style="cursor: pointer;">
+                    <span class="material-icons" aria-hidden="true">upload_file</span>
+                    <InputFile OnChange="@OnCsvUploaded" accept=".csv" style="display: none;" />
+                </label>
+                <span style="color: var(--fs-text-secondary); font-size: 0.85rem; margin-left: 0.5rem;">
+                    Upload Validation CSV
+                </span>
             </div>
-            <div class="kpi-content">
-                <span class="kpi-label">Overall Accuracy</span>
-                <span class="kpi-value" style="color: var(--fs-accent-emerald);">@($"{_overallAccuracy:P1}")</span>
-                <div class="kpi-bar">
-                    <div class="kpi-bar-fill" style="width: @($"{_overallAccuracy * 100}%"); background: var(--fs-accent-emerald);"></div>
+
+            @if (_isValidating)
+            {
+                <div style="margin-top: 1.5rem;">
+                    <RadzenProgressBar Value="100" ShowValue="false" Style="height: 4px;" Mode="ProgressBarMode.Indeterminate" />
+                    <p class="status-msg" style="margin-top: 0.5rem;">Classifying validation samples...</p>
+                </div>
+            }
+
+            @if (_warnings.Count > 0)
+            {
+                <div style="margin-top: 1rem; text-align: left; max-width: 500px; margin-left: auto; margin-right: auto;">
+                    @foreach (var w in _warnings.Take(5))
+                    {
+                        <p style="color: var(--fs-accent-amber); font-size: 0.8rem;">@w</p>
+                    }
+                    @if (_warnings.Count > 5)
+                    {
+                        <p style="color: var(--fs-text-tertiary); font-size: 0.8rem;">...and @(_warnings.Count - 5) more warnings</p>
+                    }
+                </div>
+            }
+        </div>
+
+        @* MF configuration for validation *@
+        <div class="fs-card" style="margin-top: 1rem;">
+            <div class="section-header">
+                <span class="material-icons section-icon">tune</span>
+                <span class="section-title">Classification Parameters</span>
+            </div>
+            <p style="color: var(--fs-text-tertiary); font-size: 0.85rem; margin-bottom: 1rem;">
+                Validation will classify each sample using these parameters to compare predicted vs actual.
+            </p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                <div>
+                    <label style="color: var(--fs-text-secondary); font-size: 0.85rem;">Membership Function</label>
+                    <RadzenDropDown @bind-Value="@_mfType" Data="@_mfTypes" Style="width: 100%;" />
+                </div>
+                <div>
+                    <label style="color: var(--fs-text-secondary); font-size: 0.85rem;">AND Operator</label>
+                    <RadzenDropDown @bind-Value="@_andOperator" Data="@_andOperators" Style="width: 100%;" />
+                </div>
+                <div>
+                    <label style="color: var(--fs-text-secondary); font-size: 0.85rem;">Defuzzifier</label>
+                    <RadzenDropDown @bind-Value="@_defuzzifier" Data="@_defuzzifiers" Style="width: 100%;" />
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        @* KPI Cards Row *@
+        <div class="kpi-row">
+            <div class="kpi-card fs-scale-in" style="animation-delay: 0.1s;">
+                <div class="kpi-icon-area" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2);">
+                    <span class="material-icons" style="color: var(--fs-accent-emerald);">verified</span>
+                </div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Overall Accuracy</span>
+                    <span class="kpi-value" style="color: var(--fs-accent-emerald);">@($"{_overallAccuracy:P1}")</span>
+                    <div class="kpi-bar">
+                        <div class="kpi-bar-fill" style="width: @($"{_overallAccuracy * 100}%"); background: var(--fs-accent-emerald);"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kpi-card fs-scale-in" style="animation-delay: 0.2s;">
+                <div class="kpi-icon-area" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.2);">
+                    <span class="material-icons" style="color: var(--fs-accent-blue);">functions</span>
+                </div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Kappa Coefficient</span>
+                    <span class="kpi-value" style="color: var(--fs-accent-blue);">@($"{_kappa:F4}")</span>
+                    <span class="kpi-interpretation">@GetKappaInterpretation(_kappa)</span>
+                </div>
+            </div>
+
+            <div class="kpi-card fs-scale-in" style="animation-delay: 0.3s;">
+                <div class="kpi-icon-area" style="background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.2);">
+                    <span class="material-icons" style="color: var(--fs-accent-violet);">analytics</span>
+                </div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Total Samples</span>
+                    <span class="kpi-value" style="color: var(--fs-accent-violet);">@_totalSamples</span>
+                    <span class="kpi-interpretation">@_classNames.Count classes evaluated</span>
+                </div>
+            </div>
+
+            <div class="kpi-card fs-scale-in" style="animation-delay: 0.4s;">
+                <div class="kpi-icon-area" style="background: rgba(6, 182, 212, 0.1); border-color: rgba(6, 182, 212, 0.2);">
+                    <span class="material-icons" style="color: var(--fs-accent-cyan);">check_circle</span>
+                </div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Correct Classifications</span>
+                    <span class="kpi-value" style="color: var(--fs-accent-cyan);">@_correctCount</span>
+                    <span class="kpi-interpretation">of @_totalSamples total</span>
                 </div>
             </div>
         </div>
 
-        <div class="kpi-card fs-scale-in" style="animation-delay: 0.2s;">
-            <div class="kpi-icon-area" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.2);">
-                <span class="material-icons" style="color: var(--fs-accent-blue);">functions</span>
+        @* Confusion Matrix *@
+        <div class="section-card fs-scale-in" style="animation-delay: 0.3s;">
+            <ConfusionMatrixHeatmap ClassNames="_classNames" Matrix="_confusionMatrix" ClassColors="@_classColorMap" />
+        </div>
+
+        @* Charts Row *@
+        <div class="charts-row">
+            @* Per-Class Accuracy Bar Chart *@
+            <div class="section-card chart-card fs-scale-in" style="animation-delay: 0.4s;">
+                <div class="section-header">
+                    <span class="material-icons section-icon">bar_chart</span>
+                    <span class="section-title">Per-Class Accuracy</span>
+                </div>
+                <RadzenChart Style="height: 320px;">
+                    <RadzenBarSeries Data="@_classMetrics" CategoryProperty="ClassName" ValueProperty="ProducersAccuracyPct" Title="Producer's Acc.">
+                        <RadzenSeriesDataLabels Visible="false" />
+                    </RadzenBarSeries>
+                    <RadzenBarSeries Data="@_classMetrics" CategoryProperty="ClassName" ValueProperty="UsersAccuracyPct" Title="User's Acc.">
+                        <RadzenSeriesDataLabels Visible="false" />
+                    </RadzenBarSeries>
+                    <RadzenCategoryAxis />
+                    <RadzenValueAxis Min="0" Max="100" Step="25">
+                        <RadzenGridLines Visible="true" />
+                    </RadzenValueAxis>
+                    <RadzenLegend Position="LegendPosition.Bottom" />
+                </RadzenChart>
             </div>
-            <div class="kpi-content">
-                <span class="kpi-label">Kappa Coefficient</span>
-                <span class="kpi-value" style="color: var(--fs-accent-blue);">@($"{_kappa:F4}")</span>
-                <span class="kpi-interpretation">Substantial Agreement</span>
+
+            @* Accuracy Donut *@
+            <div class="section-card chart-card fs-scale-in" style="animation-delay: 0.5s;">
+                <div class="section-header">
+                    <span class="material-icons section-icon">donut_large</span>
+                    <span class="section-title">Classification Split</span>
+                </div>
+                <RadzenChart Style="height: 320px;">
+                    <RadzenDonutSeries Data="@_donutData" CategoryProperty="Label" ValueProperty="Value" Title="Accuracy">
+                        <RadzenSeriesDataLabels Visible="true" />
+                    </RadzenDonutSeries>
+                </RadzenChart>
+                <div class="donut-center-label">
+                    <span class="donut-pct">@($"{_overallAccuracy:P0}")</span>
+                    <span class="donut-sublabel">Accurate</span>
+                </div>
             </div>
         </div>
 
-        <div class="kpi-card fs-scale-in" style="animation-delay: 0.3s;">
-            <div class="kpi-icon-area" style="background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.2);">
-                <span class="material-icons" style="color: var(--fs-accent-violet);">analytics</span>
-            </div>
-            <div class="kpi-content">
-                <span class="kpi-label">Total Samples</span>
-                <span class="kpi-value" style="color: var(--fs-accent-violet);">@_totalSamples</span>
-                <span class="kpi-interpretation">7 classes evaluated</span>
-            </div>
-        </div>
-
-        <div class="kpi-card fs-scale-in" style="animation-delay: 0.4s;">
-            <div class="kpi-icon-area" style="background: rgba(6, 182, 212, 0.1); border-color: rgba(6, 182, 212, 0.2);">
-                <span class="material-icons" style="color: var(--fs-accent-cyan);">check_circle</span>
-            </div>
-            <div class="kpi-content">
-                <span class="kpi-label">Correct Classifications</span>
-                <span class="kpi-value" style="color: var(--fs-accent-cyan);">@_correctCount</span>
-                <span class="kpi-interpretation">of @_totalSamples total</span>
-            </div>
-        </div>
-    </div>
-
-    @* Confusion Matrix *@
-    <div class="section-card fs-scale-in" style="animation-delay: 0.3s;">
-        <ConfusionMatrixHeatmap ClassNames="_classNames" Matrix="_confusionMatrix" />
-    </div>
-
-    @* Charts Row *@
-    <div class="charts-row">
-        @* Per-Class Accuracy Bar Chart *@
-        <div class="section-card chart-card fs-scale-in" style="animation-delay: 0.4s;">
+        @* Enhanced Data Grid *@
+        <div class="section-card fs-scale-in" style="animation-delay: 0.5s;">
             <div class="section-header">
-                <span class="material-icons section-icon">bar_chart</span>
-                <span class="section-title">Per-Class Accuracy</span>
+                <span class="material-icons section-icon">table_chart</span>
+                <span class="section-title">Detailed Per-Class Metrics</span>
             </div>
-            <RadzenChart Style="height: 320px;">
-                <RadzenBarSeries Data="@_classMetrics" CategoryProperty="ClassName" ValueProperty="ProducersAccuracyPct" Title="Producer's Acc.">
-                    <RadzenSeriesDataLabels Visible="false" />
-                </RadzenBarSeries>
-                <RadzenBarSeries Data="@_classMetrics" CategoryProperty="ClassName" ValueProperty="UsersAccuracyPct" Title="User's Acc.">
-                    <RadzenSeriesDataLabels Visible="false" />
-                </RadzenBarSeries>
-                <RadzenCategoryAxis />
-                <RadzenValueAxis Min="0" Max="100" Step="25">
-                    <RadzenGridLines Visible="true" />
-                </RadzenValueAxis>
-                <RadzenLegend Position="LegendPosition.Bottom" />
-            </RadzenChart>
+            <RadzenDataGrid Data="@_classMetrics" TItem="ClassMetricRow" class="metrics-grid">
+                <Columns>
+                    <RadzenDataGridColumn TItem="ClassMetricRow" Property="ClassName" Title="Class" Width="140px">
+                        <Template Context="item">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="width: 10px; height: 10px; border-radius: 50%; background: @GetClassColor(item.ClassName); flex-shrink: 0;"></span>
+                                <span>@item.ClassName</span>
+                            </div>
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="ClassMetricRow" Property="ProducersAccuracy" Title="Producer's Acc." Width="150px">
+                        <Template Context="item">
+                            <div class="acc-cell">
+                                <div class="acc-bar" style="width: @($"{item.ProducersAccuracy * 100}%"); background: @GetAccuracyColor(item.ProducersAccuracy);"></div>
+                                <span class="acc-text">@($"{item.ProducersAccuracy:P1}")</span>
+                            </div>
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="ClassMetricRow" Property="UsersAccuracy" Title="User's Acc." Width="150px">
+                        <Template Context="item">
+                            <div class="acc-cell">
+                                <div class="acc-bar" style="width: @($"{item.UsersAccuracy * 100}%"); background: @GetAccuracyColor(item.UsersAccuracy);"></div>
+                                <span class="acc-text">@($"{item.UsersAccuracy:P1}")</span>
+                            </div>
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="ClassMetricRow" Property="F1Score" Title="F1 Score" Width="120px">
+                        <Template Context="item">
+                            <span class="mono-text" style="color: @GetAccuracyColor(item.F1Score);">@($"{item.F1Score:F3}")</span>
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="ClassMetricRow" Property="Samples" Title="Samples" Width="100px">
+                        <Template Context="item">
+                            <span class="mono-text">@item.Samples</span>
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
         </div>
 
-        @* Accuracy Donut *@
-        <div class="section-card chart-card fs-scale-in" style="animation-delay: 0.5s;">
-            <div class="section-header">
-                <span class="material-icons section-icon">donut_large</span>
-                <span class="section-title">Classification Split</span>
-            </div>
-            <RadzenChart Style="height: 320px;">
-                <RadzenDonutSeries Data="@_donutData" CategoryProperty="Label" ValueProperty="Value" Title="Accuracy">
-                    <RadzenSeriesDataLabels Visible="true" />
-                </RadzenDonutSeries>
-            </RadzenChart>
-            <div class="donut-center-label">
-                <span class="donut-pct">@($"{_overallAccuracy:P0}")</span>
-                <span class="donut-sublabel">Accurate</span>
-            </div>
+        @* Re-validate button *@
+        <div style="text-align: center; margin-top: 1.5rem;">
+            <RadzenButton Text="Upload New Validation Data" Icon="refresh" ButtonStyle="ButtonStyle.Secondary"
+                          Click="@ResetValidation" />
         </div>
-    </div>
-
-    @* Enhanced Data Grid *@
-    <div class="section-card fs-scale-in" style="animation-delay: 0.5s;">
-        <div class="section-header">
-            <span class="material-icons section-icon">table_chart</span>
-            <span class="section-title">Detailed Per-Class Metrics</span>
-        </div>
-        <RadzenDataGrid Data="@_classMetrics" TItem="ClassMetricRow" class="metrics-grid">
-            <Columns>
-                <RadzenDataGridColumn TItem="ClassMetricRow" Property="ClassName" Title="Class" Width="140px">
-                    <Template Context="item">
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span style="width: 10px; height: 10px; border-radius: 50%; background: @GetClassColor(item.ClassName); flex-shrink: 0;"></span>
-                            <span>@item.ClassName</span>
-                        </div>
-                    </Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="ClassMetricRow" Property="ProducersAccuracy" Title="Producer's Acc." Width="150px">
-                    <Template Context="item">
-                        <div class="acc-cell">
-                            <div class="acc-bar" style="width: @($"{item.ProducersAccuracy * 100}%"); background: @GetAccuracyColor(item.ProducersAccuracy);"></div>
-                            <span class="acc-text">@($"{item.ProducersAccuracy:P1}")</span>
-                        </div>
-                    </Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="ClassMetricRow" Property="UsersAccuracy" Title="User's Acc." Width="150px">
-                    <Template Context="item">
-                        <div class="acc-cell">
-                            <div class="acc-bar" style="width: @($"{item.UsersAccuracy * 100}%"); background: @GetAccuracyColor(item.UsersAccuracy);"></div>
-                            <span class="acc-text">@($"{item.UsersAccuracy:P1}")</span>
-                        </div>
-                    </Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="ClassMetricRow" Property="F1Score" Title="F1 Score" Width="120px">
-                    <Template Context="item">
-                        <span class="mono-text" style="color: @GetAccuracyColor(item.F1Score);">@($"{item.F1Score:F3}")</span>
-                    </Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="ClassMetricRow" Property="Samples" Title="Samples" Width="100px">
-                    <Template Context="item">
-                        <span class="mono-text">@item.Samples</span>
-                    </Template>
-                </RadzenDataGridColumn>
-            </Columns>
-        </RadzenDataGrid>
-    </div>
+    }
 </div>
 
 @code {
-    private double _overallAccuracy = 0.8187;
-    private double _kappa = 0.7637;
-    private int _totalSamples = 171;
+    private double _overallAccuracy;
+    private double _kappa;
+    private int _totalSamples;
     private int _correctCount;
+    private bool _hasResults;
+    private bool _isValidating;
 
-    private List<string> _classNames = ["Urban", "Water", "Forest", "Agriculture", "Bare Soil", "Cloud", "Shadow"];
+    private string _mfType = "Gaussian";
+    private string _andOperator = "Minimum";
+    private string _defuzzifier = "Max Weight";
 
-    private int[,] _confusionMatrix = new int[,]
-    {
-        { 21, 0, 1, 1, 1, 0, 0 },   // Urban
-        { 0, 21, 0, 0, 0, 1, 1 },    // Water
-        { 1, 0, 21, 2, 0, 0, 1 },    // Forest
-        { 2, 0, 2, 18, 1, 0, 0 },    // Agriculture
-        { 1, 0, 0, 2, 17, 1, 1 },    // Bare Soil
-        { 0, 1, 0, 0, 1, 25, 3 },    // Cloud
-        { 0, 1, 1, 0, 2, 2, 18 }     // Shadow
-    };
+    private List<string> _mfTypes = ["Gaussian", "Triangular", "Trapezoidal", "Bell"];
+    private List<string> _andOperators = ["Minimum", "Product"];
+    private List<string> _defuzzifiers = ["Max Weight", "Weighted Average"];
 
-    private List<ClassMetricRow> _classMetrics =
-    [
-        new("Urban", 0.88, 0.85, 24),
-        new("Water", 0.92, 0.90, 23),
-        new("Forest", 0.85, 0.82, 25),
-        new("Agriculture", 0.78, 0.80, 23),
-        new("Bare Soil", 0.75, 0.77, 22),
-        new("Cloud", 0.82, 0.84, 30),
-        new("Shadow", 0.76, 0.73, 24)
-    ];
-
+    private List<string> _classNames = [];
+    private int[,] _confusionMatrix = new int[0, 0];
+    private List<ClassMetricRow> _classMetrics = [];
     private List<DonutItem> _donutData = [];
+    private List<string> _warnings = [];
 
-    protected override void OnInitialized()
+    private Core.Validation.ConfusionMatrix? _matrix;
+
+    // Color palette for dynamic class assignment
+    private static readonly string[] Palette =
+    [
+        "#EF4444", "#3B82F6", "#10B981", "#F59E0B", "#D97706",
+        "#8B5CF6", "#EC4899", "#06B6D4", "#6B7280", "#84CC16",
+        "#F43F5E", "#0EA5E9", "#14B8A6", "#A855F7", "#E8ECF4"
+    ];
+    private Dictionary<string, string> _classColorMap = new();
+
+    private async Task OnCsvUploaded(InputFileChangeEventArgs e)
     {
-        // Compute correct count from confusion matrix diagonal
-        _correctCount = 0;
-        for (var i = 0; i < _classNames.Count && i < _confusionMatrix.GetLength(0); i++)
-            _correctCount += _confusionMatrix[i, i];
+        if (!ProjectState.HasTrainingSession) return;
 
-        _donutData =
-        [
-            new("Correct", _correctCount),
-            new("Incorrect", _totalSamples - _correctCount)
-        ];
+        _isValidating = true;
+        _warnings.Clear();
+        StateHasChanged();
+
+        try
+        {
+            using var stream = e.File.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+
+            // Reuse TrainingService's CSV parser (same format)
+            var (samples, bandNames, warnings) = TrainingService.LoadSamplesFromCsv(stream);
+            _warnings = warnings;
+
+            if (samples.Count == 0)
+            {
+                NotificationService.Notify(NotificationSeverity.Warning, "No Samples",
+                    "CSV contained no valid data rows.", duration: 5000);
+                return;
+            }
+
+            // Validate band names match training session
+            var sessionBands = new HashSet<string>(ProjectState.TrainingSession!.BandNames);
+            var csvBands = new HashSet<string>(bandNames);
+            if (!sessionBands.SetEquals(csvBands))
+            {
+                var missing = sessionBands.Except(csvBands).ToList();
+                var extra = csvBands.Except(sessionBands).ToList();
+                var msg = "";
+                if (missing.Count > 0) msg += $"Missing bands: {string.Join(", ", missing)}. ";
+                if (extra.Count > 0) msg += $"Extra bands: {string.Join(", ", extra)}.";
+                NotificationService.Notify(NotificationSeverity.Error, "Band Mismatch", msg.Trim(), duration: 8000);
+                return;
+            }
+
+            // Run validation
+            var options = new ClassificationOptions(_mfType, _andOperator, _defuzzifier);
+            var (matrix, metrics) = await Task.Run(() =>
+                ValidationSvc.ValidateFromSamples(samples, ProjectState.TrainingSession!, options));
+
+            _matrix = matrix;
+
+            // Populate UI state
+            _overallAccuracy = matrix.OverallAccuracy;
+            _kappa = matrix.KappaCoefficient;
+            _totalSamples = matrix.TotalSamples;
+            _correctCount = matrix.CorrectCount;
+            _classNames = matrix.ClassNames.ToList();
+
+            // Build class color map
+            _classColorMap.Clear();
+            for (var i = 0; i < _classNames.Count; i++)
+                _classColorMap[_classNames[i]] = Palette[i % Palette.Length];
+
+            // Build int[,] matrix for heatmap component
+            var n = _classNames.Count;
+            _confusionMatrix = new int[n, n];
+            for (var i = 0; i < n; i++)
+                for (var j = 0; j < n; j++)
+                    _confusionMatrix[i, j] = matrix[_classNames[i], _classNames[j]];
+
+            // Build per-class metrics
+            _classMetrics = metrics.PerClassMetrics
+                .Select(m => new ClassMetricRow(
+                    m.ClassName,
+                    m.ProducersAccuracy,
+                    m.UsersAccuracy,
+                    m.ActualCount))
+                .ToList();
+
+            // Donut data
+            _donutData =
+            [
+                new("Correct", _correctCount),
+                new("Incorrect", _totalSamples - _correctCount)
+            ];
+
+            // Store in project state
+            ProjectState.ConfusionMatrix = matrix;
+            _hasResults = true;
+
+            NotificationService.Notify(NotificationSeverity.Success, "Validation Complete",
+                $"OA: {_overallAccuracy:P1}, Kappa: {_kappa:F4} ({samples.Count} samples, {_classNames.Count} classes)",
+                duration: 6000);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Validation Error",
+                ex.Message, duration: 6000);
+        }
+        finally
+        {
+            _isValidating = false;
+        }
     }
 
-    private static string GetClassColor(string className) => className switch
+    private void ResetValidation()
     {
-        "Urban" => "#EF4444",
-        "Water" => "#3B82F6",
-        "Forest" => "#10B981",
-        "Agriculture" => "#F59E0B",
-        "Bare Soil" => "#D97706",
-        "Cloud" => "#E8ECF4",
-        "Shadow" => "#6B7280",
-        _ => "#8B95B0"
-    };
+        _hasResults = false;
+        _matrix = null;
+        _classNames.Clear();
+        _classMetrics.Clear();
+        _donutData.Clear();
+        _confusionMatrix = new int[0, 0];
+        _warnings.Clear();
+        ProjectState.ConfusionMatrix = null;
+    }
+
+    private string GetClassColor(string className) =>
+        _classColorMap.GetValueOrDefault(className, "#8B95B0");
 
     private static string GetAccuracyColor(double accuracy) => accuracy switch
     {
@@ -221,6 +403,28 @@
         >= 0.70 => "#F59E0B",
         _ => "#EF4444"
     };
+
+    private static string GetKappaInterpretation(double kappa) => kappa switch
+    {
+        >= 0.81 => "Almost Perfect Agreement",
+        >= 0.61 => "Substantial Agreement",
+        >= 0.41 => "Moderate Agreement",
+        >= 0.21 => "Fair Agreement",
+        >= 0.0 => "Slight Agreement",
+        _ => "Poor Agreement"
+    };
+
+    private async Task ExportCsv()
+    {
+        if (_matrix is null) return;
+
+        var csv = ValidationSvc.ExportConfusionMatrixCsv(_matrix);
+        var fileName = $"validation_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", csv);
+
+        NotificationService.Notify(NotificationSeverity.Success, "Exported",
+            $"Confusion matrix saved as {fileName}.", duration: 4000);
+    }
 
     private record ClassMetricRow(string ClassName, double ProducersAccuracy, double UsersAccuracy, int Samples)
     {
@@ -230,12 +434,6 @@
             (ProducersAccuracy + UsersAccuracy) == 0
                 ? 0
                 : 2 * (ProducersAccuracy * UsersAccuracy) / (ProducersAccuracy + UsersAccuracy);
-    }
-
-    private void ExportCsv()
-    {
-        NotificationService.Notify(NotificationSeverity.Info, "Coming Soon",
-            "CSV export will be available once connected to real classification results.", duration: 4000);
     }
 
     private record DonutItem(string Label, int Value);
