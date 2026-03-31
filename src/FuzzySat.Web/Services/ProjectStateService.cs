@@ -7,6 +7,15 @@ using FuzzySat.Core.Validation;
 namespace FuzzySat.Web.Services;
 
 /// <summary>
+/// Persisted band selection state for the Explore &amp; Train page.
+/// </summary>
+public sealed record ExploreBandSelection(
+    int SelectedBandIndex,
+    int RedBandIndex,
+    int GreenBandIndex,
+    int BlueBandIndex);
+
+/// <summary>
 /// Scoped service holding the current project's state across pages.
 /// Each Blazor Server circuit (browser tab) gets its own instance.
 ///
@@ -27,6 +36,11 @@ public sealed class ProjectStateService
     private ClassificationResult? _classificationResult;
     private ConfusionMatrix? _confusionMatrix;
     private string? _importedRasterPath;
+    private string? _exploreViewMode;
+    private ExploreBandSelection? _exploreBands;
+    private List<TrainingRegion>? _trainingRegions;
+    private List<LabeledPixelSample>? _trainingSamples;
+    private MultispectralImage? _cachedImage;
 
     /// <summary>
     /// Fired when any state property changes. Subscribers must call
@@ -75,6 +89,41 @@ public sealed class ProjectStateService
         set { _importedRasterPath = value; NotifyChanged(); }
     }
 
+    /// <summary>View mode for the Explore &amp; Train page ("Single" or "RGB").</summary>
+    public string? ExploreViewMode
+    {
+        get => _exploreViewMode;
+        set { _exploreViewMode = value; NotifyChanged(); }
+    }
+
+    /// <summary>Selected band indices for the Explore &amp; Train page.</summary>
+    public ExploreBandSelection? ExploreBands
+    {
+        get => _exploreBands;
+        set { _exploreBands = value; NotifyChanged(); }
+    }
+
+    /// <summary>Drawn training regions preserved across navigation.</summary>
+    public List<TrainingRegion>? TrainingRegions
+    {
+        get => _trainingRegions;
+        set { _trainingRegions = value; NotifyChanged(); }
+    }
+
+    /// <summary>Extracted pixel samples preserved across navigation.</summary>
+    public List<LabeledPixelSample>? TrainingSamples
+    {
+        get => _trainingSamples;
+        set { _trainingSamples = value; NotifyChanged(); }
+    }
+
+    /// <summary>Cached in-memory raster to avoid re-reading from disk on navigation.</summary>
+    public MultispectralImage? CachedImage
+    {
+        get => _cachedImage;
+        set { _cachedImage = value; NotifyChanged(); }
+    }
+
     /// <summary>Whether a project is loaded with a valid configuration.</summary>
     public bool HasProject => _configuration is not null;
 
@@ -96,6 +145,11 @@ public sealed class ProjectStateService
         _classificationResult = null;
         _confusionMatrix = null;
         _importedRasterPath = null;
+        _exploreViewMode = null;
+        _exploreBands = null;
+        _trainingRegions = null;
+        _trainingSamples = null;
+        _cachedImage = null;
         NotifyChanged();
     }
 
