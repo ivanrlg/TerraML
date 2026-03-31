@@ -11,7 +11,7 @@
     <div class="page-header">
         <div>
             <h1 class="page-title">Band Viewer</h1>
-            <p class="page-subtitle">Visualize spectral bands with real statistics, histograms, and grayscale previews.</p>
+            <p class="page-subtitle">Visualize spectral bands and RGB composites with statistics and histograms.</p>
         </div>
         <span class="fs-badge fs-badge-blue">Step 2 of 5</span>
     </div>
@@ -29,11 +29,48 @@
         @* Band Toolbar *@
         <div class="band-toolbar">
             <div class="toolbar-section">
-                <span class="toolbar-label">Band</span>
-                <RadzenDropDown @bind-Value="@_selectedBand" Data="@_bandNames"
-                                Placeholder="Select band..." Style="width: 180px;"
-                                Change="@(_ => OnBandChanged())" />
+                <span class="toolbar-label">View</span>
+                <RadzenDropDown @bind-Value="@_viewMode" Data="@_viewModes"
+                                Style="width: 140px;" Change="@(_ => OnViewModeChanged())" />
             </div>
+
+            @if (_viewMode == "Single Band")
+            {
+                <div class="toolbar-section">
+                    <span class="toolbar-label">Band</span>
+                    <RadzenDropDown @bind-Value="@_selectedBand" Data="@_bandNames"
+                                    Placeholder="Select band..." Style="width: 180px;"
+                                    Change="@(_ => OnBandChanged())" />
+                </div>
+            }
+            else
+            {
+                <div class="toolbar-section">
+                    <span class="toolbar-label" style="color: #EF4444;">R</span>
+                    <RadzenDropDown @bind-Value="@_redBand" Data="@_bandNames" Style="width: 120px;"
+                                    Change="@(_ => OnRgbChanged())" />
+                </div>
+                <div class="toolbar-section">
+                    <span class="toolbar-label" style="color: #10B981;">G</span>
+                    <RadzenDropDown @bind-Value="@_greenBand" Data="@_bandNames" Style="width: 120px;"
+                                    Change="@(_ => OnRgbChanged())" />
+                </div>
+                <div class="toolbar-section">
+                    <span class="toolbar-label" style="color: #3B82F6;">B</span>
+                    <RadzenDropDown @bind-Value="@_blueBand" Data="@_bandNames" Style="width: 120px;"
+                                    Change="@(_ => OnRgbChanged())" />
+                </div>
+                @if (_availablePresets.Count > 0)
+                {
+                    <div class="toolbar-section">
+                        <span class="toolbar-label">Preset</span>
+                        <RadzenDropDown @bind-Value="@_selectedPreset" Data="@_availablePresets"
+                                        TextProperty="Label" Style="width: 160px;"
+                                        Change="@(_ => OnPresetChanged())" />
+                    </div>
+                }
+            }
+
             <div class="toolbar-section">
                 <span class="toolbar-label">Stretch</span>
                 <RadzenDropDown @bind-Value="@_stretch" Data="@_stretches" Style="width: 140px;" Disabled="true" />
@@ -53,13 +90,13 @@
                 {
                     <div style="display: flex; align-items: center; justify-content: center; height: 520px; background: var(--fs-bg-surface); border-radius: var(--fs-radius-lg);">
                         <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" />
-                        <span style="margin-left: 1rem; color: var(--fs-text-secondary);">Loading band data...</span>
+                        <span style="margin-left: 1rem; color: var(--fs-text-secondary);">Loading @(_viewMode == "RGB Composite" ? "composite" : "band") data...</span>
                     </div>
                 }
                 else if (_bandPreviewBase64 is not null)
                 {
                     <div style="background: var(--fs-bg-surface); border-radius: var(--fs-radius-lg); padding: 0.5rem; text-align: center;">
-                        <img src="data:image/png;base64,@_bandPreviewBase64" alt="Band preview"
+                        <img src="data:image/png;base64,@_bandPreviewBase64" alt="@(_viewMode == "RGB Composite" ? "RGB Composite" : "Band") preview"
                              style="max-width: 100%; max-height: 520px; border-radius: var(--fs-radius-md); opacity: @(_opacity / 100.0);" />
                     </div>
                 }
@@ -74,11 +111,23 @@
                 <div class="info-section">
                     <div class="info-header">
                         <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-cyan);">info</span>
-                        <span>Band Metadata</span>
+                        <span>@(_viewMode == "RGB Composite" ? "RGB Composite" : "Band Metadata")</span>
                     </div>
                     <div class="meta-grid">
-                        <span class="meta-label">Band</span>
-                        <span class="meta-value mono-text">@(_selectedBand ?? "None")</span>
+                        @if (_viewMode == "RGB Composite")
+                        {
+                            <span class="meta-label">Red</span>
+                            <span class="meta-value mono-text" style="color: #EF4444;">@(_redBand ?? "—")</span>
+                            <span class="meta-label">Green</span>
+                            <span class="meta-value mono-text" style="color: #10B981;">@(_greenBand ?? "—")</span>
+                            <span class="meta-label">Blue</span>
+                            <span class="meta-value mono-text" style="color: #3B82F6;">@(_blueBand ?? "—")</span>
+                        }
+                        else
+                        {
+                            <span class="meta-label">Band</span>
+                            <span class="meta-value mono-text">@(_selectedBand ?? "None")</span>
+                        }
                         <span class="meta-label">Dimensions</span>
                         <span class="meta-value mono-text">@(ProjectState.RasterInfo is not null ? $"{ProjectState.RasterInfo.Columns} x {ProjectState.RasterInfo.Rows}" : "—")</span>
                         <span class="meta-label">Data Type</span>
@@ -134,18 +183,34 @@
 </div>
 
 @code {
+    private string _viewMode = "Single Band";
     private string? _selectedBand;
+    private string? _redBand;
+    private string? _greenBand;
+    private string? _blueBand;
     private string _stretch = "Min-Max";
     private double _opacity = 100;
     private bool _isLoading = false;
+    private CompositePreset? _selectedPreset;
 
     private List<string> _bandNames = [];
+    private List<string> _viewModes = ["Single Band", "RGB Composite"];
     private List<string> _stretches = ["Min-Max", "Std Dev", "Histogram Eq."];
+    private List<CompositePreset> _availablePresets = [];
 
     private BandStatistics? _stats;
     private string? _bandPreviewBase64;
     private List<HistBin> _histogramData = [];
     private MultispectralImage? _loadedImage;
+
+    // All known presets (filtered at runtime by available band names)
+    private static readonly CompositePreset[] AllPresets =
+    [
+        new("True Color", "Red", "Green", "Blue"),
+        new("False Color IR", "NIR", "Red", "Green"),
+        new("SWIR Composite", "SWIR1", "NIR", "Red"),
+        new("Vegetation", "NIR", "SWIR1", "Red"),
+    ];
 
     protected override async Task OnInitializedAsync()
     {
@@ -157,7 +222,17 @@
             {
                 _selectedBand = _bandNames[0];
 
-                // Load raster info if not already available
+                // Default RGB assignment (first 3 bands or best guess)
+                _redBand = _bandNames.Count > 2 ? _bandNames[2] : _bandNames[0]; // Red band (index 2 for S2)
+                _greenBand = _bandNames.Count > 1 ? _bandNames[1] : _bandNames[0]; // Green
+                _blueBand = _bandNames[0]; // Blue
+
+                // Filter presets by available band names
+                var nameSet = new HashSet<string>(_bandNames, StringComparer.OrdinalIgnoreCase);
+                _availablePresets = AllPresets
+                    .Where(p => nameSet.Contains(p.RedBand) && nameSet.Contains(p.GreenBand) && nameSet.Contains(p.BlueBand))
+                    .ToList();
+
                 if (!ProjectState.HasRasterInfo)
                 {
                     try
@@ -176,12 +251,36 @@
         }
     }
 
-    private const long MaxPixels = 50_000_000; // ~50 megapixels safety limit
+    private const long MaxPixels = 50_000_000;
+
+    private async Task OnViewModeChanged()
+    {
+        if (_viewMode == "RGB Composite")
+            await LoadRgbData();
+        else
+            await LoadBandData();
+    }
 
     private async Task OnBandChanged()
     {
         if (_selectedBand is not null && !_isLoading)
             await LoadBandData();
+    }
+
+    private async Task OnRgbChanged()
+    {
+        _selectedPreset = null; // Clear preset when manually changed
+        if (_redBand is not null && _greenBand is not null && _blueBand is not null && !_isLoading)
+            await LoadRgbData();
+    }
+
+    private async Task OnPresetChanged()
+    {
+        if (_selectedPreset is null) return;
+        _redBand = _selectedPreset.RedBand;
+        _greenBand = _selectedPreset.GreenBand;
+        _blueBand = _selectedPreset.BlueBand;
+        await LoadRgbData();
     }
 
     private async Task LoadBandData()
@@ -193,42 +292,30 @@
 
         try
         {
-            // Size guard: check raster dimensions before loading into memory
             var info = ProjectState.RasterInfo;
             if (info is not null && (long)info.Rows * info.Columns * info.BandCount > MaxPixels)
             {
                 NotificationService.Notify(NotificationSeverity.Error, "Raster Too Large",
-                    $"Raster ({info.Columns}x{info.Rows}, {info.BandCount} bands) exceeds the {MaxPixels / 1_000_000}M pixel limit for web preview.",
+                    $"Raster ({info.Columns}x{info.Rows}, {info.BandCount} bands) exceeds the {MaxPixels / 1_000_000}M pixel limit.",
                     duration: 6000);
                 return;
             }
 
-            // Load image if not cached
-            if (_loadedImage is null)
+            _loadedImage ??= await Task.Run(() =>
+                RasterService.ReadImage(ProjectState.Configuration.InputRasterPath, _bandNames));
+
+            var selectedBand = _selectedBand;
+            var (stats, png) = await Task.Run(() =>
             {
-                _loadedImage = await Task.Run(() =>
-                    RasterService.ReadImage(ProjectState.Configuration.InputRasterPath, _bandNames));
-            }
+                var band = _loadedImage.GetBand(selectedBand);
+                var s = RasterService.ComputeBandStatistics(band);
+                var p = RasterService.RenderBandPreview(band, s);
+                return (s, p);
+            });
 
-            var band = _loadedImage.GetBand(_selectedBand);
-
-            // Compute statistics
-            var stats = await Task.Run(() => RasterService.ComputeBandStatistics(band));
             _stats = stats;
-
-            // Build histogram display data (sample every 4th bin for chart readability)
-            _histogramData = [];
-            for (var i = 0; i < 256; i += 4)
-            {
-                long sum = 0;
-                for (var j = i; j < Math.Min(i + 4, 256); j++)
-                    sum += stats.Histogram[j];
-                _histogramData.Add(new HistBin(i.ToString(), sum));
-            }
-
-            // Render preview (reuse min/max from stats to avoid redundant scan)
-            var png = await Task.Run(() => RasterService.RenderBandPreview(band, stats));
             _bandPreviewBase64 = Convert.ToBase64String(png);
+            BuildHistogramData(stats);
         }
         catch (Exception ex)
         {
@@ -242,5 +329,63 @@
         }
     }
 
+    private async Task LoadRgbData()
+    {
+        if (_redBand is null || _greenBand is null || _blueBand is null ||
+            ProjectState.Configuration?.InputRasterPath is null) return;
+
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            _loadedImage ??= await Task.Run(() =>
+                RasterService.ReadImage(ProjectState.Configuration.InputRasterPath, _bandNames));
+
+            var rName = _redBand;
+            var gName = _greenBand;
+            var bName = _blueBand;
+
+            var (rStats, png) = await Task.Run(() =>
+            {
+                var rBand = _loadedImage.GetBand(rName);
+                var gBand = _loadedImage.GetBand(gName);
+                var bBand = _loadedImage.GetBand(bName);
+                var rs = RasterService.ComputeBandStatistics(rBand);
+                var gs = RasterService.ComputeBandStatistics(gBand);
+                var bs = RasterService.ComputeBandStatistics(bBand);
+                var p = RasterService.RenderRgbComposite(rBand, gBand, bBand, rs, gs, bs);
+                return (rs, p);
+            });
+
+            _stats = rStats; // Show red channel stats in panel
+            _bandPreviewBase64 = Convert.ToBase64String(png);
+            BuildHistogramData(rStats);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load RGB composite");
+            NotificationService.Notify(NotificationSeverity.Error, "Load Error",
+                "Failed to render RGB composite. Check logs for details.", duration: 5000);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void BuildHistogramData(BandStatistics stats)
+    {
+        _histogramData = [];
+        for (var i = 0; i < 256; i += 4)
+        {
+            long sum = 0;
+            for (var j = i; j < Math.Min(i + 4, 256); j++)
+                sum += stats.Histogram[j];
+            _histogramData.Add(new HistBin(i.ToString(), sum));
+        }
+    }
+
     private record HistBin(string Bin, long Count);
+    private record CompositePreset(string Label, string RedBand, string GreenBand, string BlueBand);
 }
