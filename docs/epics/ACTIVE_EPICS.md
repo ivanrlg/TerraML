@@ -1,6 +1,6 @@
 # EPICs Activos - FuzzySat
 
-> **Ultima actualizacion**: 2026-03-29
+> **Ultima actualizacion**: 2026-03-30
 > **Proposito**: Punto central de informacion de EPICs en desarrollo.
 > Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
 
@@ -77,18 +77,21 @@ SDCA MaximumEntropy), KMeansClusterer, 13 tests ML.
 
 ## Epic #5 - Blazor Web App — EN PROGRESO
 
-- **Status**: **~60% completado** (subio de 42% tras Fase 3B)
+- **Status**: **~70% completado** (subio de 60% tras Fase 3C)
 - **Priority**: P3
 - **Folder**: [epic-005-blazor-web/](epic-005-blazor-web/)
 - **Security**: UNC rejection, OOM guard (50M px), path traversal, raster whitelist
-- **Tests Web**: 18 tests (ProjectLoaderService + RasterService)
+- **Tests Web**: 41 tests (ProjectLoader + Raster + Classification + Validation)
 
 **Completado**: Blazor setup, Layout, Home, ProjectSetup (save/load/RasterInfo),
-ConfusionMatrixHeatmap, DI services, BandViewer (real stats/histogram/preview via
-SkiaSharp), Training (CSV upload, spectral chart, extract/export session),
-TrainingService, file-download.js interop.
-**Parcial**: Classification, Validation — UI existe con datos mock.
-**No existe**: ClassificationService, leaflet-interop.js, History page.
+ConfusionMatrixHeatmap (colores dinamicos), DI services, BandViewer (real stats/histogram/preview
+via SkiaSharp), Training (CSV upload, spectral chart, extract/export session),
+TrainingService, ClassificationService (async, 4 MF types, Product AND, progress reporting),
+ValidationService (ConfusionMatrix from CSV samples, CSV export), Classification page con
+FuzzyClassifier real, Validation page con confusion matrix real + CSV upload,
+file-download.js interop.
+**Siguiente**: Interactive Training Tool (seleccion de areas con mouse sobre imagen).
+**Pendiente**: leaflet-interop.js, History page, API controllers.
 
 ---
 

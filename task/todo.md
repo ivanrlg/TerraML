@@ -1,21 +1,20 @@
 # Project TODOs - FuzzySat
 
 > **Archivo central de tracking de progreso.**
-> Ultima actualizacion: 2026-03-29
+> Ultima actualizacion: 2026-03-30
 > **Reconciliado**: Alineado con auditoria de codigo real (Epic #6 gap analysis)
 
 ---
 
 ## Estado Actual
 
-> **Proyecto al ~65% global** (subio de 58% tras Fase 3B)
+> **Proyecto al ~68% global** (subio de 65% tras Fase 3C)
 > - Core Engine: **100%** (PCA implementado, 242 Core tests)
 > - CLI: **80%** funcional (4 comandos wired, falta VisualizeCommand)
 > - API: 0% (template default)
-> - Web: **60%** (ProjectSetup, BandViewer, Training funcionales con datos reales)
+> - Web: **70%** (Classification + Validation con datos reales, PR #22 merged)
 > - CI/CD: 30% (solo build+test)
-> - Tests totales: **260** (242 Core + 18 Web)
-> - Tests totales: **260** (242 Core + 18 Web)
+> - Tests totales: **283** (242 Core + 41 Web)
 
 ---
 
@@ -139,16 +138,24 @@
 - [x] Training page con datos reales (CSV upload, spectral chart, extract/export)
 - [x] file-download.js interop + SkiaSharp.NativeAssets.Linux
 
-### Fase 3C — Classification + Validation (Siguiente)
-- [ ] ClassificationService (async, IProgress, CancellationToken)
-- [ ] Classification conectada a FuzzyClassifier con progreso real
-- [ ] Classification result preview (colored PNG) + export GeoTIFF
-- [ ] Validation con ConfusionMatrix real + ground truth CSV upload
-- [ ] Export CSV real
+### Fase 3C — Classification + Validation (PR #22) — COMPLETADA
+- [x] ClassificationService (async, IProgress, CancellationToken, 4 MF types, Product AND)
+- [x] ValidationService (ConfusionMatrix from samples, CSV export with RFC 4180 escaping)
+- [x] Classification conectada a FuzzyClassifier con progreso real por fila
+- [x] Validation con ConfusionMatrix real + ground truth CSV upload
+- [x] Export CSV real (clasificacion + validacion)
+- [x] ConfusionMatrixHeatmap: soporte para colores dinamicos (cualquier # de clases)
+- [x] PR review fixes: ProductAnd+defuzzifier, ReadImage off UI thread, CSV escaping
+- [x] 41 Web tests (17 nuevos: ClassificationService + ValidationService)
 
-### Fase 3D — Leaflet Maps (Deferred)
+### Fase 3D — Interactive Training Tool (Siguiente)
+- [ ] PixelExtractionService (extrae pixeles de region rectangular del raster)
+- [ ] training-selection.js (canvas overlay, dibujar rectangulo con mouse)
+- [ ] Training page: preview de banda + seleccion interactiva de areas
+- [ ] Crear TrainingSession desde areas seleccionadas (sin CSV manual)
+
+### Fase 3E — Leaflet Maps (Deferred)
 - [ ] leaflet-interop.js + LeafletMap.razor
-- [ ] Drawing tools para training areas
 - [ ] History page
 
 ### Fase 4 — API (P2)
