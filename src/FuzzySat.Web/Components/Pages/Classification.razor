@@ -216,20 +216,13 @@
 
         try
         {
-            // Load raster image
+            // Build options
             var rasterPath = ProjectState.Configuration!.InputRasterPath!;
             var bandNames = ProjectState.TrainingSession!.BandNames;
-            var image = RasterService.ReadImage(rasterPath, bandNames);
-
-            _currentStage = 2;
-            _progress = 10;
-            _statusMessage = $"Loaded raster ({image.Rows}x{image.Columns}, {image.BandNames.Count} bands). Computing MFs...";
-            StateHasChanged();
-
-            // Build options
+            var session = ProjectState.TrainingSession!;
             var options = new ClassificationOptions(_mfType, _andOperator, _defuzzifier);
 
-            // Create progress handler on Blazor thread
+            // Create progress handler on Blazor thread (Progress<T> captures sync context)
             var progress = new Progress<ClassificationProgress>(p =>
             {
                 _progress = p.Percentage;
@@ -245,12 +238,15 @@
                 _statusMessage = p.Stage == "Classifying pixels"
                     ? $"Classifying row {p.CurrentRow}/{p.TotalRows} ({p.Percentage:F0}%)"
                     : $"{p.Stage} ({p.Percentage:F0}%)";
-                InvokeAsync(StateHasChanged);
+                StateHasChanged();
             });
 
-            // Run classification on background thread
+            // Run raster loading + classification on background thread to avoid blocking UI
             var result = await Task.Run(() =>
-                ClassificationSvc.Classify(image, ProjectState.TrainingSession!, options, progress, _cts.Token));
+            {
+                var image = RasterService.ReadImage(rasterPath, bandNames);
+                return ClassificationSvc.Classify(image, session, options, progress, _cts!.Token);
+            });
 
             // Store result in project state
             ProjectState.ClassificationResult = result;
@@ -317,7 +313,7 @@
         foreach (var (className, count) in _classCounts)
         {
             var pct = total > 0 ? (double)count / total * 100 : 0;
-            lines.AppendLine($"{className},{count},{pct:F2}");
+            lines.AppendLine($"{ValidationService.CsvEscape(className)},{count},{pct:F2}");
         }
         lines.AppendLine();
         lines.AppendLine($"Total,{total},100.00");

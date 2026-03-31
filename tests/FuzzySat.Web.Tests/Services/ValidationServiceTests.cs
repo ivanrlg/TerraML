@@ -112,4 +112,47 @@ public class ValidationServiceTests
             matrix.TotalSamples.Should().Be(4);
         }
     }
+
+    [Fact]
+    public void ValidateFromSamples_ProductAnd_IsHonored()
+    {
+        var (samples, session) = CreateTestData();
+        var options = new ClassificationOptions("Gaussian", "Product", "Max Weight");
+
+        var (matrix, _) = _service.ValidateFromSamples(samples, session, options);
+
+        // With well-separated classes, ProductAnd should still classify correctly
+        matrix.OverallAccuracy.Should().Be(1.0);
+        matrix.TotalSamples.Should().Be(4);
+    }
+
+    [Fact]
+    public void ValidateFromSamples_ProductAnd_WeightedAverage_ProducesValidResult()
+    {
+        var (samples, session) = CreateTestData();
+        var options = new ClassificationOptions("Gaussian", "Product", "Weighted Average");
+
+        var (matrix, _) = _service.ValidateFromSamples(samples, session, options);
+
+        matrix.TotalSamples.Should().Be(4);
+        matrix.OverallAccuracy.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public void CsvEscape_FieldWithComma_IsQuoted()
+    {
+        ValidationService.CsvEscape("Bare Soil, Rocky").Should().Be("\"Bare Soil, Rocky\"");
+    }
+
+    [Fact]
+    public void CsvEscape_FieldWithQuote_IsEscaped()
+    {
+        ValidationService.CsvEscape("Class \"A\"").Should().Be("\"Class \"\"A\"\"\"");
+    }
+
+    [Fact]
+    public void CsvEscape_SimpleField_IsUnchanged()
+    {
+        ValidationService.CsvEscape("Urban").Should().Be("Urban");
+    }
 }

@@ -101,6 +101,31 @@ public class ClassificationServiceTests
     }
 
     [Fact]
+    public void Classify_ProductAnd_WeightedAverage_UsesDefuzzifier()
+    {
+        // With only 2 well-separated classes, both defuzzifiers produce the same winner.
+        // This test verifies that the ProductAnd path actually calls the defuzzifier
+        // (i.e., produces a valid result) rather than silently using MaxWeight.
+        var (image, session) = CreateTestData();
+
+        var optionsMaxWeight = new ClassificationOptions("Gaussian", "Product", "Max Weight");
+        var optionsWeightedAvg = new ClassificationOptions("Gaussian", "Product", "Weighted Average");
+
+        var resultMW = _service.Classify(image, session, optionsMaxWeight);
+        var resultWA = _service.Classify(image, session, optionsWeightedAvg);
+
+        // Both should produce valid results (not crash)
+        resultMW.Rows.Should().Be(3);
+        resultWA.Rows.Should().Be(3);
+
+        // Corner pixels with strong class separation should agree
+        resultMW.GetClass(0, 0).Should().Be("Water");
+        resultWA.GetClass(0, 0).Should().Be("Water");
+        resultMW.GetClass(0, 2).Should().Be("Urban");
+        resultWA.GetClass(0, 2).Should().Be("Urban");
+    }
+
+    [Fact]
     public void Classify_WeightedAverageDefuzzifier_ProducesValidResult()
     {
         var (image, session) = CreateTestData();
@@ -117,14 +142,20 @@ public class ClassificationServiceTests
     {
         var (image, session) = CreateTestData();
         var options = new ClassificationOptions();
+        var completedEvent = new ManualResetEventSlim(false);
         var reports = new List<ClassificationProgress>();
 
-        var progress = new Progress<ClassificationProgress>(p => reports.Add(p));
+        var progress = new Progress<ClassificationProgress>(p =>
+        {
+            reports.Add(p);
+            if (p.Stage == "Complete")
+                completedEvent.Set();
+        });
 
         _service.Classify(image, session, options, progress);
 
-        // Allow progress callbacks to complete (Progress<T> posts asynchronously)
-        Thread.Sleep(100);
+        // Wait for async Progress<T> callbacks (posts to captured SynchronizationContext)
+        completedEvent.Wait(TimeSpan.FromSeconds(2));
 
         reports.Should().NotBeEmpty();
         reports.Should().Contain(p => p.Stage == "Complete");

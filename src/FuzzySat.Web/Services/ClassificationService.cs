@@ -1,5 +1,4 @@
 using FuzzySat.Core.Classification;
-using FuzzySat.Core.FuzzyLogic.Classification;
 using FuzzySat.Core.FuzzyLogic.Defuzzification;
 using FuzzySat.Core.FuzzyLogic.Inference;
 using FuzzySat.Core.FuzzyLogic.MembershipFunctions;
@@ -34,17 +33,17 @@ public sealed class ClassificationService
 
         // Stage 1: Build rule set
         progress?.Report(new ClassificationProgress("Building membership functions", 0, image.Rows, 0));
-        var ruleSet = BuildRuleSet(session, options.MembershipFunctionType, options.AndOperator);
+        var ruleSet = BuildRuleSet(session, options.MembershipFunctionType);
 
-        // Stage 2: Create inference engine
+        // Stage 2: Create inference engine and defuzzifier
         progress?.Report(new ClassificationProgress("Initializing inference engine", 0, image.Rows, 5));
         var engine = new FuzzyInferenceEngine(ruleSet);
         var defuzzifier = CreateDefuzzifier(options.DefuzzifierType);
+        var useProductAnd = options.AndOperator == "Product";
 
         // Stage 3: Classify pixel-by-pixel with progress
         var classMap = new string[image.Rows, image.Columns];
         var confidenceMap = new double[image.Rows, image.Columns];
-        var useProductAnd = options.AndOperator == "Product";
 
         for (var row = 0; row < image.Rows; row++)
         {
@@ -55,33 +54,18 @@ public sealed class ClassificationService
                 var pixel = image.GetPixelVector(row, col);
                 var bandValues = (IDictionary<string, double>)pixel.BandValues;
 
+                InferenceResult result;
                 if (useProductAnd)
                 {
-                    // Custom evaluation using ProductAnd instead of default Min AND
-                    var bestClass = "";
-                    var bestStrength = -1.0;
-                    foreach (var rule in ruleSet.Rules)
-                    {
-                        var degrees = rule.BandMembershipFunctions
-                            .Select(kvp => kvp.Value.Evaluate(bandValues[kvp.Key]));
-                        var strength = FuzzyOperators.ProductAnd(degrees);
-
-                        if (strength > bestStrength)
-                        {
-                            bestStrength = strength;
-                            bestClass = rule.ClassName;
-                        }
-                    }
-                    classMap[row, col] = bestClass;
-                    confidenceMap[row, col] = bestStrength;
+                    result = InferWithProductAnd(ruleSet, bandValues);
                 }
                 else
                 {
-                    // Standard evaluation using Min AND (via inference engine)
-                    var result = engine.Infer(bandValues);
-                    classMap[row, col] = defuzzifier.Defuzzify(result);
-                    confidenceMap[row, col] = result.WinnerStrength;
+                    result = engine.Infer(bandValues);
                 }
+
+                classMap[row, col] = defuzzifier.Defuzzify(result);
+                confidenceMap[row, col] = result.WinnerStrength;
             }
 
             // Report progress every 10 rows to avoid excessive UI updates
@@ -100,17 +84,52 @@ public sealed class ClassificationService
             .Select((name, i) => new LandCoverClass { Name = name, Code = i + 1 })
             .ToList();
 
-        var result2 = new ClassificationResult(classMap, confidenceMap, classes);
+        var classificationResult = new ClassificationResult(classMap, confidenceMap, classes);
         progress?.Report(new ClassificationProgress("Complete", image.Rows, image.Rows, 100));
 
-        return result2;
+        return classificationResult;
+    }
+
+    /// <summary>
+    /// Classifies a single pixel's band values, returning the predicted class name.
+    /// Used by ValidationService for per-sample classification.
+    /// </summary>
+    internal string ClassifyPixel(
+        FuzzyRuleSet ruleSet,
+        IDefuzzifier defuzzifier,
+        bool useProductAnd,
+        FuzzyInferenceEngine engine,
+        IDictionary<string, double> bandValues)
+    {
+        var result = useProductAnd
+            ? InferWithProductAnd(ruleSet, bandValues)
+            : engine.Infer(bandValues);
+        return defuzzifier.Defuzzify(result);
+    }
+
+    /// <summary>
+    /// Evaluates all rules using Product AND and constructs an InferenceResult
+    /// so the selected defuzzifier is properly applied.
+    /// </summary>
+    private static InferenceResult InferWithProductAnd(
+        FuzzyRuleSet ruleSet, IDictionary<string, double> bandValues)
+    {
+        var strengths = new List<KeyValuePair<string, double>>(ruleSet.Rules.Count);
+        foreach (var rule in ruleSet.Rules)
+        {
+            var degrees = rule.BandMembershipFunctions
+                .Select(kvp => kvp.Value.Evaluate(bandValues[kvp.Key]));
+            var strength = FuzzyOperators.ProductAnd(degrees);
+            strengths.Add(new KeyValuePair<string, double>(rule.ClassName, strength));
+        }
+        return new InferenceResult(strengths);
     }
 
     /// <summary>
     /// Builds a FuzzyRuleSet supporting all 4 MF types.
     /// Converts mean/stddev from training statistics to the appropriate MF parameters.
     /// </summary>
-    internal static FuzzyRuleSet BuildRuleSet(TrainingSession session, string mfType, string andOperator)
+    internal static FuzzyRuleSet BuildRuleSet(TrainingSession session, string mfType)
     {
         var rules = new List<FuzzyRule>();
 
@@ -154,7 +173,7 @@ public sealed class ClassificationService
         return new FuzzyRuleSet(rules);
     }
 
-    private static IDefuzzifier CreateDefuzzifier(string type) => type switch
+    internal static IDefuzzifier CreateDefuzzifier(string type) => type switch
     {
         "Max Weight" => new MaxWeightDefuzzifier(),
         "Weighted Average" => new WeightedAverageDefuzzifier(),
