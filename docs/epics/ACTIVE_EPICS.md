@@ -1,6 +1,6 @@
 # EPICs Activos - FuzzySat
 
-> **Ultima actualizacion**: 2026-03-30 (post PR #23)
+> **Ultima actualizacion**: 2026-03-31 (post PR #29 — Epic #7 completado)
 > **Proposito**: Punto central de informacion de EPICs en desarrollo.
 > Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
 
@@ -10,10 +10,9 @@
 
 | Estado | Cantidad | EPICs |
 |--------|----------|-------|
-| Completado | 2 | #1 Core Engine MVP, #3 Advanced Features |
+| Completado | 3 | #1 Core Engine MVP, #3 Advanced Features, #7 Classified Output |
 | Casi Completado | 2 | #2 I/O & CLI (~80%), #4 ML Hybrid (~90%) |
-| Parcial | 1 | #5 Blazor Web (~35%) |
-| Planificado | 1 | #7 Classified Image Output & Hybrid ML |
+| Parcial | 1 | #5 Blazor Web (~85%) |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 
 ---
@@ -114,19 +113,22 @@ para llegar al 100%. Proyecto esta al ~45% global. Documenta decisiones tecnicas
 
 ---
 
-## Epic #7 - Classified Image Output & Hybrid ML — PLANIFICADO
+## Epic #7 - Classified Image Output & Hybrid ML — COMPLETADO
 
-- **Status**: **Planificado** (esperando merge de PR actual)
+- **Status**: **COMPLETADO** (PR #29 mergeado 2026-03-31)
 - **Priority**: P1
 - **Folder**: [epic-007-classified-output/](epic-007-classified-output/)
-- **GitHub Issue**: [#27](https://github.com/ivanrlg/FuzzySat/issues/27)
+- **GitHub Issue**: [#27](https://github.com/ivanrlg/FuzzySat/issues/27) (closed)
 - **Creado**: 2026-03-31
+- **Micro-commits**: 12 commits, 1 PR
+- **Tests**: 19 nuevos (6 Hybrid + 7 Renderer + 6 AreaCalculator), 354 total
 
-**Scope**: Completar el ciclo de clasificacion: (1) conectar HybridClassifier (Random Forest +
-SDCA) a la Web UI, (2) generar y visualizar imagen clasificada con side-by-side viewer y colores
-auto+editables, (3) calcular estadisticas de area por clase (m2, ha), (4) exportar GeoTIFF.
+**Completado**: HybridClassificationService (Random Forest + SDCA en Web), ClassifiedImageRenderer
+(colores auto+editables, keyword matching bilingue), classification-canvas.js (side-by-side viewer
+con zoom/pan sincronizado, tooltip hover, 4 modos de vista), AreaCalculator (m2/ha por clase),
+tabla de estadisticas con charts (pie + bar), exportacion GeoTIFF, CSV mejorado con area,
+color picker editable, ProjectStateService.ClassColors.
 
-**Plan**: 3 PRs, ~16 commits.
 **Documentos**:
 - [00-overview.md](epic-007-classified-output/00-overview.md) — Objetivo y alcance
 - [01-plan.md](epic-007-classified-output/01-plan.md) — Plan de implementacion por fases
