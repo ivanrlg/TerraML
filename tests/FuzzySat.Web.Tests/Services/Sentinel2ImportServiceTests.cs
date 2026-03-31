@@ -1,11 +1,12 @@
 using FluentAssertions;
 using FuzzySat.Web.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FuzzySat.Web.Tests.Services;
 
 public class Sentinel2ImportServiceTests : IDisposable
 {
-    private readonly Sentinel2ImportService _service = new();
+    private readonly Sentinel2ImportService _service = new(NullLogger<Sentinel2ImportService>.Instance);
     private readonly string _tempDir;
 
     public Sentinel2ImportServiceTests()
@@ -107,6 +108,17 @@ public class Sentinel2ImportServiceTests : IDisposable
             .WithMessage("*UNC*");
     }
 
+    [Fact]
+    public void DetectFormat_CopernicusBrowserTiffs_ReturnsBandFolder()
+    {
+        File.WriteAllText(Path.Combine(_tempDir,
+            "2026-03-22-00_00_2026-03-22-23_59_Sentinel-2_L2A_B01_(Raw).tiff"), "dummy");
+
+        var result = _service.DetectFormat(_tempDir);
+
+        result.Should().Be(Sentinel2ImportService.InputFormat.BandFolder);
+    }
+
     #endregion
 
     #region DiscoverBands
@@ -122,7 +134,6 @@ public class Sentinel2ImportServiceTests : IDisposable
     [Fact]
     public void DiscoverBands_NonBandFiles_AreSkipped()
     {
-        // TCI (True Color Image) should be skipped — not a spectral band
         File.WriteAllText(Path.Combine(_tempDir, "TCI_10m.tif"), "dummy");
         File.WriteAllText(Path.Combine(_tempDir, "readme.txt"), "dummy");
 
@@ -132,23 +143,20 @@ public class Sentinel2ImportServiceTests : IDisposable
     }
 
     [Fact]
-    public void DetectFormat_CopernicusBrowserTiffs_ReturnsBandFolder()
-    {
-        // Copernicus Browser uses format: date_Sentinel-2_L2A_BXX_(Raw).tiff
-        File.WriteAllText(Path.Combine(_tempDir,
-            "2026-03-22-00_00_2026-03-22-23_59_Sentinel-2_L2A_B01_(Raw).tiff"), "dummy");
-
-        var result = _service.DetectFormat(_tempDir);
-
-        result.Should().Be(Sentinel2ImportService.InputFormat.BandFolder);
-    }
-
-    [Fact]
     public void DiscoverBands_NonexistentDirectory_ThrowsDirectoryNotFound()
     {
         var act = () => _service.DiscoverBands(Path.Combine(_tempDir, "nope"));
 
         act.Should().Throw<DirectoryNotFoundException>();
+    }
+
+    [Fact]
+    public void DiscoverBands_UncPath_ThrowsArgumentException()
+    {
+        var act = () => _service.DiscoverBands(@"\\server\share\bands");
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*UNC*");
     }
 
     #endregion
@@ -256,13 +264,11 @@ public class Sentinel2ImportServiceTests : IDisposable
             SelectedBands: bands,
             OutputPath: Path.Combine(_tempDir, "progress.vrt"));
 
+        // Use synchronous progress handler to avoid flaky async timing
         var reports = new List<Sentinel2ImportService.ImportProgress>();
-        var progress = new Progress<Sentinel2ImportService.ImportProgress>(r => reports.Add(r));
+        var progress = new SynchronousProgress<Sentinel2ImportService.ImportProgress>(r => reports.Add(r));
 
         await _service.BuildVrtAsync(options, progress);
-
-        // Allow async progress reporting to flush
-        await Task.Delay(100);
 
         reports.Should().NotBeEmpty();
         reports.Last().TotalBands.Should().Be(2);
@@ -305,6 +311,40 @@ public class Sentinel2ImportServiceTests : IDisposable
         content.Should().Contain("<GeoTransform>");
     }
 
+    [Fact]
+    public async Task BuildVrtAsync_NonVrtExtension_ThrowsArgumentException()
+    {
+        var bands = new List<Sentinel2ImportService.Sentinel2BandInfo>
+        {
+            CreateDummyBandInfo("B02", 10),
+        };
+        var options = new Sentinel2ImportService.ImportOptions(
+            SelectedBands: bands,
+            OutputPath: Path.Combine(_tempDir, "output.tif"));
+
+        var act = () => _service.BuildVrtAsync(options);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*.vrt*");
+    }
+
+    [Fact]
+    public async Task BuildVrtAsync_UncOutputPath_ThrowsArgumentException()
+    {
+        var bands = new List<Sentinel2ImportService.Sentinel2BandInfo>
+        {
+            CreateDummyBandInfo("B02", 10),
+        };
+        var options = new Sentinel2ImportService.ImportOptions(
+            SelectedBands: bands,
+            OutputPath: @"\\server\share\output.vrt");
+
+        var act = () => _service.BuildVrtAsync(options);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*UNC*");
+    }
+
     #endregion
 
     private static Sentinel2ImportService.Sentinel2BandInfo CreateDummyBandInfo(
@@ -319,5 +359,14 @@ public class Sentinel2ImportServiceTests : IDisposable
             DataType: "UInt16",
             Projection: "EPSG:32619",
             GeoTransform: [0, resolution, 0, 0, 0, -resolution]);
+    }
+
+    /// <summary>
+    /// Synchronous IProgress implementation that invokes the handler immediately
+    /// on the calling thread, avoiding flaky async timing in tests.
+    /// </summary>
+    private sealed class SynchronousProgress<T>(Action<T> handler) : IProgress<T>
+    {
+        public void Report(T value) => handler(value);
     }
 }

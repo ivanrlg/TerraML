@@ -14,7 +14,7 @@
 > - API: 0% (template default)
 > - Web: **82%** (False color composites + CSV export, PR #24 merged)
 > - CI/CD: 30% (solo build+test)
-> - Tests totales: **299** (242 Core + 57 Web)
+> - Tests totales: **327** (242 Core + 85 Web)
 
 ---
 

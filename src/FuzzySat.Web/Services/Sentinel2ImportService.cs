@@ -1,7 +1,9 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using MaxRev.Gdal.Core;
+using Microsoft.Extensions.Logging;
 using OSGeo.GDAL;
 
 namespace FuzzySat.Web.Services;
@@ -15,6 +17,10 @@ public sealed class Sentinel2ImportService
 {
     private static bool _initialized;
     private static readonly object InitLock = new();
+    private readonly ILogger<Sentinel2ImportService> _logger;
+
+    /// <summary>Maximum number of files to scan in a folder (DoS guard).</summary>
+    private const int MaxBandFiles = 50;
 
     /// <summary>Supported single-band raster extensions.</summary>
     private static readonly HashSet<string> BandExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -74,6 +80,11 @@ public sealed class Sentinel2ImportService
         string CurrentBandName,
         string Status);
 
+    public Sentinel2ImportService(ILogger<Sentinel2ImportService> logger)
+    {
+        _logger = logger;
+    }
+
     private static void EnsureInitialized()
     {
         if (_initialized) return;
@@ -86,16 +97,25 @@ public sealed class Sentinel2ImportService
     }
 
     /// <summary>
+    /// Validates that a path is not UNC/network and resolves it to a full path.
+    /// </summary>
+    private static string ValidateAndResolvePath(string path, string paramName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path, paramName);
+        var fullPath = Path.GetFullPath(path);
+
+        if (fullPath.StartsWith(@"\\", StringComparison.Ordinal))
+            throw new ArgumentException("UNC/network paths are not allowed.", paramName);
+
+        return fullPath;
+    }
+
+    /// <summary>
     /// Detects the input format from a path.
     /// </summary>
     public InputFormat DetectFormat(string path)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(path));
-
-        var fullPath = Path.GetFullPath(path);
-
-        if (fullPath.StartsWith(@"\\", StringComparison.Ordinal))
-            throw new ArgumentException("UNC/network paths are not allowed.", nameof(path));
+        var fullPath = ValidateAndResolvePath(path, nameof(path));
 
         if (Directory.Exists(fullPath))
         {
@@ -125,15 +145,15 @@ public sealed class Sentinel2ImportService
     /// </summary>
     public List<Sentinel2BandInfo> DiscoverBands(string path)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(path));
+        var fullPath = ValidateAndResolvePath(path, nameof(path));
         EnsureInitialized();
 
-        var fullPath = Path.GetFullPath(path);
         if (!Directory.Exists(fullPath))
             throw new DirectoryNotFoundException($"Directory not found: '{fullPath}'.");
 
         var files = Directory.GetFiles(fullPath)
             .Where(f => BandExtensions.Contains(Path.GetExtension(f)))
+            .Take(MaxBandFiles)
             .ToList();
 
         var bands = new List<Sentinel2BandInfo>();
@@ -181,9 +201,9 @@ public sealed class Sentinel2ImportService
                     Projection: dataset.GetProjection() ?? "",
                     GeoTransform: gt));
             }
-            catch
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                // Skip files that GDAL cannot open
+                _logger.LogWarning(ex, "Failed to open '{File}' with GDAL, skipping", file);
             }
         }
 
@@ -211,7 +231,12 @@ public sealed class Sentinel2ImportService
         ArgumentNullException.ThrowIfNull(options);
         if (options.SelectedBands.Count == 0)
             throw new ArgumentException("At least one band must be selected.", nameof(options));
-        ArgumentException.ThrowIfNullOrWhiteSpace(options.OutputPath, nameof(options.OutputPath));
+
+        var outputPath = ValidateAndResolvePath(options.OutputPath, nameof(options.OutputPath));
+
+        // Ensure output has .vrt extension
+        if (!outputPath.EndsWith(".vrt", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Output path must have .vrt extension.", nameof(options.OutputPath));
 
         return Task.Run(() =>
         {
@@ -241,11 +266,12 @@ public sealed class Sentinel2ImportService
             if (!string.IsNullOrWhiteSpace(reference.Projection))
                 vrt.Add(new XElement("SRS", reference.Projection));
 
-            // Add GeoTransform
+            // Add GeoTransform (InvariantCulture to ensure dot decimal separator)
             if (reference.GeoTransform is { Length: 6 })
             {
                 vrt.Add(new XElement("GeoTransform",
-                    string.Join(", ", reference.GeoTransform.Select(v => v.ToString("G17")))));
+                    string.Join(", ", reference.GeoTransform.Select(
+                        v => v.ToString("G17", CultureInfo.InvariantCulture)))));
             }
 
             for (var i = 0; i < bands.Count; i++)
@@ -280,7 +306,6 @@ public sealed class Sentinel2ImportService
             }
 
             // Write VRT file
-            var outputPath = Path.GetFullPath(options.OutputPath);
             var outputDir = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(outputDir) && !Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
