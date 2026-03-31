@@ -349,8 +349,8 @@ window.trainingSelection = {
         var h = Math.abs(this._currentY - this._startY);
 
         ctx.strokeStyle = this._activeColor;
-        ctx.lineWidth = 2;
-        ctx.setLineDash([6, 3]);
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
         ctx.strokeRect(x, y, w, h);
         ctx.setLineDash([]);
 
@@ -376,7 +376,7 @@ window.trainingSelection = {
 
             // Border
             ctx.strokeStyle = r.color;
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1;
             ctx.setLineDash([]);
             ctx.strokeRect(x, y, w, h);
 
