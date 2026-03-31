@@ -322,7 +322,7 @@
             }
 
             // Run validation
-            var options = new ClassificationOptions(_mfType, _andOperator, _defuzzifier);
+            var options = new ClassificationOptions(MembershipFunctionType: _mfType, AndOperator: _andOperator, DefuzzifierType: _defuzzifier);
             var (matrix, metrics) = await Task.Run(() =>
                 ValidationSvc.ValidateFromSamples(samples, ProjectState.TrainingSession!, options));
 

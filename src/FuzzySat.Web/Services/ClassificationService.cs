@@ -185,6 +185,7 @@ public sealed class ClassificationService
 /// Options for configuring the classification pipeline.
 /// </summary>
 public record ClassificationOptions(
+    string ClassificationMethod = "Pure Fuzzy",
     string MembershipFunctionType = "Gaussian",
     string AndOperator = "Minimum",
     string DefuzzifierType = "Max Weight");

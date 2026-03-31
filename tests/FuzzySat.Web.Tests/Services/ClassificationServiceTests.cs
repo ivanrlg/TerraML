@@ -50,7 +50,7 @@ public class ClassificationServiceTests
     public void Classify_WithGaussianMF_ProducesValidResult()
     {
         var (image, session) = CreateTestData();
-        var options = new ClassificationOptions("Gaussian", "Minimum", "Max Weight");
+        var options = new ClassificationOptions(MembershipFunctionType: "Gaussian", AndOperator: "Minimum", DefuzzifierType: "Max Weight");
 
         var result = _service.Classify(image, session, options);
 
@@ -77,7 +77,7 @@ public class ClassificationServiceTests
     public void Classify_AllMfTypes_Succeed(string mfType)
     {
         var (image, session) = CreateTestData();
-        var options = new ClassificationOptions(mfType, "Minimum", "Max Weight");
+        var options = new ClassificationOptions(MembershipFunctionType: mfType, AndOperator: "Minimum", DefuzzifierType: "Max Weight");
 
         var result = _service.Classify(image, session, options);
 
@@ -91,7 +91,7 @@ public class ClassificationServiceTests
     public void Classify_ProductAndOperator_ProducesValidResult()
     {
         var (image, session) = CreateTestData();
-        var options = new ClassificationOptions("Gaussian", "Product", "Max Weight");
+        var options = new ClassificationOptions(MembershipFunctionType: "Gaussian", AndOperator: "Product", DefuzzifierType: "Max Weight");
 
         var result = _service.Classify(image, session, options);
 
@@ -108,8 +108,8 @@ public class ClassificationServiceTests
         // (i.e., produces a valid result) rather than silently using MaxWeight.
         var (image, session) = CreateTestData();
 
-        var optionsMaxWeight = new ClassificationOptions("Gaussian", "Product", "Max Weight");
-        var optionsWeightedAvg = new ClassificationOptions("Gaussian", "Product", "Weighted Average");
+        var optionsMaxWeight = new ClassificationOptions(MembershipFunctionType: "Gaussian", AndOperator: "Product", DefuzzifierType: "Max Weight");
+        var optionsWeightedAvg = new ClassificationOptions(MembershipFunctionType: "Gaussian", AndOperator: "Product", DefuzzifierType: "Weighted Average");
 
         var resultMW = _service.Classify(image, session, optionsMaxWeight);
         var resultWA = _service.Classify(image, session, optionsWeightedAvg);
@@ -129,7 +129,7 @@ public class ClassificationServiceTests
     public void Classify_WeightedAverageDefuzzifier_ProducesValidResult()
     {
         var (image, session) = CreateTestData();
-        var options = new ClassificationOptions("Gaussian", "Minimum", "Weighted Average");
+        var options = new ClassificationOptions(MembershipFunctionType: "Gaussian", AndOperator: "Minimum", DefuzzifierType: "Weighted Average");
 
         var result = _service.Classify(image, session, options);
 
@@ -185,7 +185,7 @@ public class ClassificationServiceTests
     public void Classify_UnknownMfType_ThrowsArgument()
     {
         var (image, session) = CreateTestData();
-        var options = new ClassificationOptions("InvalidType", "Minimum", "Max Weight");
+        var options = new ClassificationOptions(MembershipFunctionType: "InvalidType", AndOperator: "Minimum", DefuzzifierType: "Max Weight");
         var act = () => _service.Classify(image, session, options);
         act.Should().Throw<ArgumentException>().WithMessage("*Unknown MF type*");
     }
