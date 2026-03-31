@@ -24,10 +24,11 @@ public sealed class Sentinel2ImportService
 
     /// <summary>
     /// Regex to extract Sentinel-2 band name from filename.
-    /// Matches patterns like: B02.tif, _B04_10m.tif, T19PCK_20251222_B8A_20m.jp2
+    /// Matches patterns like: B02.tif, _B04_10m.tif, T19PCK_20251222_B8A_20m.jp2,
+    /// 2026-03-22_Sentinel-2_L2A_B01_(Raw).tiff (Copernicus Browser format)
     /// </summary>
     private static readonly Regex BandNameRegex = new(
-        @"_?(B(?:0[1-9]|1[0-2]|8A))(?:_(\d+)m)?\.(?:tif|tiff|jp2)$",
+        @"_?(B(?:0[1-9]|1[0-2]|8A))(?:_(\d+)m)?(?:_\([^)]*\))?\.(?:tif|tiff|jp2)$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>

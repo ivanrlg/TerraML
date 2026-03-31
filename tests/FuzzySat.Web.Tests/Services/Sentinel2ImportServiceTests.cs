@@ -132,6 +132,18 @@ public class Sentinel2ImportServiceTests : IDisposable
     }
 
     [Fact]
+    public void DetectFormat_CopernicusBrowserTiffs_ReturnsBandFolder()
+    {
+        // Copernicus Browser uses format: date_Sentinel-2_L2A_BXX_(Raw).tiff
+        File.WriteAllText(Path.Combine(_tempDir,
+            "2026-03-22-00_00_2026-03-22-23_59_Sentinel-2_L2A_B01_(Raw).tiff"), "dummy");
+
+        var result = _service.DetectFormat(_tempDir);
+
+        result.Should().Be(Sentinel2ImportService.InputFormat.BandFolder);
+    }
+
+    [Fact]
     public void DiscoverBands_NonexistentDirectory_ThrowsDirectoryNotFound()
     {
         var act = () => _service.DiscoverBands(Path.Combine(_tempDir, "nope"));
