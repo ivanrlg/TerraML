@@ -21,9 +21,11 @@ for multispectral satellite imagery.
 
 | | |
 |---|---|
+| **81.87% Overall Accuracy** | Fuzzy logic baseline from the [original thesis](docs/THESIS.md) (Kappa = 0.7637) |
 | **3 Classification Modes** | Fuzzy logic, hybrid (fuzzy+ML), and pure ML |
+| **6 ML Classifiers** | Random Forest, SDCA, LightGBM, SVM, Logistic Regression, MLP Neural Network |
 | **4 Membership Functions** | Gaussian, Triangular, Trapezoidal, Generalized Bell |
-| **Hybrid ML Pipeline** | ML.NET Random Forest + SDCA using fuzzy features |
+| **Ensemble Methods** | Majority/weighted voting and stacking with meta-learner |
 | **GDAL Raster I/O** | Read GeoTIFF with geospatial metadata; write classified rasters |
 | **484 Unit Tests** | 349 Core + 119 Web + 16 CLI -- mathematical correctness validated |
 | **Explainable AI** | Every membership degree and firing strength is inspectable |
@@ -37,6 +39,7 @@ for multispectral satellite imagery.
 - [Classification Pipeline](#classification-pipeline)
 - [Limitations & Why Hybrid](#limitations--why-hybrid)
 - [Quick Start](#quick-start)
+- [Docker](#docker)
 - [Membership Functions](#membership-functions)
 - [Spectral Indices](#spectral-indices)
 - [Hybrid ML Pipeline](#hybrid-ml-pipeline)
@@ -116,21 +119,30 @@ graph TB
         subgraph "Validation"
             CM[ConfusionMatrix]
             AM[AccuracyMetrics<br/>OA, Kappa, Per-class]
+            CV[CrossValidator<br/>k-fold CV]
+            MC[ModelComparisonEngine<br/>Benchmark all methods]
         end
 
-        subgraph "ML Hybrid (ML.NET)"
-            FE[FuzzyFeatureExtractor<br/>Raw + MF degrees + strengths]
-            HC[HybridClassifier<br/>IClassifier]
+        subgraph "ML Classifiers"
+            FE[FuzzyFeatureExtractor<br/>MF degrees + strengths]
+            RE[RawFeatureExtractor<br/>Pure spectral bands]
+            HC[HybridClassifier<br/>RF / SDCA]
+            LG[LightGbmClassifier<br/>Gradient Boosting]
+            SV[SvmClassifier<br/>Linear SVM / OVA]
+            LR[LogisticRegressionClassifier<br/>L-BFGS MaxEntropy]
+            NN[NeuralNetClassifier<br/>MLP / TorchSharp]
             KM[KMeansClusterer<br/>Training area suggestion]
-            RF[RandomForest<br/>FastForest/OVA]
-            SD[SDCA<br/>MaximumEntropy]
+        end
+
+        subgraph "Ensemble Methods"
+            EN[EnsembleClassifier<br/>Majority / Weighted Voting]
+            ST[StackingClassifier<br/>OOF Meta-learner]
         end
     end
 
     subgraph "Interfaces"
         CLI[FuzzySat.CLI<br/>System.CommandLine +<br/>Spectre.Console]
         WEB[FuzzySat.Web<br/>Blazor Server +<br/>Radzen]
-        API[FuzzySat.Api<br/>ASP.NET Core]
     end
 
     %% Core fuzzy pipeline
@@ -146,28 +158,51 @@ graph TB
     FC --> CM
     CM --> AM
 
-    %% ML Hybrid connections
+    %% Feature extraction paths
     R -->|"RuleSet"| FE
-    FE -->|"Feature vectors"| RF
-    FE -->|"Feature vectors"| SD
+    FE -->|"Fuzzy features"| HC
+    FE -->|"Fuzzy features"| LG
+    FE -->|"Fuzzy features"| SV
+    FE -->|"Fuzzy features"| LR
+    FE -->|"Fuzzy features"| NN
+    RE -->|"Raw bands"| HC
+    RE -->|"Raw bands"| LG
+    RE -->|"Raw bands"| SV
+    RE -->|"Raw bands"| LR
+    RE -->|"Raw bands"| NN
     FE -->|"Feature vectors"| KM
-    RF --> HC
-    SD --> HC
+
+    %% ML outputs
     HC --> GW
     HC --> CM
+    LG --> CM
+    SV --> CM
+    LR --> CM
+    NN --> CM
     KM -->|"Cluster labels"| TE
 
-    %% Spectral indices feed into classification
+    %% Ensemble connections
+    HC --> EN
+    LG --> EN
+    SV --> EN
+    LR --> EN
+    HC --> ST
+    LG --> ST
+    SV --> ST
+
+    %% Validation
+    CM --> CV
+    CV --> MC
+
+    %% Spectral indices
     GR --> SI
     SI -->|"Derived bands"| MF
 
-    %% Interfaces connect to classifiers
+    %% Interfaces
     CLI --> FC
     CLI --> HC
     WEB --> FC
     WEB --> HC
-    API --> FC
-    API --> HC
 ```
 
 ---
@@ -189,18 +224,26 @@ flowchart LR
     H --> I["MaxWeight<br/>Defuzzifier"]
     I --> J["ClassificationResult<br/>Class + Confidence map"]
 
-    E -->|"RuleSet"| FE["FuzzyFeatureExtractor<br/>(ML.NET)"]
-    FE -->|"Feature vectors"| ML["HybridClassifier<br/>RandomForest / SDCA"]
+    E -->|"RuleSet"| FE["FuzzyFeatureExtractor"]
+    B -->|"Raw bands"| RE["RawFeatureExtractor"]
+    FE -->|"Fuzzy features"| ML["ML Classifiers<br/>RF, SDCA, LightGBM,<br/>SVM, LR, MLP"]
+    RE -->|"Raw features"| ML
     ML --> J
 
+    ML --> EN["Ensemble / Stacking"]
+    EN --> J
+
     J -->|GDAL| K["Classified<br/>GeoTIFF"]
-    J --> L["ConfusionMatrix<br/>OA + kappa"]
+    J --> L["ConfusionMatrix<br/>OA + Kappa"]
+    L --> CV["CrossValidator<br/>k-fold CV"]
 
     style A fill:#4a90d9,color:#fff
     style K fill:#2ecc71,color:#fff
     style L fill:#e67e22,color:#fff
     style FE fill:#9b59b6,color:#fff
+    style RE fill:#e74c3c,color:#fff
     style ML fill:#8e44ad,color:#fff
+    style EN fill:#f39c12,color:#fff
 ```
 
 ### Per-Pixel Classification (4 steps)
@@ -228,9 +271,10 @@ score above 0.7, look more carefully at SWIR1" -- it just picks the higher numbe
 ### Why Fuzzy Logic Feeds ML (Not the Other Way Around)
 
 A common question: if we're using Machine Learning anyway, why not skip fuzzy logic
-and feed raw pixel values directly to a Random Forest?
+and feed raw pixel values directly to ML?
 
-You *can* do that. But the result is worse. Here's why:
+You *can* do that -- Terra ML supports both modes. But the hybrid approach often performs
+better. Here's why:
 
 A pixel with 4 spectral bands gives ML **4 numbers without context**. The algorithm
 must discover on its own that 130 in VNIR1 is "typical Urban" and 75 is "typical Forest".
@@ -250,7 +294,11 @@ critical). With the interpretation included, better decisions follow.
 
 **Fuzzy logic becomes an intelligent preprocessor** that enriches the data before
 ML sees it. Two systems working together: one understands the physics of spectral
-reflectance (fuzzy logic), the other finds complex statistical patterns (Random Forest).
+reflectance (fuzzy logic), the other finds complex statistical patterns (ML classifiers).
+
+Terra ML includes a **Model Comparison** tool with k-fold cross-validation that lets
+you benchmark all 6 classifiers (RF, SDCA, LightGBM, SVM, LR, MLP) in both hybrid and
+pure ML modes side by side, so you can verify the benefit for your specific dataset.
 
 ---
 
@@ -264,8 +312,8 @@ reflectance (fuzzy logic), the other finds complex statistical patterns (Random 
 ### Build & Test
 
 ```bash
-git clone https://github.com/ivanrlg/FuzzySat.git
-cd FuzzySat
+git clone https://github.com/ivanrlg/TerraML.git
+cd TerraML
 
 dotnet build
 dotnet test     # 484 tests
@@ -329,6 +377,27 @@ Console.WriteLine($"OA: {cm.OverallAccuracy:P2}, Kappa: {cm.KappaCoefficient:F4}
 
 ---
 
+## Docker
+
+Run the web application with Docker -- no .NET SDK or GDAL installation required:
+
+```bash
+# Using Docker Compose (recommended)
+docker compose up --build
+# Open http://localhost:8080
+```
+
+Or build and run directly:
+
+```bash
+docker build -t terra-ml .
+docker run -p 8080:8080 -v terra-ml-data:/app/data terra-ml
+```
+
+The `docker-compose.yml` mounts a named volume (`fuzzysat-data`) at `/app/data` for persistent project storage. The image uses a multi-stage build (SDK for compilation, ASP.NET runtime for execution) to keep the final image small.
+
+---
+
 ## Membership Functions
 
 Terra ML implements four membership function types:
@@ -375,42 +444,85 @@ flowchart LR
     end
 
     P["Pixel<br/>Band Values"] --> FE["FuzzyFeatureExtractor"]
+    P --> RE["RawFeatureExtractor"]
     RS -->|"Rules + MFs"| FE
 
-    FE --> V["Feature Vector"]
+    FE --> V["Fuzzy Feature Vector<br/>(enriched)"]
+    RE --> RV["Raw Feature Vector<br/>(spectral only)"]
 
-    subgraph "Feature Vector Components"
+    subgraph "Feature Vector (Fuzzy)"
         direction TB
         R["Raw spectral values<br/>(N bands)"]
         M["MF degrees per class/band<br/>(N_classes x N_bands)"]
         S["Firing strengths per class<br/>(N_classes)"]
     end
 
-    V --> RF["Random Forest<br/>(FastForest/OVA)<br/>via ML.NET"]
-    V --> SD["SDCA MaxEntropy<br/>via ML.NET"]
-    V --> KM["K-Means Clustering<br/>via ML.NET"]
-    RF --> HC["HybridClassifier<br/>(IClassifier)"]
-    SD --> HC
+    V --> RF["Random Forest<br/>FastForest/OVA"]
+    V --> SD["SDCA<br/>MaxEntropy"]
+    V --> LG["LightGBM<br/>Gradient Boosting"]
+    V --> SVM["SVM<br/>Linear/OVA"]
+    V --> LR["Logistic Regression<br/>L-BFGS"]
+    V --> NN["MLP Neural Network<br/>TorchSharp"]
+    RV --> RF
+    RV --> SD
+    RV --> LG
+    RV --> SVM
+    RV --> LR
+    RV --> NN
+
+    RF --> CR["ClassificationResult"]
+    SD --> CR
+    LG --> CR
+    SVM --> CR
+    LR --> CR
+    NN --> CR
+
+    RF --> EN["Ensemble<br/>Voting / Stacking"]
+    SD --> EN
+    LG --> EN
+    SVM --> EN
+    LR --> EN
+    EN --> CR
+
+    V --> KM["K-Means Clustering"]
     KM --> TA["Suggested<br/>Training Areas"]
 
-    HC --> CR["ClassificationResult"]
-
     style FE fill:#9b59b6,color:#fff
-    style HC fill:#8e44ad,color:#fff
+    style RE fill:#e74c3c,color:#fff
     style CR fill:#2ecc71,color:#fff
     style RS fill:#3498db,color:#fff
+    style EN fill:#f39c12,color:#fff
 ```
 
-The `FuzzyFeatureExtractor` uses the `FuzzyRuleSet` (built from training data) to produce an enriched feature vector:
+### Feature Extraction Modes
+
+| Mode | Extractor | Features | Use Case |
+|:---|:---|:---:|:---|
+| **Hybrid** | `FuzzyFeatureExtractor` | N_bands + N_classes x (N_bands + 1) | Best accuracy -- fuzzy-enriched input |
+| **Pure ML** | `RawFeatureExtractor` | N_bands | Baseline comparison -- raw spectral bands only |
+
+For 4 bands and 7 classes, the fuzzy extractor produces 4 + 7 x 5 = **39 features** per pixel:
 
 | Feature Group | Count | Source |
 |:---|:---:|:---|
 | Raw spectral values | N_bands | Pixel band values |
 | Membership degrees | N_classes x N_bands | Each MF evaluated on pixel |
 | Firing strengths | N_classes | AND(min) across bands per class |
-| **Total** | **N_bands + N_classes x (N_bands + 1)** | |
 
-For 4 bands and 7 classes: 4 + 7 x 5 = **39 features** per pixel. This enriched representation bridges fuzzy logic and machine learning, often improving accuracy over raw spectral features alone.
+### Available ML Classifiers
+
+| Classifier | Backend | Strengths |
+|:---|:---|:---|
+| **Random Forest** | ML.NET FastForest/OVA | Robust, handles noise well |
+| **SDCA** | ML.NET MaximumEntropy | Fast convergence, good for large datasets |
+| **LightGBM** | ML.NET LightGBM | High accuracy, gradient boosting |
+| **SVM** | ML.NET Linear SVM/OVA | Effective for high-dimensional data |
+| **Logistic Regression** | ML.NET L-BFGS MaxEntropy | Calibrated probabilities |
+| **MLP Neural Network** | TorchSharp | Deep learning, adaptive architecture |
+| **Ensemble (Voting)** | Majority / weighted vote | Combines multiple classifiers |
+| **Stacking** | OOF meta-learner (LogReg) | Learns optimal classifier combination |
+
+All classifiers implement `IClassifier` and can be used interchangeably in the classification pipeline. The **Model Comparison** tool benchmarks all methods with k-fold cross-validation.
 
 ---
 
@@ -422,6 +534,7 @@ For 4 bands and 7 classes: 4 + 7 x 5 = **39 features** per pixel. This enriched 
 | `dotnet run -- train` | Extract training statistics from labeled samples |
 | `dotnet run -- validate` | Validate classification against ground truth |
 | `dotnet run -- info <file>` | Display raster metadata (bands, dimensions, projection) |
+| `dotnet run -- visualize` | Render a false color composite PNG from a raster |
 
 Run from `src/FuzzySat.CLI/`. Built with [System.CommandLine](https://github.com/dotnet/command-line-api) 3.0 + [Spectre.Console](https://spectreconsole.net/) for rich terminal output.
 
@@ -435,10 +548,11 @@ Terra ML includes a server-side Blazor web app with a wizard-flow interface:
 |:---|:---|
 | **Home** | Project overview and workflow steps |
 | **Project Setup** | Configure bands, define land cover classes, set I/O paths |
-| **Band Viewer** | Real band statistics, histograms, and SkiaSharp grayscale previews |
-| **Training** | Draw training areas and extract spectral statistics |
+| **Training** | Draw training areas, visualize bands, extract spectral statistics |
 | **Classification** | Configure MF type, AND operator, defuzzifier; run with progress bar |
 | **Validation** | View Overall Accuracy, Kappa, per-class producer's/user's accuracy |
+| **Model Comparison** | Cross-validate and benchmark all classification methods |
+| **History** | Browse, load, and manage saved projects |
 
 Built with [Radzen Blazor](https://blazor.radzen.com/) components.
 
@@ -455,11 +569,12 @@ dotnet run --project src/FuzzySat.Web
 |:---|:---|:---:|
 | **Framework** | .NET | 10.0 (LTS) |
 | **Language** | C# | 13 |
-| **Raster I/O** | GDAL via MaxRev.Gdal.Core | 3.12.2 |
-| **ML** | Microsoft.ML + FastTree | 5.0.0 |
+| **Raster I/O** | GDAL via MaxRev.Gdal.Core | 3.12.3 |
+| **ML** | Microsoft.ML + FastTree + LightGBM | 5.0.0 |
+| **Neural Network** | TorchSharp | 0.105.0 |
 | **CLI** | System.CommandLine | 3.0.0-preview |
 | **Terminal UI** | Spectre.Console | 0.54.0 |
-| **Web UI** | Blazor Server + Radzen | 10.0.6 |
+| **Web UI** | Blazor Server + Radzen | 10.1.0 |
 | **Tests** | xUnit + FluentAssertions | 2.9.3 / 8.9.0 |
 
 ---
@@ -501,16 +616,33 @@ dotnet run --project src/FuzzySat.Web
 </details>
 
 <details>
-<summary><strong>Raster & ML</strong></summary>
+<summary><strong>Raster I/O</strong></summary>
 
 | Type | Namespace | Purpose |
 |:---|:---|:---|
 | `GdalRasterReader` | `Core.Raster` | Reads GeoTIFF to MultispectralImage |
 | `GdalRasterWriter` | `Core.Raster` | Writes ClassificationResult as GeoTIFF |
 | `SpectralIndexCalculator` | `Core.Raster` | NDVI, NDWI, NDBI derived bands |
-| `HybridClassifier` | `Core.ML` | ML.NET with fuzzy features |
-| `FuzzyFeatureExtractor` | `Core.ML` | Pixel to ML feature vector |
+
+</details>
+
+<details>
+<summary><strong>ML Classifiers & Ensemble</strong></summary>
+
+| Type | Namespace | Purpose |
+|:---|:---|:---|
+| `HybridClassifier` | `Core.ML` | Random Forest / SDCA with fuzzy or raw features |
+| `LightGbmClassifier` | `Core.ML` | LightGBM gradient boosting classifier |
+| `SvmClassifier` | `Core.ML` | Linear SVM with One-vs-All strategy |
+| `LogisticRegressionClassifier` | `Core.ML` | L-BFGS Maximum Entropy classifier |
+| `NeuralNetClassifier` | `Core.ML` | MLP Neural Network via TorchSharp |
+| `EnsembleClassifier` | `Core.ML` | Majority / weighted voting ensemble |
+| `StackingClassifier` | `Core.ML` | Out-of-fold stacking with meta-learner |
+| `FuzzyFeatureExtractor` | `Core.ML` | Pixel to fuzzy-enriched feature vector |
+| `RawFeatureExtractor` | `Core.ML` | Pixel to raw spectral feature vector |
 | `KMeansClusterer` | `Core.ML` | Unsupervised training area suggestion |
+| `ModelComparisonEngine` | `Core.ML` | Benchmark all classifiers with k-fold CV |
+| `CrossValidator` | `Core.ML` | k-fold cross-validation evaluator |
 
 </details>
 
@@ -519,8 +651,10 @@ dotnet run --project src/FuzzySat.Web
 ## Project Structure
 
 ```
-FuzzySat/
+TerraML/
 ├── FuzzySat.slnx                          # Solution file (.NET 10)
+├── Dockerfile                             # Multi-stage Docker build (SDK → ASP.NET runtime)
+├── docker-compose.yml                     # One-command deployment with data volume
 ├── src/
 │   ├── FuzzySat.Core/                     # Core library (all algorithms)
 │   │   ├── FuzzyLogic/
@@ -534,10 +668,10 @@ FuzzySat/
 │   │   ├── Raster/                        # GDAL reader/writer, Band, SpectralIndices
 │   │   ├── Classification/                # ClassificationResult, ConfidenceMap
 │   │   ├── Validation/                    # ConfusionMatrix, AccuracyMetrics, Kappa
-│   │   ├── ML/                            # HybridClassifier, KMeans, FeatureExtractor
+│   │   ├── ML/                            # 6 classifiers, ensemble, stacking, CV
 │   │   └── Configuration/                 # BandConfig, ClassifierConfig (JSON)
 │   ├── FuzzySat.CLI/                      # Command-line tool (5 commands)
-│   └── FuzzySat.Web/                      # Blazor Server (6 pages, Radzen UI)
+│   └── FuzzySat.Web/                      # Blazor Server (7 pages, Radzen UI)
 ├── tests/
 │   ├── FuzzySat.Core.Tests/               # Core unit tests (xUnit + FluentAssertions)
 │   ├── FuzzySat.CLI.Tests/                # CLI command tests
