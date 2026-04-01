@@ -58,10 +58,9 @@ FuzzySat has strict separation of concerns. Please respect these boundaries:
 
 | Code type                  | Belongs in             | Never in            |
 |----------------------------|------------------------|---------------------|
-| Interfaces, fuzzy engine   | `FuzzySat.Core/`       | CLI, Api, Web       |
-| CLI commands               | `FuzzySat.CLI/`        | Core, Api, Web      |
-| API controllers            | `FuzzySat.Api/`        | Core, CLI, Web      |
-| Blazor pages               | `FuzzySat.Web/`        | Core, CLI, Api      |
+| Interfaces, fuzzy engine   | `FuzzySat.Core/`       | CLI, Web            |
+| CLI commands               | `FuzzySat.CLI/`        | Core, Web           |
+| Blazor pages               | `FuzzySat.Web/`        | Core, CLI           |
 | Unit tests                 | `tests/`               | `src/`              |
 
 ## Testing

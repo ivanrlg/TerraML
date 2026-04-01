@@ -607,8 +607,7 @@ FuzzySat/
 │   │   ├── Validation/                    # ConfusionMatrix, AccuracyMetrics, Kappa
 │   │   ├── ML/                            # HybridClassifier, KMeans, FeatureExtractor
 │   │   └── Configuration/                 # BandConfig, ClassifierConfig (JSON)
-│   ├── FuzzySat.CLI/                      # Command-line tool (4 commands)
-│   ├── FuzzySat.Api/                      # REST API (ASP.NET Core)
+│   ├── FuzzySat.CLI/                      # Command-line tool (5 commands)
 │   └── FuzzySat.Web/                      # Blazor Server (6 pages, Radzen UI)
 ├── tests/
 │   ├── FuzzySat.Core.Tests/               # Core unit tests (xUnit + FluentAssertions)

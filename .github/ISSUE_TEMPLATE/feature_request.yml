@@ -36,7 +36,6 @@ body:
         - Core (ML hybrid pipeline)
         - CLI
         - Web (Blazor)
-        - API
         - Documentation
         - CI/CD
         - Other
