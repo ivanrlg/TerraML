@@ -179,6 +179,7 @@
     private bool _isBuildingVrt;
     private bool _isImporting => _isDetecting || _isBuildingVrt;
     private bool _importComplete;
+    private CancellationTokenSource? _buildCts;
     private Sentinel2ImportService.ImportProgress? _lastImportProgress;
 
     private static readonly Dictionary<string, string> S2BandDescriptions = new(StringComparer.OrdinalIgnoreCase)
@@ -360,6 +361,12 @@
             .ToList();
         if (selectedBandInfos.Count == 0) return;
 
+        // Cancel any in-flight build before starting a new one
+        _buildCts?.Cancel();
+        _buildCts?.Dispose();
+        _buildCts = new CancellationTokenSource();
+        var ct = _buildCts.Token;
+
         _isBuildingVrt = true;
         _importComplete = false;
         _lastImportProgress = null;
@@ -374,7 +381,7 @@
                 InvokeAsync(StateHasChanged);
             });
 
-            var result = await ImportService.BuildVrtAsync(options, progress);
+            var result = await ImportService.BuildVrtAsync(options, progress, ct);
             _importOutputPath = result;
             _importComplete = true;
 
@@ -388,6 +395,11 @@
             catch { /* raster info is optional here */ }
 
             await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer build — no action needed
+            return;
         }
         catch (Exception ex)
         {
@@ -470,6 +482,9 @@
     /// <summary>Reset internal import state (called by parent on Reset).</summary>
     public void Reset()
     {
+        _buildCts?.Cancel();
+        _buildCts?.Dispose();
+        _buildCts = null;
         _isDetecting = false;
         _isBuildingVrt = false;
         _importFolderPath = "";
