@@ -1,6 +1,5 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/FuzzySat.Api/FuzzySat.Api.csproj" />
     <Project Path="src/FuzzySat.CLI/FuzzySat.CLI.csproj" />
     <Project Path="src/FuzzySat.Core/FuzzySat.Core.csproj" />
     <Project Path="src/FuzzySat.Web/FuzzySat.Web.csproj" />
