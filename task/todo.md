@@ -1,20 +1,20 @@
 # Project TODOs - FuzzySat
 
 > **Archivo central de tracking de progreso.**
-> Ultima actualizacion: 2026-04-01
+> Ultima actualizacion: 2026-04-01 (post PR #42 — History page + Epic #5 closure)
 > **Reconciliado**: Alineado con auditoria de codigo real (Epic #6 gap analysis)
 
 ---
 
 ## Estado Actual
 
-> **Proyecto al ~88% global** (subio de 85% tras Epic #10 Phase 3 + API removal)
+> **Proyecto al ~90% global** (subio de 88% tras Epic #11 History page + Epic #5 closure)
 > - Core Engine: **100%** (PCA + 7 ML classifiers + ensemble + benchmark, 349 Core tests)
 > - CLI: **100%** (5 comandos + 16 CLI tests)
 > - API: Removido (no necesario, Web cubre todos los workflows)
-> - Web: **92%** (9 classification methods, Model Comparison, pre-stacked import)
+> - Web: **98%** (History page completada, Leaflet deferred)
 > - CI/CD: 30% (solo build+test)
-> - Tests totales: **471** (349 Core + 16 CLI + 106 Web)
+> - Tests totales: **483** (349 Core + 16 CLI + 118 Web)
 
 ---
 
