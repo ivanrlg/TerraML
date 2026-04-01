@@ -53,21 +53,15 @@ public static class VisualizeCommand
                     return 1;
                 }
 
-                // Read raster
-                AnsiConsole.MarkupLine("[dim]Reading raster...[/]");
-                var reader = new GdalRasterReader();
-                var info = reader.ReadInfo(inputPath);
-
-                // Validate band indices
-                if (red < 1 || red > info.BandCount ||
-                    green < 1 || green > info.BandCount ||
-                    blue < 1 || blue > info.BandCount)
+                if (maxWidth <= 0 || maxHeight <= 0)
                 {
-                    AnsiConsole.MarkupLine($"[red]Error:[/] Band indices must be between 1 and {info.BandCount}");
+                    AnsiConsole.MarkupLine("[red]Error:[/] --width and --height must be positive integers greater than 0.");
                     return 1;
                 }
 
-                // Load only the 3 requested bands (not the entire raster)
+                // Load only the 3 requested bands (single dataset open via ReadBands)
+                AnsiConsole.MarkupLine("[dim]Reading raster bands...[/]");
+                var reader = new GdalRasterReader();
                 var bands = reader.ReadBands(inputPath, [red, green, blue]);
                 var redBand = bands[0];
                 var greenBand = bands[1];
