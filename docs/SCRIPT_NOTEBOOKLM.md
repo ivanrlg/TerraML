@@ -248,15 +248,13 @@ Kappa, y las precisiones del productor y del usuario por clase.
 El modulo de Raster usa GDAL para leer y escribir imagenes GeoTIFF con metadatos
 geoespaciales, e incluye calculadores de indices espectrales: NDVI, NDWI, NDBI.
 
-Sobre ese nucleo se construyen tres interfaces:
+Sobre ese nucleo se construyen dos interfaces:
 
 Una CLI con 5 comandos: classify, train, validate, info, y visualize. Construida con
 System.CommandLine y Spectre.Console.
 
 Una aplicacion web en Blazor Server con 7 paginas: Home, Project Setup, Training,
 Classification, Validation, Model Comparison, e History. Construida con componentes Radzen.
-
-Y una API REST para integracion con otros sistemas.
 
 El despliegue es flexible: puede correr directamente con dotnet run, o en Docker con un
 docker-compose up que levanta todo sin instalar SDK ni GDAL.
@@ -375,7 +373,7 @@ La tesis abrio una puerta. Terra ML la cruzo.
 **Imagenes satelitales**:
 - ASTER (2008): 4 bandas VNIR/SWIR, 15m resolucion
 - Sentinel-2 (2026): 13 bandas, 10-60m resolucion, gratuitas via Copernicus
-- Landsat 8/9: 11 bandas, 15-100m, gratuitas via USGS
+- Landsat 8/9 (OLI/OLI+TIRS): 7-8 bandas soportadas, 15-100m, gratuitas via USGS
 - Custom GeoTIFF: cualquier imagen multibanda
 
 **Aplicacion web**: 7 paginas (Home, Project Setup, Training, Classification, Validation, Model Comparison, History)

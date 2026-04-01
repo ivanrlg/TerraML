@@ -243,15 +243,13 @@ and per-class producer's and user's accuracy.
 The Raster module uses GDAL to read and write GeoTIFF images with geospatial metadata, and
 includes spectral index calculators: NDVI, NDWI, NDBI.
 
-On top of that core sit three interfaces:
+On top of that core sit two interfaces:
 
 A CLI with 5 commands: classify, train, validate, info, and visualize. Built with
 System.CommandLine and Spectre.Console for rich terminal output.
 
 A Blazor Server web application with 7 pages: Home, Project Setup, Training, Classification,
 Validation, Model Comparison, and History. Built with Radzen components.
-
-And a REST API for integration with other systems.
 
 Deployment is flexible: run directly with dotnet run, or spin up Docker with a single
 docker-compose up -- no SDK or GDAL installation required.
@@ -369,7 +367,7 @@ The thesis opened a door. Terra ML walked through it.
 **Satellite imagery**:
 - ASTER (2008): 4 VNIR/SWIR bands, 15m resolution
 - Sentinel-2 (2026): 13 bands, 10-60m resolution, free via Copernicus
-- Landsat 8/9: 11 bands, 15-100m, free via USGS
+- Landsat 8/9 (OLI/OLI+TIRS): 7-8 bands supported, 15-100m, free via USGS
 - Custom GeoTIFF: any multiband image
 
 **Web application**: 7 pages (Home, Project Setup, Training, Classification, Validation, Model Comparison, History)
