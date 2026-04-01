@@ -90,9 +90,6 @@ public sealed class StackingClassifier : IClassifier
 
         // Reindex: we need original sample indices per fold
         // Since CreateStratifiedFolds shuffles, we need to track which original samples are in each fold
-        var allFoldSamples = new List<(string Label, IDictionary<string, double> BandValues, int OrigIdx)>();
-        var origIdx = 0;
-        var foldMembership = new int[samples.Count];
         // Rebuild: assign fold membership based on stratified split
         var rng = new Random(seed);
         var byClass = samples
