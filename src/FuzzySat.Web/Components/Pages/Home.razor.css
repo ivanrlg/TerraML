@@ -275,67 +275,32 @@
     margin: 0;
 }
 
-/* --- Comparison --- */
-.comparison-section {
+/* --- About / Inspiration --- */
+.about-section {
     margin-bottom: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--fs-border);
 }
 
-.comparison-grid {
-    background: var(--fs-bg-surface);
-    border: 1px solid var(--fs-border);
-    border-radius: var(--fs-radius-md);
-    padding: 1.5rem;
-}
-
-.comp-row {
-    display: grid;
-    grid-template-columns: 120px 1fr 70px 80px;
-    align-items: center;
+.about-content {
+    display: flex;
+    align-items: flex-start;
     gap: 1rem;
-    padding: 0.65rem 0;
-    border-bottom: 1px solid rgba(42, 53, 88, 0.3);
+    max-width: 720px;
 }
 
-.comp-row:last-child {
-    border-bottom: none;
-}
-
-.comp-winner {
-    font-weight: 600;
-}
-
-.comp-name {
-    font-size: 0.85rem;
-    color: var(--fs-text-secondary);
-}
-
-.comp-winner .comp-name {
-    color: var(--fs-text-primary);
-}
-
-.comp-bar-area {
-    height: 8px;
-    background: var(--fs-bg-elevated);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.comp-bar {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 1s ease-out;
-}
-
-.comp-value {
-    font-size: 0.85rem;
-    color: var(--fs-text-primary);
-    text-align: right;
-}
-
-.comp-kappa {
-    font-size: 0.7rem;
+.about-icon {
+    font-size: 1.5rem;
     color: var(--fs-text-tertiary);
-    text-align: right;
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+}
+
+.about-text {
+    font-size: 0.8rem;
+    color: var(--fs-text-secondary);
+    line-height: 1.7;
+    margin: 0;
 }
 
 /* --- Responsive --- */
@@ -366,11 +331,4 @@
         grid-template-columns: 1fr;
     }
 
-    .comp-row {
-        grid-template-columns: 80px 1fr 60px;
-    }
-
-    .comp-kappa {
-        display: none;
-    }
 }
