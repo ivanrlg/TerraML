@@ -120,44 +120,19 @@
         </div>
     </div>
 
-    @* Thesis Comparison *@
-    <div class="comparison-section">
-        <h2 class="section-heading">
-            <span class="material-icons" style="color: var(--fs-accent-amber);">emoji_events</span>
-            Original Thesis Results (2008)
-        </h2>
-        <div class="comparison-grid">
-            <div class="comp-row comp-winner">
-                <span class="comp-name">Fuzzy Logic</span>
-                <div class="comp-bar-area">
-                    <div class="comp-bar" style="width: 81.87%; background: linear-gradient(90deg, var(--fs-accent-emerald), var(--fs-accent-cyan));"></div>
-                </div>
-                <span class="comp-value mono-text">81.87%</span>
-                <span class="comp-kappa mono-text">K=0.7637</span>
-            </div>
-            <div class="comp-row">
-                <span class="comp-name">Max. Likelihood</span>
-                <div class="comp-bar-area">
-                    <div class="comp-bar" style="width: 74.27%; background: var(--fs-accent-blue); opacity: 0.6;"></div>
-                </div>
-                <span class="comp-value mono-text">74.27%</span>
-                <span class="comp-kappa mono-text">K=0.6650</span>
-            </div>
-            <div class="comp-row">
-                <span class="comp-name">Decision Tree</span>
-                <div class="comp-bar-area">
-                    <div class="comp-bar" style="width: 63.74%; background: var(--fs-accent-amber); opacity: 0.6;"></div>
-                </div>
-                <span class="comp-value mono-text">63.74%</span>
-                <span class="comp-kappa mono-text">K=0.5312</span>
-            </div>
-            <div class="comp-row">
-                <span class="comp-name">Min. Distance</span>
-                <div class="comp-bar-area">
-                    <div class="comp-bar" style="width: 56.14%; background: var(--fs-accent-red); opacity: 0.6;"></div>
-                </div>
-                <span class="comp-value mono-text">56.14%</span>
-                <span class="comp-kappa mono-text">K=0.4233</span>
+    @* About / Inspiration *@
+    <div class="about-section">
+        <div class="about-content">
+            <span class="material-icons about-icon">school</span>
+            <div>
+                <p class="about-text">
+                    <strong>About this project</strong> &mdash;
+                    FuzzySat is inspired by an undergraduate thesis
+                    (Universidad de Los Andes, Venezuela, 2008) where fuzzy logic was used to classify
+                    Landsat satellite imagery using MATLAB. This open-source reimplementation in C#/.NET
+                    extends the original concept with modern ML classifiers, Sentinel-2 support,
+                    and a web-based interface.
+                </p>
             </div>
         </div>
     </div>
