@@ -144,7 +144,7 @@
                         @* VRT not yet built — show info that it will auto-build *@
                         <div class="auto-build-status">
                             <span class="material-icons" style="font-size: 0.9rem; color: var(--fs-accent-blue);">info</span>
-                            <span class="auto-build-text">VRT will be created automatically when you save the project</span>
+                            <span class="auto-build-text">VRT will be created automatically in the background</span>
                         </div>
                     }
                 }
@@ -207,6 +207,15 @@
 
     private async Task SetMode(InputMode mode)
     {
+        // Cancel any in-flight VRT build when leaving import mode
+        if (mode != InputMode.ImportSentinel2 && _isBuildingVrt)
+        {
+            _buildCts?.Cancel();
+            _buildCts?.Dispose();
+            _buildCts = null;
+            _isBuildingVrt = false;
+        }
+
         CurrentMode = mode;
         await CurrentModeChanged.InvokeAsync(mode);
     }
@@ -403,7 +412,8 @@
             _importOutputPath = result;
             _importComplete = true;
 
-            // Set input path to the VRT
+            // Set input path to the VRT and clear any previous raster error
+            await RasterErrorChanged.InvokeAsync(null);
             await InputPathChanged.InvokeAsync(result);
             try
             {
