@@ -66,31 +66,31 @@
                 <div class="wf-step-badge">1</div>
                 <span class="material-icons wf-icon" style="color: var(--fs-accent-blue);">tune</span>
                 <span class="wf-title">Project Setup</span>
-                <span class="wf-desc">Configure bands, define land cover classes, set paths</span>
+                <span class="wf-desc">Import rasters, configure bands, define land cover classes</span>
             </a>
-            <a href="band-viewer" class="workflow-card fs-scale-in" style="animation-delay: 0.3s;">
+            <a href="training" class="workflow-card fs-scale-in" style="animation-delay: 0.3s;">
                 <div class="wf-step-badge">2</div>
-                <span class="material-icons wf-icon" style="color: var(--fs-accent-cyan);">layers</span>
-                <span class="wf-title">Band Viewer</span>
-                <span class="wf-desc">Visualize spectral bands and false color composites</span>
+                <span class="material-icons wf-icon" style="color: var(--fs-accent-cyan);">model_training</span>
+                <span class="wf-title">Explore & Train</span>
+                <span class="wf-desc">Visualize bands, draw training areas, extract spectral statistics</span>
             </a>
-            <a href="training" class="workflow-card fs-scale-in" style="animation-delay: 0.4s;">
+            <a href="classification" class="workflow-card fs-scale-in" style="animation-delay: 0.4s;">
                 <div class="wf-step-badge">3</div>
-                <span class="material-icons wf-icon" style="color: var(--fs-accent-emerald);">model_training</span>
-                <span class="wf-title">Training</span>
-                <span class="wf-desc">Draw training areas, extract spectral statistics</span>
-            </a>
-            <a href="classification" class="workflow-card fs-scale-in" style="animation-delay: 0.5s;">
-                <div class="wf-step-badge">4</div>
                 <span class="material-icons wf-icon" style="color: var(--fs-accent-amber);">category</span>
                 <span class="wf-title">Classification</span>
-                <span class="wf-desc">Run fuzzy inference engine on every pixel</span>
+                <span class="wf-desc">Run fuzzy, hybrid, or pure ML classification</span>
             </a>
-            <a href="validation" class="workflow-card fs-scale-in" style="animation-delay: 0.6s;">
-                <div class="wf-step-badge">5</div>
+            <a href="validation" class="workflow-card fs-scale-in" style="animation-delay: 0.5s;">
+                <div class="wf-step-badge">4</div>
                 <span class="material-icons wf-icon" style="color: var(--fs-accent-violet);">assessment</span>
                 <span class="wf-title">Validation</span>
-                <span class="wf-desc">Confusion matrix, Kappa, accuracy assessment</span>
+                <span class="wf-desc">Confusion matrix, Kappa, per-class accuracy</span>
+            </a>
+            <a href="model-comparison" class="workflow-card fs-scale-in" style="animation-delay: 0.6s;">
+                <div class="wf-step-badge">5</div>
+                <span class="material-icons wf-icon" style="color: var(--fs-accent-emerald);">compare</span>
+                <span class="wf-title">Compare Models</span>
+                <span class="wf-desc">Cross-validate and compare all classification methods</span>
             </a>
         </div>
     </div>
@@ -105,17 +105,17 @@
             <div class="feature-card fs-scale-in" style="animation-delay: 0.3s;">
                 <span class="material-icons feature-icon" style="color: var(--fs-accent-blue);">insights</span>
                 <h3 class="feature-title">Fuzzy Inference Engine</h3>
-                <p class="feature-desc">Gaussian, Triangular, Trapezoidal, and Bell membership functions with configurable AND operators and defuzzifiers.</p>
+                <p class="feature-desc">4 membership functions (Gaussian, Triangular, Trapezoidal, Bell) with configurable AND operators (Min, Product) and defuzzifiers. Pure fuzzy classification pixel-by-pixel.</p>
             </div>
             <div class="feature-card fs-scale-in" style="animation-delay: 0.4s;">
                 <span class="material-icons feature-icon" style="color: var(--fs-accent-emerald);">psychology</span>
-                <h3 class="feature-title">Hybrid ML Pipeline</h3>
-                <p class="feature-desc">Fuzzy features as intelligent preprocessing for Random Forest and SDCA classifiers via ML.NET. 39 to 111 enriched features.</p>
+                <h3 class="feature-title">Hybrid & Pure ML</h3>
+                <p class="feature-desc">7 ML classifiers (Random Forest, SDCA, LightGBM, SVM, Logistic Regression, MLP Neural Network, KMeans). Use fuzzy-enriched features or raw band values. Ensemble voting & stacking.</p>
             </div>
             <div class="feature-card fs-scale-in" style="animation-delay: 0.5s;">
-                <span class="material-icons feature-icon" style="color: var(--fs-accent-cyan);">public</span>
-                <h3 class="feature-title">Free Satellite Imagery</h3>
-                <p class="feature-desc">Built for Sentinel-2 Copernicus data: 13 bands, 10m resolution, global coverage. GDAL-powered raster I/O.</p>
+                <span class="material-icons feature-icon" style="color: var(--fs-accent-cyan);">satellite_alt</span>
+                <h3 class="feature-title">Sentinel-2 Ready</h3>
+                <p class="feature-desc">Smart import wizard for Copernicus Sentinel-2 data. Auto-detect format, build VRT, 13 bands at 10-60m resolution. GDAL-powered raster I/O.</p>
             </div>
         </div>
     </div>
