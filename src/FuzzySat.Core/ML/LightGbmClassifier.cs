@@ -4,7 +4,7 @@ using Microsoft.ML.Data;
 namespace FuzzySat.Core.ML;
 
 /// <summary>
-/// ML.NET classifier using LightGBM (gradient boosting) with fuzzy membership features.
+/// ML.NET classifier using LightGBM (gradient boosting) with extracted features.
 /// Generally the strongest classifier for tabular data.
 /// </summary>
 public sealed class LightGbmClassifier : MlClassifierBase
@@ -19,10 +19,10 @@ public sealed class LightGbmClassifier : MlClassifierBase
     }
 
     /// <summary>
-    /// Trains a LightGBM multiclass classifier on fuzzy-enriched features.
+    /// Trains a LightGBM multiclass classifier on extracted features.
     /// </summary>
     /// <param name="trainingSamples">Labeled training data.</param>
-    /// <param name="featureExtractor">Fuzzy feature extractor.</param>
+    /// <param name="featureExtractor">Feature extractor for transforming band values into ML features.</param>
     /// <param name="numberOfLeaves">Max leaves per tree. Must be at least 2.</param>
     /// <param name="numberOfIterations">Number of boosting iterations. Must be at least 1.</param>
     /// <param name="learningRate">Learning rate (shrinkage). Must be positive.</param>

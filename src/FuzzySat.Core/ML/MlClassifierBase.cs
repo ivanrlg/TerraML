@@ -5,7 +5,8 @@ using Microsoft.ML.Data;
 namespace FuzzySat.Core.ML;
 
 /// <summary>
-/// Abstract base class for ML.NET classifiers that use fuzzy membership degrees as features.
+/// Abstract base class for ML.NET classifiers that use an <see cref="IFeatureExtractor"/>
+/// to produce feature vectors from pixel band values.
 /// Encapsulates the shared pipeline: MLContext creation, schema definition, data loading,
 /// MapValueToKey/MapKeyToValue, PredictionEngine with thread-safe lock.
 /// Subclasses only provide the <see cref="IEstimator{TTransformer}"/> trainer.
@@ -50,7 +51,7 @@ public abstract class MlClassifierBase : IClassifier
     /// </summary>
     /// <typeparam name="T">The concrete classifier type.</typeparam>
     /// <param name="trainingSamples">Labeled training data (class name + band values).</param>
-    /// <param name="featureExtractor">Fuzzy feature extractor.</param>
+    /// <param name="featureExtractor">Feature extractor for transforming band values into ML features.</param>
     /// <param name="trainerFactory">
     /// Factory that receives an <see cref="MLContext"/> and the feature count,
     /// and returns the trainer estimator to append to the pipeline.
