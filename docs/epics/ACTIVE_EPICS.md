@@ -13,7 +13,7 @@
 | Completado | 4 | #1 Core Engine MVP, #3 Advanced Features, #7 Classified Output, #8 Project Persistence |
 | Casi Completado | 2 | #2 I/O & CLI (~80%), #4 ML Hybrid (~90%) |
 | Parcial | 1 | #5 Blazor Web (~85%) |
-| En Desarrollo | 1 | #10 Input UX Redesign & Homepage Overhaul |
+| En Progreso | 1 | #10 Input UX Redesign & Homepage (~50%) |
 | Planificado | 1 | #9 Advanced ML Classifiers & Ensemble Methods |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 
@@ -186,11 +186,12 @@ de comparacion automatica de modelos. 6 PRs, ~24 micro-commits.
 
 ---
 
-## Epic #10 - Input UX Redesign & Homepage Overhaul — EN DESARROLLO
+## Epic #10 - Input UX Redesign & Homepage Overhaul — EN PROGRESO
 
-- **Status**: **En Desarrollo**
+- **Status**: **~50% completado** (Fases 1-2 mergeadas, Fases 3-4 pendientes)
 - **Priority**: P1
 - **Folder**: [epic-010-input-ux-homepage/](epic-010-input-ux-homepage/)
+- **GitHub PR**: [#32](https://github.com/ivanrlg/FuzzySat/pull/32) (merged)
 - **Creado**: 2026-03-31
 - **Prerequisito**: Epic #8 completado (PR #30)
 
@@ -198,9 +199,14 @@ de comparacion automatica de modelos. 6 PRs, ~24 micro-commits.
 reorganizar el homepage para enfocarse en el uso de la herramienta, moviendo datos de la
 tesis a una pagina dedicada.
 
-**4 Fases planificadas**:
-1. Componentizar ProjectSetup.razor (~900 lineas → componentes modulares)
-2. Smart Import Wizard (auto-detect sensor, preset sincronizado con bandas reales)
+**Completado (PR #32)**:
+- Fase 1: Componentizar ProjectSetup.razor (848→280 lineas, 5 componentes modulares)
+- Fase 2: Smart Import Wizard (auto-detect Sentinel-2, auto-build VRT, preset dinamico,
+  band names B01 normalizados, CancellationToken, IDisposable)
+- Fixes adicionales: spectral chart auto-scaling, thinner selection borders,
+  new project state reset, 3 rondas de review bot resueltas
+
+**Pendiente**:
 3. Soporte imagenes pre-stacked + conversion in-app
 4. Homepage workflow-oriented + pagina Thesis dedicada
 
