@@ -18,6 +18,7 @@ builder.Services.AddSingleton<ProjectLoaderService>();
 builder.Services.AddSingleton<TrainingService>();
 builder.Services.AddSingleton<ClassificationService>();
 builder.Services.AddSingleton<HybridClassificationService>();
+builder.Services.AddSingleton<ModelComparisonService>();
 builder.Services.AddSingleton<ValidationService>();
 builder.Services.AddSingleton<PixelExtractionService>();
 builder.Services.AddSingleton<Sentinel2ImportService>();
