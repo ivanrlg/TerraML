@@ -12,7 +12,7 @@ public sealed class LightGbmClassifier : MlClassifierBase
     private LightGbmClassifier(
         MLContext mlContext,
         ITransformer model,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         SchemaDefinition inputSchema)
         : base(mlContext, model, featureExtractor, inputSchema)
     {
@@ -28,7 +28,7 @@ public sealed class LightGbmClassifier : MlClassifierBase
     /// <param name="learningRate">Learning rate (shrinkage). Must be positive.</param>
     public static LightGbmClassifier Train(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> trainingSamples,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         int numberOfLeaves = 31,
         int numberOfIterations = 100,
         double learningRate = 0.1)

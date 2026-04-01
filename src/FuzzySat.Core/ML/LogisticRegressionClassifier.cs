@@ -14,7 +14,7 @@ public sealed class LogisticRegressionClassifier : MlClassifierBase
     private LogisticRegressionClassifier(
         MLContext mlContext,
         ITransformer model,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         SchemaDefinition inputSchema)
         : base(mlContext, model, featureExtractor, inputSchema)
     {
@@ -29,7 +29,7 @@ public sealed class LogisticRegressionClassifier : MlClassifierBase
     /// <param name="historySize">L-BFGS history size (higher = more memory, better convergence). Must be at least 1.</param>
     public static LogisticRegressionClassifier Train(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> trainingSamples,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         int historySize = 50)
     {
         if (historySize < 1)

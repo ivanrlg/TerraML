@@ -13,7 +13,7 @@ public sealed class SvmClassifier : MlClassifierBase
     private SvmClassifier(
         MLContext mlContext,
         ITransformer model,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         SchemaDefinition inputSchema)
         : base(mlContext, model, featureExtractor, inputSchema)
     {
@@ -27,7 +27,7 @@ public sealed class SvmClassifier : MlClassifierBase
     /// <param name="numberOfIterations">Number of training iterations. Must be at least 1.</param>
     public static SvmClassifier Train(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> trainingSamples,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         int numberOfIterations = 100)
     {
         if (numberOfIterations < 1)

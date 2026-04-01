@@ -14,7 +14,7 @@ public abstract class MlClassifierBase : IClassifier
 {
     private readonly object _lock = new();
     private readonly PredictionEngine<PixelFeatureData, PixelPrediction> _predictionEngine;
-    private readonly FuzzyFeatureExtractor _featureExtractor;
+    private readonly IFeatureExtractor _featureExtractor;
 
     /// <summary>
     /// Initializes a new instance from a trained ML.NET model.
@@ -22,7 +22,7 @@ public abstract class MlClassifierBase : IClassifier
     protected MlClassifierBase(
         MLContext mlContext,
         ITransformer model,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         SchemaDefinition inputSchema)
     {
         _featureExtractor = featureExtractor;
@@ -61,9 +61,9 @@ public abstract class MlClassifierBase : IClassifier
     /// </param>
     protected static T TrainBase<T>(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> trainingSamples,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         Func<MLContext, int, IEstimator<ITransformer>> trainerFactory,
-        Func<MLContext, ITransformer, FuzzyFeatureExtractor, SchemaDefinition, T> constructor)
+        Func<MLContext, ITransformer, IFeatureExtractor, SchemaDefinition, T> constructor)
         where T : MlClassifierBase
     {
         ArgumentNullException.ThrowIfNull(trainingSamples);

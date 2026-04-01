@@ -15,7 +15,7 @@ public sealed class HybridClassifier : MlClassifierBase
     private HybridClassifier(
         MLContext mlContext,
         ITransformer model,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         SchemaDefinition inputSchema)
         : base(mlContext, model, featureExtractor, inputSchema)
     {
@@ -29,7 +29,7 @@ public sealed class HybridClassifier : MlClassifierBase
     /// <param name="numberOfTrees">Number of trees in the forest. Must be at least 1.</param>
     public static HybridClassifier TrainRandomForest(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> trainingSamples,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         int numberOfTrees = 100)
     {
         if (numberOfTrees < 1)
@@ -50,7 +50,7 @@ public sealed class HybridClassifier : MlClassifierBase
     /// <param name="maximumNumberOfIterations">Max iterations. Must be at least 1.</param>
     public static HybridClassifier TrainSdca(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> trainingSamples,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         int maximumNumberOfIterations = 100)
     {
         if (maximumNumberOfIterations < 1)
