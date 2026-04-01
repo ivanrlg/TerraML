@@ -392,6 +392,17 @@
                 return;
             }
 
+            // If project name changed, clear training/classification from previous project
+            var previousName = ProjectState.Configuration?.ProjectName;
+            var isNewProject = previousName is null
+                || !safeName.Equals(previousName, StringComparison.OrdinalIgnoreCase);
+
+            if (isNewProject)
+            {
+                ProjectState.Reset();
+                _inputRasterWizard?.Reset();
+            }
+
             await ProjectLoader.SaveProjectAsync(safeName, config);
             await ProjectLoader.SaveLastProjectAsync(safeName);
 
