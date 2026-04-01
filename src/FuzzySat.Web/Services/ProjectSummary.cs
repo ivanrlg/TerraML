@@ -16,6 +16,8 @@ public sealed record ProjectSummary
     public string? ClassificationMethod { get; init; }
     public double? OverallAccuracy { get; init; }
     public double? KappaCoefficient { get; init; }
+
+    /// <summary>UTC timestamp of the project's last modification.</summary>
     public DateTime LastModified { get; init; }
     public ProjectStatus Status { get; init; }
 }

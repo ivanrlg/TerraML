@@ -137,7 +137,7 @@ public sealed class ProjectLoaderService
             try
             {
                 var config = LoadProject(name);
-                if (config is null) continue;
+                if (config?.Bands is null || config.Classes is null) continue;
 
                 var dataDir = Path.Combine(_projectDir, name);
                 var status = DetermineStatus(dataDir);
@@ -146,10 +146,10 @@ public sealed class ProjectLoaderService
                 ClassificationOptionsDto? classOpts = null;
                 ValidationResultDto? validation = null;
 
-                if (status >= ProjectStatus.Classified)
+                if (status is ProjectStatus.Classified or ProjectStatus.Validated)
                     classOpts = ReadJson<ClassificationOptionsDto>(Path.Combine(dataDir, "classification-options.json"));
 
-                if (status >= ProjectStatus.Validated)
+                if (status is ProjectStatus.Validated)
                     validation = ReadJson<ValidationResultDto>(Path.Combine(dataDir, "validation-result.json"));
 
                 summaries.Add(new ProjectSummary
@@ -180,8 +180,9 @@ public sealed class ProjectLoaderService
     /// </summary>
     public void DeleteProject(string name)
     {
-        var configPath = ResolveSafePath(name);
-        var resolvedDataDir = ResolveSafeDir(name);
+        ValidateProjectName(name);
+        var configPath = Path.GetFullPath(Path.Combine(_projectDir, $"{name}.json"));
+        var resolvedDataDir = Path.GetFullPath(Path.Combine(_projectDir, name));
 
         if (File.Exists(configPath))
             File.Delete(configPath);
@@ -245,14 +246,13 @@ public sealed class ProjectLoaderService
     }
 
     /// <summary>
-    /// Resolves a project name to a file path within the project directory.
-    /// Throws if the resolved path escapes the project directory (path traversal).
+    /// Validates that a project name does not contain directory separators or attempt path traversal.
+    /// Shared by all path-resolving methods.
     /// </summary>
-    private string ResolveSafePath(string name)
+    private void ValidateProjectName(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
 
-        // Reject directory separators to prevent nested paths
         if (name.IndexOf(Path.DirectorySeparatorChar) >= 0 ||
             (Path.AltDirectorySeparatorChar != Path.DirectorySeparatorChar &&
              name.IndexOf(Path.AltDirectorySeparatorChar) >= 0))
@@ -260,37 +260,18 @@ public sealed class ProjectLoaderService
             throw new ArgumentException("Invalid project name: directory separators are not allowed.", nameof(name));
         }
 
-        var filePath = Path.GetFullPath(Path.Combine(_projectDir, $"{name}.json"));
-
-        // Use GetRelativePath for OS-appropriate path containment check
-        var relativePath = Path.GetRelativePath(_projectDir, filePath);
+        var resolvedPath = Path.GetFullPath(Path.Combine(_projectDir, name));
+        var relativePath = Path.GetRelativePath(_projectDir, resolvedPath);
         if (relativePath.StartsWith("..", StringComparison.Ordinal))
             throw new ArgumentException("Invalid project name: path traversal detected.", nameof(name));
-
-        return filePath;
     }
 
     /// <summary>
-    /// Resolves a project name to a data directory path within the project directory.
-    /// Uses the same validation rules as ResolveSafePath (separator rejection + containment check).
+    /// Resolves a project name to a config file path within the project directory.
     /// </summary>
-    private string ResolveSafeDir(string name)
+    private string ResolveSafePath(string name)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
-
-        if (name.IndexOf(Path.DirectorySeparatorChar) >= 0 ||
-            (Path.AltDirectorySeparatorChar != Path.DirectorySeparatorChar &&
-             name.IndexOf(Path.AltDirectorySeparatorChar) >= 0))
-        {
-            throw new ArgumentException("Invalid project name: directory separators are not allowed.", nameof(name));
-        }
-
-        var dirPath = Path.GetFullPath(Path.Combine(_projectDir, name));
-
-        var relativePath = Path.GetRelativePath(_projectDir, dirPath);
-        if (relativePath.StartsWith("..", StringComparison.Ordinal))
-            throw new ArgumentException("Invalid project name: path traversal detected.", nameof(name));
-
-        return dirPath;
+        ValidateProjectName(name);
+        return Path.GetFullPath(Path.Combine(_projectDir, $"{name}.json"));
     }
 }

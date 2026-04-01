@@ -114,9 +114,9 @@
 
 @if (_showDeleteDialog)
 {
-    <div class="dialog-overlay" @onclick="CancelDelete">
+    <div class="dialog-overlay" @onclick="CancelDelete" role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title">
         <div class="dialog-panel" @onclick:stopPropagation="true">
-            <h3 style="margin: 0 0 0.5rem; color: var(--fs-text-primary);">Delete Project</h3>
+            <h3 id="delete-dialog-title" style="margin: 0 0 0.5rem; color: var(--fs-text-primary);">Delete Project</h3>
             <p style="color: var(--fs-text-secondary); margin-bottom: 1.5rem;">
                 Are you sure you want to delete <strong>@_deleteDisplayName</strong>?
                 This will remove the configuration and all associated data (training, classification, validation).
@@ -141,16 +141,52 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await Task.Run(() => _projects = ProjectLoader.GetProjectSummaries().OrderByDescending(p => p.LastModified).ToList());
-        _loading = false;
+        try
+        {
+            await Task.Run(() => _projects = ProjectLoader.GetProjectSummaries()
+                .OrderByDescending(p => p.LastModified).ToList());
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load project history");
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Load Failed",
+                Detail = "Could not load project history. Check logs for details.",
+                Duration = 5000
+            });
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private async Task Refresh()
     {
         _loading = true;
         StateHasChanged();
-        await Task.Run(() => _projects = ProjectLoader.GetProjectSummaries().OrderByDescending(p => p.LastModified).ToList());
-        _loading = false;
+        try
+        {
+            await Task.Run(() => _projects = ProjectLoader.GetProjectSummaries()
+                .OrderByDescending(p => p.LastModified).ToList());
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to refresh project history");
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Refresh Failed",
+                Detail = "Could not refresh project history. Check logs for details.",
+                Duration = 5000
+            });
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private void LoadProject(string key)
@@ -172,13 +208,13 @@
         _deleteDisplayName = null;
     }
 
-    private void ExecuteDelete()
+    private async Task ExecuteDelete()
     {
         if (_deleteTargetKey is null) return;
 
         try
         {
-            ProjectLoader.DeleteProject(_deleteTargetKey);
+            await Task.Run(() => ProjectLoader.DeleteProject(_deleteTargetKey));
             _projects.RemoveAll(p => p.Key == _deleteTargetKey);
 
             // If we just deleted the currently active project, clear in-memory state
