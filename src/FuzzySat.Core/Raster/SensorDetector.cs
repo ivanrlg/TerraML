@@ -13,8 +13,8 @@ public static class SensorDetector
     {
         13 => "Sentinel-2",
         12 => "Sentinel-2 (no B10)",
-        7 => "Landsat 8/9",
-        8 => "Landsat 8/9",
+        8 => "Landsat 8/9 OLI+TIRS",
+        7 => "Landsat 8/9 OLI",
         6 => "Landsat 5/7",
         4 => "NAIP",
         _ => null
@@ -27,7 +27,8 @@ public static class SensorDetector
     {
         "Sentinel-2" => ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B09", "B10", "B11", "B12"],
         "Sentinel-2 (no B10)" => ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B09", "B11", "B12"],
-        "Landsat 8/9" when sensor == "Landsat 8/9" => ["Coastal", "Blue", "Green", "Red", "NIR", "SWIR1", "SWIR2"],
+        "Landsat 8/9 OLI+TIRS" => ["Coastal", "Blue", "Green", "Red", "NIR", "SWIR1", "SWIR2", "Cirrus"],
+        "Landsat 8/9 OLI" => ["Coastal", "Blue", "Green", "Red", "NIR", "SWIR1", "SWIR2"],
         "Landsat 5/7" => ["Blue", "Green", "Red", "NIR", "SWIR1", "SWIR2"],
         "NAIP" => ["Red", "Green", "Blue", "NIR"],
         _ => null

@@ -673,10 +673,14 @@
         catch (FileNotFoundException)
         {
             _preStackedError = "File not found.";
+            await RasterInfoChanged.InvokeAsync(null);
+            await RasterErrorChanged.InvokeAsync("File not found");
         }
         catch (Exception ex)
         {
             _preStackedError = "Cannot read raster file.";
+            await RasterInfoChanged.InvokeAsync(null);
+            await RasterErrorChanged.InvokeAsync("Cannot read raster file");
             Logger.LogWarning(ex, "Failed to load pre-stacked raster at '{Path}'", _preStackedPath);
         }
         finally
@@ -732,6 +736,11 @@
             await InputPathChanged.InvokeAsync(vrtPath);
             var info = await Task.Run(() => RasterService.GetInfo(vrtPath));
             await RasterInfoChanged.InvokeAsync(info);
+
+            // Update local state to reflect the active VRT
+            _preStackedPath = vrtPath;
+            _preStackedInfo = info;
+            _preStackedSelectedBands = Enumerable.Range(1, indices.Count).ToHashSet();
             await SyncPreStackedBands();
 
             NotificationService.Notify(NotificationSeverity.Success, "Subset Created",
@@ -757,7 +766,11 @@
             _preStackedConverting = true;
             StateHasChanged();
 
-            var outputPath = Path.ChangeExtension(_preStackedPath, ".tif");
+            var ext = Path.GetExtension(_preStackedPath);
+            var outputPath = string.Equals(ext, ".tif", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(ext, ".tiff", StringComparison.OrdinalIgnoreCase)
+                ? Path.ChangeExtension(_preStackedPath, null) + "_converted.tif"
+                : Path.ChangeExtension(_preStackedPath, ".tif");
             await Task.Run(() => GdalRasterUtils.TranslateFormat(_preStackedPath, outputPath));
 
             _preStackedPath = outputPath;

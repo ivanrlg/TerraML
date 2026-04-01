@@ -26,16 +26,18 @@ public static class GdalRasterUtils
 
     /// <summary>
     /// Creates a VRT file referencing a subset of bands from a multiband source raster.
+    /// Output must reside in the same directory as the source file.
     /// </summary>
-    /// <param name="sourcePath">Path to the source multiband raster.</param>
-    /// <param name="bandIndices">1-based band indices to include.</param>
-    /// <param name="outputVrtPath">Output VRT file path.</param>
-    /// <returns>The output VRT file path.</returns>
     public static string CreateBandSubsetVrt(string sourcePath, IReadOnlyList<int> bandIndices, string outputVrtPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath, nameof(sourcePath));
         ArgumentNullException.ThrowIfNull(bandIndices);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputVrtPath, nameof(outputVrtPath));
+
+        if (bandIndices.Count == 0)
+            throw new ArgumentException("At least one band index is required.", nameof(bandIndices));
+
+        ValidateOutputPath(sourcePath, outputVrtPath);
         EnsureInitialized();
 
         using var dataset = Gdal.Open(sourcePath, Access.GA_ReadOnly)
@@ -102,16 +104,17 @@ public static class GdalRasterUtils
 
     /// <summary>
     /// Translates a raster to a different format using GDAL.
-    /// The output format is inferred from the file extension unless explicitly provided.
+    /// Output must reside in the same directory as the source and must not overwrite the source.
     /// </summary>
-    /// <param name="sourcePath">Source raster path.</param>
-    /// <param name="outputPath">Output raster path.</param>
-    /// <param name="outputFormat">GDAL driver short name (e.g., "GTiff"). Null to infer from extension.</param>
-    /// <returns>The output file path.</returns>
     public static string TranslateFormat(string sourcePath, string outputPath, string? outputFormat = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath, nameof(sourcePath));
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath, nameof(outputPath));
+
+        if (string.Equals(Path.GetFullPath(sourcePath), Path.GetFullPath(outputPath), StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Output path cannot be the same as source path.", nameof(outputPath));
+
+        ValidateOutputPath(sourcePath, outputPath);
         EnsureInitialized();
 
         var format = outputFormat ?? InferFormat(Path.GetExtension(outputPath));
@@ -131,6 +134,20 @@ public static class GdalRasterUtils
             throw new IOException($"Failed to create output raster: '{outputPath}'.");
 
         return outputPath;
+    }
+
+    /// <summary>
+    /// Validates that the output path resides in the same directory as the source
+    /// and does not contain path traversal sequences.
+    /// </summary>
+    private static void ValidateOutputPath(string sourcePath, string outputPath)
+    {
+        var sourceDir = Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? "";
+        var outputFull = Path.GetFullPath(outputPath);
+
+        if (!outputFull.StartsWith(sourceDir, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException(
+                "Output path must reside in the same directory as the source file.", nameof(outputPath));
     }
 
     private static string InferFormat(string extension) => extension.ToLowerInvariant() switch

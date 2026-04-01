@@ -68,6 +68,6 @@ public sealed class RasterInfo
         DriverName = driverName;
         Projection = projection;
         GeoTransform = geoTransform is { Length: 6 } ? (double[])geoTransform.Clone() : null;
-        Bands = bands ?? [];
+        Bands = bands is not null ? bands.ToArray() : [];
     }
 }

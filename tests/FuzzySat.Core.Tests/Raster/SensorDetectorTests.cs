@@ -8,8 +8,8 @@ public class SensorDetectorTests
     [Theory]
     [InlineData(13, "Sentinel-2")]
     [InlineData(12, "Sentinel-2 (no B10)")]
-    [InlineData(7, "Landsat 8/9")]
-    [InlineData(8, "Landsat 8/9")]
+    [InlineData(8, "Landsat 8/9 OLI+TIRS")]
+    [InlineData(7, "Landsat 8/9 OLI")]
     [InlineData(6, "Landsat 5/7")]
     [InlineData(4, "NAIP")]
     public void DetectFromBandCount_KnownCounts_ReturnsExpectedSensor(int bandCount, string expected)
@@ -50,5 +50,21 @@ public class SensorDetectorTests
     public void GetBandNames_UnknownSensor_ReturnsNull()
     {
         SensorDetector.GetBandNames("UnknownSensor").Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(13)]
+    [InlineData(12)]
+    [InlineData(8)]
+    [InlineData(7)]
+    [InlineData(6)]
+    [InlineData(4)]
+    public void GetBandNames_MatchesBandCount(int bandCount)
+    {
+        var sensor = SensorDetector.DetectFromBandCount(bandCount);
+        sensor.Should().NotBeNull();
+        var names = SensorDetector.GetBandNames(sensor!);
+        names.Should().NotBeNull();
+        names!.Should().HaveCount(bandCount);
     }
 }
