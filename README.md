@@ -50,6 +50,7 @@ for multispectral satellite imagery.
 - [Project Structure](#project-structure)
 - [Supported Satellite Platforms](#supported-satellite-platforms)
 - [Origin](#origin)
+- [Podcast](#podcast)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -699,10 +700,29 @@ TerraML/
 
 ## Origin
 
-This project was inspired by a [2008 undergraduate thesis](docs/THESIS.md) on fuzzy logic
-satellite image classification at Universidad de Los Andes, Venezuela. The original concept
-has been significantly extended with modern ML classifiers, multiple membership function types,
-Sentinel-2 support, and open-source tooling.
+Terra ML was born from a [2008 undergraduate thesis](docs/THESIS.md) on fuzzy logic satellite
+image classification at Universidad de Los Andes, Venezuela. That thesis achieved **81.87%
+Overall Accuracy** (Kappa = 0.7637), beating Maximum Likelihood (74.27%), Decision Tree
+(63.74%), and Minimum Distance (56.14%) -- but was locked behind MATLAB and IDRISI licenses.
+
+The thesis was the spark. Terra ML is a new project that goes far beyond the original:
+3 classification modes (fuzzy, hybrid, pure ML), 6 ML classifiers, ensemble methods with
+voting and stacking, k-fold cross-validation, a Blazor web interface, Docker deployment,
+and 484 unit tests -- all open source under MIT license, built on free satellite imagery
+from Copernicus Sentinel-2.
+
+---
+
+## Podcast
+
+Learn the story behind Terra ML -- from a 2008 thesis to a modern classification platform:
+
+| Language | Listen |
+|:---|:---|
+| **Español** | [Terra ML -- Podcast (ES)](https://github.com/user-attachments/assets/56b8c06e-2d94-449e-81f6-a159b8899cc2) |
+| **English** | [Terra ML -- Podcast (EN)](https://github.com/user-attachments/assets/3b996186-d03c-4b6a-97e8-3f82223b1293) |
+
+Generated with [Google NotebookLM](https://notebooklm.google/) from project documentation.
 
 ---
 
