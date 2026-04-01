@@ -240,7 +240,8 @@ public sealed class FileProjectRepository : IProjectRepository
         var path = ResolveDataPath(projectName, fileName);
         try
         {
-            if (File.Exists(path)) File.Delete(path);
+            if (File.Exists(path))
+                File.Delete(path);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -311,7 +312,8 @@ public sealed class FileProjectRepository : IProjectRepository
 
     private async Task<T?> ReadJsonAsync<T>(string path) where T : class
     {
-        if (!File.Exists(path)) return null;
+        if (!File.Exists(path))
+            return null;
 
         try
         {
@@ -327,7 +329,8 @@ public sealed class FileProjectRepository : IProjectRepository
 
     private async Task<string?> ReadTextAsync(string path)
     {
-        if (!File.Exists(path)) return null;
+        if (!File.Exists(path))
+            return null;
 
         try
         {

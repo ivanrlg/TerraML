@@ -56,9 +56,12 @@ public sealed class RasterInfo
         ArgumentException.ThrowIfNullOrWhiteSpace(dataType, nameof(dataType));
         ArgumentException.ThrowIfNullOrWhiteSpace(driverName, nameof(driverName));
 
-        if (rows <= 0) throw new ArgumentOutOfRangeException(nameof(rows));
-        if (columns <= 0) throw new ArgumentOutOfRangeException(nameof(columns));
-        if (bandCount <= 0) throw new ArgumentOutOfRangeException(nameof(bandCount));
+        if (rows <= 0)
+            throw new ArgumentOutOfRangeException(nameof(rows));
+        if (columns <= 0)
+            throw new ArgumentOutOfRangeException(nameof(columns));
+        if (bandCount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(bandCount));
 
         FilePath = filePath;
         Rows = rows;

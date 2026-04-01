@@ -182,25 +182,25 @@ public sealed class HybridClassificationService
         string method,
         List<(string, IDictionary<string, double>)> samples,
         IFeatureExtractor extractor) => method switch
-    {
-        "Random Forest" => HybridClassifier.TrainRandomForest(samples, extractor),
-        "SDCA" => HybridClassifier.TrainSdca(samples, extractor),
-        "LightGBM" => LightGbmClassifier.Train(samples, extractor),
-        "SVM" => SvmClassifier.Train(samples, extractor),
-        "Logistic Regression" => LogisticRegressionClassifier.Train(samples, extractor),
-        "MLP Neural Network" => NeuralNetClassifier.Train(samples, extractor),
-        "Ensemble (Voting)" => TrainVotingEnsemble(samples, extractor),
-        "Ensemble (Stacking)" => StackingClassifier.Train(samples,
-            GetDefaultBaseFactories(extractor), numberOfFolds: 3),
-        // Pure ML methods (same classifiers, but extractor is RawFeatureExtractor)
-        "ML: Random Forest" => HybridClassifier.TrainRandomForest(samples, extractor),
-        "ML: SDCA" => HybridClassifier.TrainSdca(samples, extractor),
-        "ML: LightGBM" => LightGbmClassifier.Train(samples, extractor),
-        "ML: SVM" => SvmClassifier.Train(samples, extractor),
-        "ML: Logistic Regression" => LogisticRegressionClassifier.Train(samples, extractor),
-        "ML: MLP Neural Network" => NeuralNetClassifier.Train(samples, extractor),
-        _ => throw new ArgumentException($"Unknown classification method: '{method}'.")
-    };
+        {
+            "Random Forest" => HybridClassifier.TrainRandomForest(samples, extractor),
+            "SDCA" => HybridClassifier.TrainSdca(samples, extractor),
+            "LightGBM" => LightGbmClassifier.Train(samples, extractor),
+            "SVM" => SvmClassifier.Train(samples, extractor),
+            "Logistic Regression" => LogisticRegressionClassifier.Train(samples, extractor),
+            "MLP Neural Network" => NeuralNetClassifier.Train(samples, extractor),
+            "Ensemble (Voting)" => TrainVotingEnsemble(samples, extractor),
+            "Ensemble (Stacking)" => StackingClassifier.Train(samples,
+                GetDefaultBaseFactories(extractor), numberOfFolds: 3),
+            // Pure ML methods (same classifiers, but extractor is RawFeatureExtractor)
+            "ML: Random Forest" => HybridClassifier.TrainRandomForest(samples, extractor),
+            "ML: SDCA" => HybridClassifier.TrainSdca(samples, extractor),
+            "ML: LightGBM" => LightGbmClassifier.Train(samples, extractor),
+            "ML: SVM" => SvmClassifier.Train(samples, extractor),
+            "ML: Logistic Regression" => LogisticRegressionClassifier.Train(samples, extractor),
+            "ML: MLP Neural Network" => NeuralNetClassifier.Train(samples, extractor),
+            _ => throw new ArgumentException($"Unknown classification method: '{method}'.")
+        };
 
     private static EnsembleClassifier TrainVotingEnsemble(
         List<(string, IDictionary<string, double>)> samples,

@@ -85,7 +85,8 @@ public class MaxWeightDefuzzifierTests
         // Pixel matching Urban profile
         var inferenceResult = engine.Infer(new Dictionary<string, double>
         {
-            ["B1"] = 102.0, ["B2"] = 148.0
+            ["B1"] = 102.0,
+            ["B2"] = 148.0
         });
 
         var winner = _defuzzifier.Defuzzify(inferenceResult);
@@ -126,7 +127,10 @@ public class MaxWeightDefuzzifierTests
         // Pixel values matching Forest spectral signature
         var result = engine.Infer(new Dictionary<string, double>
         {
-            ["VNIR1"] = 77.0, ["VNIR2"] = 93.0, ["SWIR1"] = 83.0, ["SWIR2"] = 72.0
+            ["VNIR1"] = 77.0,
+            ["VNIR2"] = 93.0,
+            ["SWIR1"] = 83.0,
+            ["SWIR2"] = 72.0
         });
 
         _defuzzifier.Defuzzify(result).Should().Be("Forest");

@@ -25,8 +25,10 @@ public static class BandStatisticsCalculator
             for (var c = 0; c < cols; c++)
             {
                 var val = band[r, c];
-                if (val < min) min = val;
-                if (val > max) max = val;
+                if (val < min)
+                    min = val;
+                if (val > max)
+                    max = val;
             }
         }
 
@@ -53,8 +55,10 @@ public static class BandStatisticsCalculator
             for (var c = 0; c < cols; c++)
             {
                 var val = band[r, c];
-                if (val < min) min = val;
-                if (val > max) max = val;
+                if (val < min)
+                    min = val;
+                if (val > max)
+                    max = val;
                 sum += val;
             }
         }
@@ -81,8 +85,10 @@ public static class BandStatisticsCalculator
                 for (var c = 0; c < cols; c++)
                 {
                     var bin = (int)((band[r, c] - min) / range * 255);
-                    if (bin > 255) bin = 255;
-                    if (bin < 0) bin = 0;
+                    if (bin > 255)
+                        bin = 255;
+                    if (bin < 0)
+                        bin = 0;
                     histogram[bin]++;
                 }
             }

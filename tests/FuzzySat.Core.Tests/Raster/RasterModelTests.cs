@@ -46,7 +46,8 @@ public class RasterModelTests
     {
         var pv = new PixelVector(5, 10, new Dictionary<string, double>
         {
-            ["VNIR1"] = 75.0, ["SWIR1"] = 85.0
+            ["VNIR1"] = 75.0,
+            ["SWIR1"] = 85.0
         });
 
         pv.Row.Should().Be(5);

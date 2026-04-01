@@ -101,7 +101,8 @@ public class InferenceEngineTests
         // Pixel at Urban center for all bands
         var bandValues = new Dictionary<string, double>
         {
-            ["Band1"] = 100.0, ["Band2"] = 150.0
+            ["Band1"] = 100.0,
+            ["Band2"] = 150.0
         };
 
         var result = engine.Infer(bandValues);
@@ -155,7 +156,8 @@ public class InferenceEngineTests
         // Pixel values matching Forest profile
         var result = engine.Infer(new Dictionary<string, double>
         {
-            ["VNIR1"] = 82.0, ["SWIR1"] = 88.0
+            ["VNIR1"] = 82.0,
+            ["SWIR1"] = 88.0
         });
 
         result.WinnerClass.Should().Be("Forest");

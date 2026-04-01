@@ -14,10 +14,12 @@ public sealed class GdalRasterReader : IRasterReader
 
     private static void EnsureInitialized()
     {
-        if (_initialized) return;
+        if (_initialized)
+            return;
         lock (InitLock)
         {
-            if (_initialized) return;
+            if (_initialized)
+                return;
             GdalBase.ConfigureAll();
             _initialized = true;
         }
@@ -140,7 +142,8 @@ public sealed class GdalRasterReader : IRasterReader
         try
         {
             var dataset = Gdal.Open(filePath, Access.GA_ReadOnly);
-            if (dataset is not null) return dataset;
+            if (dataset is not null)
+                return dataset;
         }
         catch (Exception ex)
         {

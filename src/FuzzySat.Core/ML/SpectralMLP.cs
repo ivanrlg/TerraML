@@ -51,7 +51,8 @@ internal sealed class SpectralMLP : Module<Tensor, Tensor>
         {
             var prev = x;
             x = _layers[i].call(x);     // Linear
-            if (!ReferenceEquals(prev, input)) prev.Dispose();
+            if (!ReferenceEquals(prev, input))
+                prev.Dispose();
 
             prev = x;
             x = _layers[i + 1].call(x); // BatchNorm
@@ -69,7 +70,8 @@ internal sealed class SpectralMLP : Module<Tensor, Tensor>
         // Output layer
         var beforeOutput = x;
         x = _layers[^1].call(x);
-        if (!ReferenceEquals(beforeOutput, input)) beforeOutput.Dispose();
+        if (!ReferenceEquals(beforeOutput, input))
+            beforeOutput.Dispose();
 
         var beforeSoftmax = x;
         x = functional.log_softmax(x, dim: 1);

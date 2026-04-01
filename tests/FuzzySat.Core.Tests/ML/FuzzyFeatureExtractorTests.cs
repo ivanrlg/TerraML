@@ -25,7 +25,8 @@ public class FuzzyFeatureExtractorTests
         var extractor = MakeExtractor();
         var features = extractor.ExtractFeatures(new Dictionary<string, double>
         {
-            ["B1"] = 100.0, ["B2"] = 150.0
+            ["B1"] = 100.0,
+            ["B2"] = 150.0
         });
 
         features.Should().HaveCount(8);
@@ -37,7 +38,8 @@ public class FuzzyFeatureExtractorTests
         var extractor = MakeExtractor();
         var features = extractor.ExtractFeatures(new Dictionary<string, double>
         {
-            ["B1"] = 100.0, ["B2"] = 150.0
+            ["B1"] = 100.0,
+            ["B2"] = 150.0
         });
 
         features[0].Should().BeApproximately(100.0f, 0.001f); // Raw_B1
@@ -51,7 +53,8 @@ public class FuzzyFeatureExtractorTests
         // Pixel at Urban center: B1=100, B2=150
         var features = extractor.ExtractFeatures(new Dictionary<string, double>
         {
-            ["B1"] = 100.0, ["B2"] = 150.0
+            ["B1"] = 100.0,
+            ["B2"] = 150.0
         });
 
         // MF_Urban_B1 should be ~1.0 (at center)
@@ -66,7 +69,8 @@ public class FuzzyFeatureExtractorTests
         var extractor = MakeExtractor();
         var features = extractor.ExtractFeatures(new Dictionary<string, double>
         {
-            ["B1"] = 75.0, ["B2"] = 80.0
+            ["B1"] = 75.0,
+            ["B2"] = 80.0
         });
 
         features.Should().AllSatisfy(f => float.IsFinite(f).Should().BeTrue());

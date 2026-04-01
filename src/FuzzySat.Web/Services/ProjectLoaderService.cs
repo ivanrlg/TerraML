@@ -59,7 +59,8 @@ public sealed class ProjectLoaderService
     {
         var filePath = ResolveSafePath(name);
 
-        if (!File.Exists(filePath)) return null;
+        if (!File.Exists(filePath))
+            return null;
 
         try
         {
@@ -111,7 +112,8 @@ public sealed class ProjectLoaderService
         try
         {
             var path = Path.Combine(_projectDir, ".last-project");
-            if (!File.Exists(path)) return null;
+            if (!File.Exists(path))
+                return null;
             var name = File.ReadAllText(path).Trim();
             return string.IsNullOrWhiteSpace(name) ? null : name;
         }
@@ -137,7 +139,8 @@ public sealed class ProjectLoaderService
             try
             {
                 var config = LoadProject(name);
-                if (config?.Bands is null || config.Classes is null) continue;
+                if (config?.Bands is null || config.Classes is null)
+                    continue;
 
                 var dataDir = Path.Combine(_projectDir, name);
                 var status = DetermineStatus(dataDir);
@@ -233,7 +236,8 @@ public sealed class ProjectLoaderService
 
     private static T? ReadJson<T>(string path) where T : class
     {
-        if (!File.Exists(path)) return null;
+        if (!File.Exists(path))
+            return null;
         try
         {
             var json = File.ReadAllText(path);

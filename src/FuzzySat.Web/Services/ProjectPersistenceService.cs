@@ -57,7 +57,8 @@ public sealed class ProjectPersistenceService : IDisposable
     private void OnStateChanged()
     {
         var projectName = _state.Configuration?.ProjectName;
-        if (string.IsNullOrWhiteSpace(projectName)) return;
+        if (string.IsNullOrWhiteSpace(projectName))
+            return;
 
         // Detect what changed and set dirty flags atomically
         if (!ReferenceEquals(_lastRegions, _state.TrainingRegions))
@@ -329,7 +330,8 @@ public sealed class ProjectPersistenceService : IDisposable
             _state.ExploreViewMode = null;
 
             var hasData = await _repo.HasPersistedDataAsync(projectName);
-            if (!hasData) return;
+            if (!hasData)
+                return;
 
             // Training regions
             var regions = await _repo.LoadTrainingRegionsAsync(projectName);
@@ -418,13 +420,16 @@ public sealed class ProjectPersistenceService : IDisposable
     /// </summary>
     public async Task AutoLoadLastProjectAsync(ProjectLoaderService loader)
     {
-        if (_state.HasProject) return;
+        if (_state.HasProject)
+            return;
 
         var lastProject = loader.GetLastProject();
-        if (lastProject is null) return;
+        if (lastProject is null)
+            return;
 
         var config = loader.LoadProject(lastProject);
-        if (config is null) return;
+        if (config is null)
+            return;
 
         _state.Configuration = config;
         await RestoreProjectStateAsync(lastProject);

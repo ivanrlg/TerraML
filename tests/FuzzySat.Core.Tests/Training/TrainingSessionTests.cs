@@ -69,13 +69,15 @@ public class TrainingSessionTests
         // Pixel close to Urban profile (105, 155)
         classifier.ClassifyPixel(new Dictionary<string, double>
         {
-            ["B1"] = 106.0, ["B2"] = 154.0
+            ["B1"] = 106.0,
+            ["B2"] = 154.0
         }).Should().Be("Urban");
 
         // Pixel close to Water profile (25, 15)
         classifier.ClassifyPixel(new Dictionary<string, double>
         {
-            ["B1"] = 24.0, ["B2"] = 16.0
+            ["B1"] = 24.0,
+            ["B2"] = 16.0
         }).Should().Be("Water");
     }
 

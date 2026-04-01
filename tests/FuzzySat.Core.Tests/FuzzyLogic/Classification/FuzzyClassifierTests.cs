@@ -16,7 +16,8 @@ public class FuzzyClassifierTests
         // Pixel at Urban center
         var result = classifier.ClassifyPixel(new Dictionary<string, double>
         {
-            ["B1"] = 100.0, ["B2"] = 150.0
+            ["B1"] = 100.0,
+            ["B2"] = 150.0
         });
 
         result.Should().Be("Urban");
@@ -30,7 +31,8 @@ public class FuzzyClassifierTests
         // Pixel at Water center
         var result = classifier.ClassifyPixel(new Dictionary<string, double>
         {
-            ["B1"] = 30.0, ["B2"] = 20.0
+            ["B1"] = 30.0,
+            ["B2"] = 20.0
         });
 
         result.Should().Be("Water");
@@ -75,7 +77,8 @@ public class FuzzyClassifierTests
         var classifier = new FuzzyClassifier(engine);
         var result = classifier.ClassifyPixel(new Dictionary<string, double>
         {
-            ["B1"] = 100.0, ["B2"] = 150.0
+            ["B1"] = 100.0,
+            ["B2"] = 150.0
         });
 
         result.Should().Be("Urban");
@@ -112,17 +115,26 @@ public class FuzzyClassifierTests
 
         classifier.ClassifyPixel(new Dictionary<string, double>
         {
-            ["VNIR1"] = 128.0, ["VNIR2"] = 112.0, ["SWIR1"] = 158.0, ["SWIR2"] = 138.0
+            ["VNIR1"] = 128.0,
+            ["VNIR2"] = 112.0,
+            ["SWIR1"] = 158.0,
+            ["SWIR2"] = 138.0
         }).Should().Be("Urban");
 
         classifier.ClassifyPixel(new Dictionary<string, double>
         {
-            ["VNIR1"] = 24.0, ["VNIR2"] = 14.0, ["SWIR1"] = 11.0, ["SWIR2"] = 9.0
+            ["VNIR1"] = 24.0,
+            ["VNIR2"] = 14.0,
+            ["SWIR1"] = 11.0,
+            ["SWIR2"] = 9.0
         }).Should().Be("Water");
 
         classifier.ClassifyPixel(new Dictionary<string, double>
         {
-            ["VNIR1"] = 76.0, ["VNIR2"] = 93.0, ["SWIR1"] = 84.0, ["SWIR2"] = 71.0
+            ["VNIR1"] = 76.0,
+            ["VNIR2"] = 93.0,
+            ["SWIR1"] = 84.0,
+            ["SWIR2"] = 71.0
         }).Should().Be("Forest");
     }
 

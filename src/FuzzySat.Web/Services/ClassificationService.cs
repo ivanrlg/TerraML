@@ -144,7 +144,8 @@ public sealed class ClassificationService
                 var stddev = stats.StdDevPerBand[bandName];
 
                 // Ensure stddev is positive (avoid degenerate MFs)
-                if (stddev < 1e-10) stddev = 1e-10;
+                if (stddev < 1e-10)
+                    stddev = 1e-10;
 
                 var mfName = $"{className}_{bandName}";
 

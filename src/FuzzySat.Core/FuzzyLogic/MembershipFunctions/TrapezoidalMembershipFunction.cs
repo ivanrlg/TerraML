@@ -60,9 +60,12 @@ public sealed class TrapezoidalMembershipFunction : IMembershipFunction
     /// <inheritdoc />
     public double Evaluate(double x)
     {
-        if (x <= A || x >= D) return 0.0;
-        if (x >= B && x <= C) return 1.0;
-        if (x < B) return (x - A) / (B - A);
+        if (x <= A || x >= D)
+            return 0.0;
+        if (x >= B && x <= C)
+            return 1.0;
+        if (x < B)
+            return (x - A) / (B - A);
         return (D - x) / (D - C);
     }
 

@@ -17,11 +17,58 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore
         run: dotnet restore
+
+      - name: Check formatting
+        run: dotnet format --verify-no-changes --verbosity diagnostic
 
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Test
-        run: dotnet test --no-build --configuration Release --verbosity normal
+      - name: Test with coverage
+        run: |
+          dotnet test --no-build --configuration Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+      - name: Generate coverage report
+        run: |
+          reportgenerator \
+            -reports:./TestResults/**/coverage.cobertura.xml \
+            -targetdir:./TestResults/CoverageReport \
+            -reporttypes:"HtmlInline_AzurePipelines;Cobertura"
+
+      - name: Check coverage threshold
+        shell: bash
+        run: |
+          COVERAGE=$(python3 -c "import xml.etree.ElementTree as ET; root = ET.parse('./TestResults/CoverageReport/Cobertura.xml').getroot(); print(f'{float(root.attrib.get(\"line-rate\", \"0\")) * 100:.1f}')")
+          echo "Line coverage: ${COVERAGE}%"
+          # Threshold set to 40% — GDAL/TorchSharp/ML.NET native code has low
+          # testability on Linux CI. Raise as coverage improves.
+          if python3 -c "import sys; sys.exit(0 if float('${COVERAGE}') >= 40.0 else 1)"; then
+            echo "PASS: Coverage ${COVERAGE}% meets 40% threshold"
+          else
+            echo "FAIL: Coverage ${COVERAGE}% is below 40% threshold"
+            exit 1
+          fi
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: ./TestResults/CoverageReport/
+          retention-days: 30

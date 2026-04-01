@@ -16,10 +16,12 @@ public sealed class GdalRasterWriter : IRasterWriter
 
     private static void EnsureInitialized()
     {
-        if (_initialized) return;
+        if (_initialized)
+            return;
         lock (InitLock)
         {
-            if (_initialized) return;
+            if (_initialized)
+                return;
             GdalBase.ConfigureAll();
             _initialized = true;
         }

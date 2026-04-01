@@ -184,12 +184,15 @@ public sealed class ProjectStateService
     /// </summary>
     public void EndBatch()
     {
-        if (_batchCount > 0) _batchCount--;
-        if (_batchCount == 0) OnStateChanged?.Invoke();
+        if (_batchCount > 0)
+            _batchCount--;
+        if (_batchCount == 0)
+            OnStateChanged?.Invoke();
     }
 
     private void NotifyChanged()
     {
-        if (_batchCount == 0) OnStateChanged?.Invoke();
+        if (_batchCount == 0)
+            OnStateChanged?.Invoke();
     }
 }

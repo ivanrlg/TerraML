@@ -104,7 +104,8 @@ public sealed class ValidationService
     /// </summary>
     public static string CsvEscape(string field)
     {
-        if (string.IsNullOrEmpty(field)) return field;
+        if (string.IsNullOrEmpty(field))
+            return field;
         if (field.IndexOfAny([',', '"', '\n', '\r']) >= 0)
             return $"\"{field.Replace("\"", "\"\"")}\"";
         return field;

@@ -107,7 +107,8 @@ public sealed class PcaTransformer
     public IReadOnlyList<float[]> TransformBatch(IReadOnlyList<float[]> featureVectors)
     {
         ArgumentNullException.ThrowIfNull(featureVectors);
-        if (featureVectors.Count == 0) return [];
+        if (featureVectors.Count == 0)
+            return [];
 
         var results = new List<float[]>(featureVectors.Count);
         for (var i = 0; i < featureVectors.Count; i++)
