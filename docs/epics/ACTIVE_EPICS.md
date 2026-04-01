@@ -1,6 +1,6 @@
 # EPICs Activos - FuzzySat
 
-> **Ultima actualizacion**: 2026-04-01 (post PR #41 — Pre-stacked support + API removal)
+> **Ultima actualizacion**: 2026-04-01 (post PR #42 — History page + Epic #5 closure)
 > **Proposito**: Punto central de informacion de EPICs en desarrollo.
 > Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
 
@@ -10,8 +10,7 @@
 
 | Estado | Cantidad | EPICs |
 |--------|----------|-------|
-| Completado | 8 | #1 Core, #2 CLI, #3 Advanced, #4 ML Hybrid, #7 Classified Output, #8 Persistence, #9 ML Advanced, #10 Input UX |
-| Parcial | 1 | #5 Blazor Web (~92%) |
+| Completado | 10 | #1 Core, #2 CLI, #3 Advanced, #4 ML Hybrid, #5 Blazor Web, #7 Classified Output, #8 Persistence, #9 ML Advanced, #10 Input UX, #11 History |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 
 ---
@@ -77,13 +76,13 @@ SupportedMethods validation, delegates to ModelComparisonEngine). 9 new tests (b
 
 ---
 
-## Epic #5 - Blazor Web App — EN PROGRESO
+## Epic #5 - Blazor Web App — COMPLETADO
 
-- **Status**: **~78% completado** (subio de 70% tras Fase 3D)
+- **Status**: **COMPLETADO** (Leaflet deferred — canvas approach is production-ready)
 - **Priority**: P3
 - **Folder**: [epic-005-blazor-web/](epic-005-blazor-web/)
 - **Security**: UNC rejection, OOM guard (50M px), path traversal, raster whitelist
-- **Tests Web**: 51 tests (ProjectLoader + Raster + Classification + Validation + PixelExtraction)
+- **Tests Web**: 117+ tests (ProjectLoader + Raster + Classification + Validation + PixelExtraction + History)
 
 **Completado**: Blazor setup, Layout, Home, ProjectSetup (save/load/RasterInfo),
 ConfusionMatrixHeatmap (colores dinamicos), DI services, BandViewer (real stats/histogram/preview
@@ -92,8 +91,10 @@ draw/csv, spectral chart, extract/export session), PixelExtractionService,
 training-selection.js (canvas overlay), TrainingService, ClassificationService (async, 4 MF
 types, Product AND, progress reporting), ValidationService (ConfusionMatrix from CSV samples,
 CSV export), Classification page con FuzzyClassifier real, Validation page con confusion matrix
-real + CSV upload, file-download.js interop.
-**Pendiente**: Leaflet maps, History page, API controllers.
+real + CSV upload, file-download.js interop, History page (PR #42, Epic #11).
+**Deferred**: Leaflet maps — canvas-based approach (SkiaSharp + training-selection.js +
+classification-canvas.js) is fully functional and tested. Leaflet would require rearchitecting
+the entire rendering pipeline for zero user-facing capability gain.
 **Herramientas**: S2Preprocess (Sentinel-2 SAFE → multiband GeoTIFF).
 
 ---
@@ -201,3 +202,20 @@ Auto-save, auto-load, compatibilidad retroactiva con proyectos existentes.
 - [00-overview.md](epic-010-input-ux-homepage/00-overview.md) — Objetivo y alcance
 - [01-plan.md](epic-010-input-ux-homepage/01-plan.md) — Plan de implementacion por fases
 - [02-technical-design.md](epic-010-input-ux-homepage/02-technical-design.md) — Decisiones tecnicas
+
+---
+
+## Epic #11 - History Page — COMPLETADO
+
+- **Status**: **COMPLETADO** (PR #42)
+- **Priority**: P2
+- **Folder**: [epic-011-history/](epic-011-history/)
+- **GitHub PR**: [#42](https://github.com/ivanrlg/FuzzySat/pull/42)
+- **Creado**: 2026-04-01
+- **Tests**: 11 nuevos (ProjectLoaderService summaries + delete)
+
+**Completado**: Project History page (/history) — browse, load, and delete saved projects.
+ProjectSummary record with status detection (Configured/Trained/Classified/Validated) from
+artifact files. GetProjectSummaries() and DeleteProject() in ProjectLoaderService. Card-based
+UI with accuracy metrics, classification method, relative timestamps. Confirmation dialog for
+delete. NavMenu TOOLS section. Closes Epic #5 by marking Leaflet as deferred.

@@ -235,9 +235,9 @@
 - [x] All-bands auto-select: same dimensions = select all (Copernicus Browser)
 - [x] 91 Web tests (6 nuevos: ProjectStateServiceTests)
 
-### Fase 3E — Leaflet Maps (Deferred)
-- [ ] leaflet-interop.js + LeafletMap.razor
-- [ ] History page
+### Fase 3E — Leaflet Maps (DEFERRED — Won't Do)
+- [x] ~~leaflet-interop.js + LeafletMap.razor~~ — Deferred: canvas-based approach (SkiaSharp + JS) is functional
+- [x] History page (PR #42, Epic #11)
 
 ### Fase 4 — API (REMOVIDO)
 - [x] FuzzySat.Api project eliminado (PR #41) — Web UI cubre todos los workflows

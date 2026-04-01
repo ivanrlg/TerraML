@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FuzzySat.Core.Configuration;
+using FuzzySat.Core.Persistence;
 using Microsoft.Extensions.Options;
 
 namespace FuzzySat.Web.Services;
@@ -122,14 +123,136 @@ public sealed class ProjectLoaderService
     }
 
     /// <summary>
-    /// Resolves a project name to a file path within the project directory.
-    /// Throws if the resolved path escapes the project directory (path traversal).
+    /// Returns lightweight summaries for all persisted projects.
+    /// Reads each project's config JSON and checks for artifact files to determine status.
+    /// Skips corrupt or unreadable projects.
     /// </summary>
-    private string ResolveSafePath(string name)
+    public IReadOnlyList<ProjectSummary> GetProjectSummaries()
+    {
+        var names = ListProjects();
+        var summaries = new List<ProjectSummary>(names.Count);
+
+        foreach (var name in names)
+        {
+            try
+            {
+                var config = LoadProject(name);
+                if (config?.Bands is null || config.Classes is null) continue;
+
+                var dataDir = Path.Combine(_projectDir, name);
+                var status = DetermineStatus(dataDir);
+                var lastModified = GetLastModified(name, dataDir);
+
+                ClassificationOptionsDto? classOpts = null;
+                ValidationResultDto? validation = null;
+
+                if (status is ProjectStatus.Classified or ProjectStatus.Validated)
+                    classOpts = ReadJson<ClassificationOptionsDto>(Path.Combine(dataDir, "classification-options.json"));
+
+                if (status is ProjectStatus.Validated)
+                    validation = ReadJson<ValidationResultDto>(Path.Combine(dataDir, "validation-result.json"));
+
+                summaries.Add(new ProjectSummary
+                {
+                    Key = name,
+                    Name = config.ProjectName,
+                    BandCount = config.Bands.Count,
+                    ClassCount = config.Classes.Count,
+                    ClassificationMethod = classOpts?.ClassificationMethod,
+                    OverallAccuracy = validation?.OverallAccuracy,
+                    KappaCoefficient = validation?.KappaCoefficient,
+                    LastModified = lastModified,
+                    Status = status
+                });
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+            {
+                _logger.LogWarning(ex, "Skipping project '{Name}' due to read error", name);
+            }
+        }
+
+        return summaries;
+    }
+
+    /// <summary>
+    /// Deletes a project configuration file and its data directory.
+    /// Throws ArgumentException if name attempts path traversal.
+    /// </summary>
+    public void DeleteProject(string name)
+    {
+        ValidateProjectName(name);
+        var configPath = Path.GetFullPath(Path.Combine(_projectDir, $"{name}.json"));
+        var resolvedDataDir = Path.GetFullPath(Path.Combine(_projectDir, name));
+
+        if (File.Exists(configPath))
+            File.Delete(configPath);
+
+        if (Directory.Exists(resolvedDataDir))
+            Directory.Delete(resolvedDataDir, true);
+    }
+
+    private static ProjectStatus DetermineStatus(string dataDir)
+    {
+        if (!Directory.Exists(dataDir))
+            return ProjectStatus.Configured;
+
+        if (File.Exists(Path.Combine(dataDir, "validation-result.json")))
+            return ProjectStatus.Validated;
+
+        if (File.Exists(Path.Combine(dataDir, "classification-meta.json")))
+            return ProjectStatus.Classified;
+
+        if (File.Exists(Path.Combine(dataDir, "training-session.json")))
+            return ProjectStatus.Trained;
+
+        return ProjectStatus.Configured;
+    }
+
+    private DateTime GetLastModified(string name, string dataDir)
+    {
+        var configPath = Path.Combine(_projectDir, $"{name}.json");
+        var configTime = File.Exists(configPath) ? File.GetLastWriteTimeUtc(configPath) : DateTime.MinValue;
+
+        if (!Directory.Exists(dataDir))
+            return configTime;
+
+        try
+        {
+            var artifactTime = Directory.EnumerateFiles(dataDir)
+                .Select(f => File.GetLastWriteTimeUtc(f))
+                .DefaultIfEmpty(DateTime.MinValue)
+                .Max();
+
+            return artifactTime > configTime ? artifactTime : configTime;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return configTime;
+        }
+    }
+
+    private static T? ReadJson<T>(string path) where T : class
+    {
+        if (!File.Exists(path)) return null;
+        try
+        {
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<T>(json, JsonOptions);
+        }
+        catch (Exception ex) when (ex is JsonException or IOException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Validates that a project name does not contain directory separators or attempt path traversal.
+    /// Shared by all path-resolving methods.
+    /// </summary>
+    private void ValidateProjectName(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
 
-        // Reject directory separators to prevent nested paths
         if (name.IndexOf(Path.DirectorySeparatorChar) >= 0 ||
             (Path.AltDirectorySeparatorChar != Path.DirectorySeparatorChar &&
              name.IndexOf(Path.AltDirectorySeparatorChar) >= 0))
@@ -137,13 +260,18 @@ public sealed class ProjectLoaderService
             throw new ArgumentException("Invalid project name: directory separators are not allowed.", nameof(name));
         }
 
-        var filePath = Path.GetFullPath(Path.Combine(_projectDir, $"{name}.json"));
-
-        // Use GetRelativePath for OS-appropriate path containment check
-        var relativePath = Path.GetRelativePath(_projectDir, filePath);
+        var resolvedPath = Path.GetFullPath(Path.Combine(_projectDir, name));
+        var relativePath = Path.GetRelativePath(_projectDir, resolvedPath);
         if (relativePath.StartsWith("..", StringComparison.Ordinal))
             throw new ArgumentException("Invalid project name: path traversal detected.", nameof(name));
+    }
 
-        return filePath;
+    /// <summary>
+    /// Resolves a project name to a config file path within the project directory.
+    /// </summary>
+    private string ResolveSafePath(string name)
+    {
+        ValidateProjectName(name);
+        return Path.GetFullPath(Path.Combine(_projectDir, $"{name}.json"));
     }
 }
