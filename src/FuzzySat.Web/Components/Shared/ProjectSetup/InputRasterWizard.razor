@@ -131,6 +131,13 @@
                             <span>VRT ready — @_importSelectedBands.Count bands configured</span>
                         </div>
                     }
+                    else if (_buildError is not null)
+                    {
+                        <div class="info-banner info-warning">
+                            <span class="material-icons">error_outline</span>
+                            <span>@_buildError</span>
+                        </div>
+                    }
                     else
                     {
                         @* VRT not yet built — show info that it will auto-build *@
@@ -180,6 +187,7 @@
     private bool _isImporting => _isDetecting || _isBuildingVrt;
     private bool _importComplete;
     private CancellationTokenSource? _buildCts;
+    private string? _buildError;
     private Sentinel2ImportService.ImportProgress? _lastImportProgress;
 
     private static readonly Dictionary<string, string> S2BandDescriptions = new(StringComparer.OrdinalIgnoreCase)
@@ -242,6 +250,7 @@
         _importSelectedBands = [];
         _availableResolutions = [];
         _importComplete = false;
+        _buildError = null;
 
         if (string.IsNullOrWhiteSpace(_importFolderPath))
         {
@@ -374,6 +383,7 @@
 
         try
         {
+            _buildError = null;
             var options = new Sentinel2ImportService.ImportOptions(selectedBandInfos, _importOutputPath);
             var progress = new Progress<Sentinel2ImportService.ImportProgress>(p =>
             {
@@ -403,6 +413,7 @@
         }
         catch (Exception ex)
         {
+            _buildError = "VRT build failed. Re-detect or change band selection to retry.";
             Logger.LogWarning(ex, "Auto-build VRT failed");
         }
         finally
@@ -496,5 +507,6 @@
         _availableResolutions = [];
         _importComplete = false;
         _lastImportProgress = null;
+        _buildError = null;
     }
 }
