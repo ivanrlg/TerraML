@@ -38,30 +38,43 @@
                 <span class="material-icons section-icon">hub</span>
                 <span class="section-title">Classification Method</span>
             </div>
-            <div class="config-grid" style="margin-top: 1rem;">
-                @foreach (var method in _classificationMethods)
-                {
-                    var isActive = _classificationMethod == method.Name;
-                    <div class="config-card @(isActive ? "config-active" : "")" style="cursor: pointer;" @onclick="() => { if (!_isRunning) _classificationMethod = method.Name; }">
-                        <div class="config-card-header">
-                            <span class="material-icons config-icon" style="color: @method.Color;">@method.Icon</span>
-                            <span class="config-label">@method.Name</span>
-                        </div>
-                        <div class="mf-preview">
-                            <div class="mf-text-display">
-                                <span class="mf-formula mono-text" style="font-size: 0.75rem;">@method.Formula</span>
-                                <span class="mf-hint">@method.Hint</span>
+            @foreach (var group in _classificationMethods.GroupBy(m => m.Category))
+            {
+                <div style="margin-top: 1rem;">
+                    <span style="font-size: 0.78rem; font-weight: 600; color: var(--fs-text-tertiary); text-transform: uppercase; letter-spacing: 0.05em;">@group.Key</span>
+                </div>
+                <div class="config-grid" style="margin-top: 0.4rem;">
+                    @foreach (var method in group)
+                    {
+                        var isActive = _classificationMethod == method.Name;
+                        <div class="config-card @(isActive ? "config-active" : "")" style="cursor: pointer;" @onclick="() => { if (!_isRunning) _classificationMethod = method.Name; }">
+                            <div class="config-card-header">
+                                <span class="material-icons config-icon" style="color: @method.Color;">@method.Icon</span>
+                                <span class="config-label">@method.Name</span>
+                            </div>
+                            <div class="mf-preview">
+                                <div class="mf-text-display">
+                                    <span class="mf-formula mono-text" style="font-size: 0.75rem;">@method.Formula</span>
+                                    <span class="mf-hint">@method.Hint</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                }
-            </div>
+                    }
+                </div>
+            }
             @if (_classificationMethod != "Pure Fuzzy")
             {
                 <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: rgba(59, 130, 246, 0.08); border-radius: 8px; border-left: 3px solid var(--fs-accent-blue);">
                     <span style="color: var(--fs-text-secondary); font-size: 0.82rem;">
                         <span class="material-icons" style="font-size: 0.9rem; vertical-align: middle; margin-right: 0.25rem;">info</span>
-                        Fuzzy membership degrees are used as enriched features for ML.NET training.
+                        @if (_classificationMethod.StartsWith("ML: "))
+                        {
+                            <text>Raw spectral band values are used directly as features — no fuzzy feature engineering.</text>
+                        }
+                        else
+                        {
+                            <text>Fuzzy membership degrees are used as enriched features for ML.NET training.</text>
+                        }
                         @if (!HasTrainingSamples)
                         {
                             <strong style="color: var(--fs-accent-amber);"> Requires training samples — draw regions in Training first.</strong>
@@ -455,18 +468,28 @@
 
     private static readonly List<MethodInfo> _classificationMethods =
     [
-        new("Pure Fuzzy", "functions", "var(--fs-accent-blue)", "Fuzzy Inference", "Direct fuzzy logic classification"),
-        new("Random Forest", "park", "var(--fs-accent-emerald)", "ML.NET + 100 Trees", "Ensemble of decision trees with fuzzy features"),
-        new("SDCA", "model_training", "var(--fs-accent-amber)", "Max Entropy", "Stochastic Dual Coordinate Ascent classifier"),
-        new("LightGBM", "bolt", "var(--fs-accent-violet)", "Gradient Boosting", "LightGBM gradient boosting with fuzzy features"),
-        new("SVM", "linear_scale", "var(--fs-accent-cyan)", "LinearSvm/OVA", "Support Vector Machine with fuzzy features"),
-        new("Logistic Regression", "query_stats", "var(--fs-accent-red)", "LbfgsMaxEntropy", "Logistic regression producing calibrated probabilities"),
-        new("MLP Neural Network", "neurology", "var(--fs-accent-amber)", "TorchSharp MLP", "3-layer neural network with early stopping"),
-        new("Ensemble (Voting)", "how_to_vote", "var(--fs-accent-emerald)", "Majority Vote", "Combines RF + SDCA + LightGBM by majority vote"),
-        new("Ensemble (Stacking)", "stacks", "var(--fs-accent-blue)", "Meta-Learner", "Stacked generalization with out-of-fold predictions")
+        // Fuzzy
+        new("Pure Fuzzy", "functions", "var(--fs-accent-blue)", "Fuzzy Inference", "Direct fuzzy logic classification", "Fuzzy"),
+        // Hybrid (Fuzzy + ML)
+        new("Random Forest", "park", "var(--fs-accent-emerald)", "ML.NET + 100 Trees", "Decision trees with fuzzy features", "Hybrid"),
+        new("SDCA", "model_training", "var(--fs-accent-amber)", "Max Entropy", "SDCA classifier with fuzzy features", "Hybrid"),
+        new("LightGBM", "bolt", "var(--fs-accent-violet)", "Gradient Boosting", "LightGBM with fuzzy features", "Hybrid"),
+        new("SVM", "linear_scale", "var(--fs-accent-cyan)", "LinearSvm/OVA", "SVM with fuzzy features", "Hybrid"),
+        new("Logistic Regression", "query_stats", "var(--fs-accent-red)", "LbfgsMaxEntropy", "Logistic regression with fuzzy features", "Hybrid"),
+        new("MLP Neural Network", "neurology", "var(--fs-accent-amber)", "TorchSharp MLP", "Neural network with fuzzy features", "Hybrid"),
+        // Pure ML (raw bands only)
+        new("ML: Random Forest", "park", "var(--fs-accent-emerald)", "ML.NET + 100 Trees", "Raw bands only — no fuzzy features", "Pure ML"),
+        new("ML: SDCA", "model_training", "var(--fs-accent-amber)", "Max Entropy", "Raw bands only — no fuzzy features", "Pure ML"),
+        new("ML: LightGBM", "bolt", "var(--fs-accent-violet)", "Gradient Boosting", "Raw bands only — no fuzzy features", "Pure ML"),
+        new("ML: SVM", "linear_scale", "var(--fs-accent-cyan)", "LinearSvm/OVA", "Raw bands only — no fuzzy features", "Pure ML"),
+        new("ML: Logistic Regression", "query_stats", "var(--fs-accent-red)", "LbfgsMaxEntropy", "Raw bands only — no fuzzy features", "Pure ML"),
+        new("ML: MLP Neural Network", "neurology", "var(--fs-accent-amber)", "TorchSharp MLP", "Raw bands only — no fuzzy features", "Pure ML"),
+        // Ensemble
+        new("Ensemble (Voting)", "how_to_vote", "var(--fs-accent-emerald)", "Majority Vote", "Combines RF + SDCA + LightGBM by vote", "Ensemble"),
+        new("Ensemble (Stacking)", "stacks", "var(--fs-accent-blue)", "Meta-Learner", "Stacked generalization with OOF predictions", "Ensemble")
     ];
 
-    private record MethodInfo(string Name, string Icon, string Color, string Formula, string Hint);
+    private record MethodInfo(string Name, string Icon, string Color, string Formula, string Hint, string Category);
 
     private List<StageInfo> _stages = GetStagesForMethod("Pure Fuzzy");
 
