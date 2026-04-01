@@ -1,4 +1,4 @@
-# Epic #10 — Diseno Tecnico
+# Epic #10 — Diseño Técnico
 
 ---
 
