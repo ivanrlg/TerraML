@@ -59,6 +59,18 @@ public class RawFeatureExtractorTests
     }
 
     [Fact]
+    public void ExtractFeatures_MissingKey_ThrowsWithBandName()
+    {
+        var extractor = new RawFeatureExtractor(["B1", "B2"]);
+        var bandValues = new Dictionary<string, double> { ["B1"] = 1.0 }; // B2 missing
+
+        var act = () => extractor.ExtractFeatures(bandValues);
+
+        act.Should().Throw<KeyNotFoundException>()
+            .WithMessage("*B2*");
+    }
+
+    [Fact]
     public void Constructor_EmptyNames_Works()
     {
         var extractor = new RawFeatureExtractor([]);

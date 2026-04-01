@@ -35,11 +35,11 @@ public sealed class HybridClassificationService
             throw new ArgumentException("At least one training sample is required.", nameof(trainingSamples));
 
         // Stage 1: Create feature extractor (fuzzy-enriched or raw pass-through)
-        var isPureML = options.ClassificationMethod.StartsWith("ML: ");
+        var isPureML = options.ClassificationMethod.StartsWith("ML: ", StringComparison.Ordinal);
         IFeatureExtractor featureExtractor;
         if (isPureML)
         {
-            progress?.Report(new ClassificationProgress("Preparing raw features", 0, image.Rows, 0));
+            progress?.Report(new ClassificationProgress("Building membership functions", 0, image.Rows, 0));
             featureExtractor = new RawFeatureExtractor(session.BandNames.ToList());
         }
         else

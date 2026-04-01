@@ -67,7 +67,7 @@
                 <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: rgba(59, 130, 246, 0.08); border-radius: 8px; border-left: 3px solid var(--fs-accent-blue);">
                     <span style="color: var(--fs-text-secondary); font-size: 0.82rem;">
                         <span class="material-icons" style="font-size: 0.9rem; vertical-align: middle; margin-right: 0.25rem;">info</span>
-                        @if (_classificationMethod.StartsWith("ML: "))
+                        @if (_classificationMethod.StartsWith("ML: ", StringComparison.Ordinal))
                         {
                             <text>Raw spectral band values are used directly as features — no fuzzy feature engineering.</text>
                         }

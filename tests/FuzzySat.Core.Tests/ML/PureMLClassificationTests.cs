@@ -14,7 +14,7 @@ public class PureMLClassificationTests
     {
         var (extractor, samples) = MakeTrainingData();
 
-        var classifier = HybridClassifier.TrainRandomForest(samples, extractor, numberOfTrees: 50);
+        var classifier = HybridClassifier.TrainRandomForest(samples, extractor, numberOfTrees: 20);
 
         classifier.ClassifyPixel(UrbanPixel()).Should().Be("Urban");
         classifier.ClassifyPixel(WaterPixel()).Should().Be("Water");
