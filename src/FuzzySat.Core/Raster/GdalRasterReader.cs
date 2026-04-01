@@ -110,6 +110,19 @@ public sealed class GdalRasterReader : IRasterReader
         dataset.GetGeoTransform(gt);
         var hasGeoTransform = gt[0] != 0 || gt[1] != 0 || gt[3] != 0 || gt[5] != 0;
 
+        // Introspect per-band metadata
+        var bands = new List<BandInfo>(dataset.RasterCount);
+        for (var i = 1; i <= dataset.RasterCount; i++)
+        {
+            using var gdalBand = dataset.GetRasterBand(i);
+            var bandDataType = Gdal.GetDataTypeName(gdalBand.DataType);
+            var description = gdalBand.GetDescription();
+            var colorInterp = Gdal.GetColorInterpretationName(gdalBand.GetColorInterpretation());
+            bands.Add(new BandInfo(i, bandDataType,
+                string.IsNullOrWhiteSpace(description) ? null : description,
+                string.IsNullOrWhiteSpace(colorInterp) || colorInterp == "Undefined" ? null : colorInterp));
+        }
+
         return new RasterInfo(
             filePath: filePath,
             rows: dataset.RasterYSize,
@@ -118,7 +131,8 @@ public sealed class GdalRasterReader : IRasterReader
             dataType: dataType,
             driverName: dataset.GetDriver().ShortName,
             projection: dataset.GetProjection(),
-            geoTransform: hasGeoTransform ? gt : null);
+            geoTransform: hasGeoTransform ? gt : null,
+            bands: bands);
     }
 
     private static Dataset OpenDataset(string filePath)
