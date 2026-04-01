@@ -1,5 +1,6 @@
 @using FuzzySat.Core.Raster
 @using FuzzySat.Web.Services
+@implements IDisposable
 @inject RasterService RasterService
 @inject Sentinel2ImportService ImportService
 @inject NotificationService NotificationService
@@ -200,7 +201,7 @@
 
     protected override void OnParametersSet()
     {
-        if (_importFolderPath != ImportFolderPath && !string.IsNullOrEmpty(ImportFolderPath))
+        if (_importFolderPath != ImportFolderPath)
             _importFolderPath = ImportFolderPath;
     }
 
@@ -244,6 +245,12 @@
 
     private async Task DetectSentinel2Source()
     {
+        // Cancel any in-flight VRT build from previous detect
+        _buildCts?.Cancel();
+        _buildCts?.Dispose();
+        _buildCts = null;
+        _isBuildingVrt = false;
+
         _importSourceError = null;
         _importDetectedFormat = null;
         _discoveredBands = [];
@@ -251,6 +258,7 @@
         _availableResolutions = [];
         _importComplete = false;
         _buildError = null;
+        _lastImportProgress = null;
 
         if (string.IsNullOrWhiteSpace(_importFolderPath))
         {
@@ -418,7 +426,10 @@
         }
         finally
         {
-            _isBuildingVrt = false;
+            // Only clear the flag if this build is still the current one
+            // (a newer build may have already set _isBuildingVrt = true)
+            if (_buildCts?.Token == ct || _buildCts is null)
+                _isBuildingVrt = false;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -452,6 +463,13 @@
     {
         _importSelectedBands.Clear();
         _importComplete = false;
+        // Cancel any in-progress build since no bands are selected
+        _buildCts?.Cancel();
+        _buildCts?.Dispose();
+        _buildCts = null;
+        _isBuildingVrt = false;
+        _lastImportProgress = null;
+        _buildError = null;
     }
 
     /// <summary>Called after any band selection change — syncs bands to parent and rebuilds VRT.</summary>
@@ -508,5 +526,12 @@
         _importComplete = false;
         _lastImportProgress = null;
         _buildError = null;
+    }
+
+    public void Dispose()
+    {
+        _buildCts?.Cancel();
+        _buildCts?.Dispose();
+        _buildCts = null;
     }
 }

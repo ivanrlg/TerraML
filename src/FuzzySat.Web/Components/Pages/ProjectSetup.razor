@@ -265,6 +265,7 @@
     {
         _bands = bands;
         _presetAutoDetected = false;
+        UpdateDynamicPreset();
     }
 
     /// <summary>Update the Sentinel-2 preset entry to show actual imported band count.</summary>
@@ -275,6 +276,7 @@
             // Determine resolution label from band count
             var resLabel = _bands.Count switch
             {
+                3 => "60m",
                 4 => "10m",
                 6 => "20m",
                 _ => "mixed"
