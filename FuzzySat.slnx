@@ -6,6 +6,7 @@
     <Project Path="src/FuzzySat.Web/FuzzySat.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/FuzzySat.CLI.Tests/FuzzySat.CLI.Tests.csproj" />
     <Project Path="tests/FuzzySat.Core.Tests/FuzzySat.Core.Tests.csproj" />
   </Folder>
 </Solution>

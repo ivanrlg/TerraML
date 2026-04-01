@@ -1,4 +1,4 @@
-namespace FuzzySat.Web.Services;
+namespace FuzzySat.Core.Visualization;
 
 /// <summary>
 /// Statistics computed from a single spectral band.

@@ -1,5 +1,5 @@
 using FuzzySat.Core.Raster;
-using SkiaSharp;
+using FuzzySat.Core.Visualization;
 
 namespace FuzzySat.Web.Services;
 
@@ -7,6 +7,8 @@ namespace FuzzySat.Web.Services;
 /// Service wrapping GDAL raster operations for the Web layer.
 /// Validates file paths and restricts to known raster extensions.
 /// Registered as singleton since GdalRasterReader handles thread-safe initialization.
+/// Delegates rendering to Core's <see cref="RgbCompositeRenderer"/> and
+/// <see cref="BandStatisticsCalculator"/>.
 /// </summary>
 public sealed class RasterService
 {
@@ -40,66 +42,8 @@ public sealed class RasterService
     /// <summary>
     /// Computes basic statistics for a single band.
     /// </summary>
-    public BandStatistics ComputeBandStatistics(Band band)
-    {
-        ArgumentNullException.ThrowIfNull(band);
-
-        var rows = band.Rows;
-        var cols = band.Columns;
-        var count = (long)rows * cols;
-
-        var min = double.MaxValue;
-        var max = double.MinValue;
-        var sum = 0.0;
-
-        for (var r = 0; r < rows; r++)
-        {
-            for (var c = 0; c < cols; c++)
-            {
-                var val = band[r, c];
-                if (val < min) min = val;
-                if (val > max) max = val;
-                sum += val;
-            }
-        }
-
-        var mean = sum / count;
-
-        // Second pass for stddev
-        var sumSqDiff = 0.0;
-        for (var r = 0; r < rows; r++)
-        {
-            for (var c = 0; c < cols; c++)
-            {
-                var diff = band[r, c] - mean;
-                sumSqDiff += diff * diff;
-            }
-        }
-        var stdDev = Math.Sqrt(sumSqDiff / count);
-
-        // Histogram (256 bins, long to avoid overflow on large rasters)
-        var histogram = new long[256];
-        var range = max - min;
-        if (range > 0)
-        {
-            for (var r = 0; r < rows; r++)
-            {
-                for (var c = 0; c < cols; c++)
-                {
-                    var bin = (int)((band[r, c] - min) / range * 255);
-                    if (bin > 255) bin = 255;
-                    if (bin < 0) bin = 0;
-                    histogram[bin]++;
-                }
-            }
-        }
-        else
-        {
-            histogram[128] = count;
-        }
-
-        return new BandStatistics(min, max, mean, stdDev, histogram);
-    }
+    public BandStatistics ComputeBandStatistics(Band band) =>
+        BandStatisticsCalculator.Compute(band);
 
     /// <summary>
     /// Renders a grayscale PNG preview of a single band, normalized to 0-255.
@@ -108,68 +52,16 @@ public sealed class RasterService
     public byte[] RenderBandPreview(Band band, int maxWidth = 800, int maxHeight = 600)
     {
         ArgumentNullException.ThrowIfNull(band);
-
-        // Compute min/max (needed when no BandStatistics available)
-        var rows = band.Rows;
-        var cols = band.Columns;
-        var min = double.MaxValue;
-        var max = double.MinValue;
-        for (var r = 0; r < rows; r++)
-            for (var c = 0; c < cols; c++)
-            {
-                var v = band[r, c];
-                if (v < min) min = v;
-                if (v > max) max = v;
-            }
-
-        return RenderBandPreviewInternal(band, min, max, maxWidth, maxHeight);
+        var (min, max) = BandStatisticsCalculator.ComputeMinMax(band);
+        return RgbCompositeRenderer.RenderGrayscale(band, min, max, maxWidth, maxHeight);
     }
 
-    /// <summary>
-    /// Validates that a raster file path points to an existing file
-    /// with a supported raster extension.
-    /// </summary>
     /// <summary>
     /// Renders a grayscale PNG preview reusing pre-computed min/max from BandStatistics.
     /// Avoids redundant full-band scan.
     /// </summary>
-    public byte[] RenderBandPreview(Band band, BandStatistics stats, int maxWidth = 800, int maxHeight = 600)
-    {
-        ArgumentNullException.ThrowIfNull(band);
-        ArgumentNullException.ThrowIfNull(stats);
-        return RenderBandPreviewInternal(band, stats.Min, stats.Max, maxWidth, maxHeight);
-    }
-
-    private byte[] RenderBandPreviewInternal(Band band, double min, double max, int maxWidth, int maxHeight)
-    {
-        var rows = band.Rows;
-        var cols = band.Columns;
-
-        var scale = Math.Min(1.0, Math.Min((double)maxWidth / cols, (double)maxHeight / rows));
-        var outW = Math.Max(1, (int)(cols * scale));
-        var outH = Math.Max(1, (int)(rows * scale));
-        var range = max - min;
-
-        using var bitmap = new SKBitmap(outW, outH, SKColorType.Gray8, SKAlphaType.Opaque);
-        var pixels = bitmap.GetPixelSpan();
-
-        for (var y = 0; y < outH; y++)
-        {
-            var srcRow = Math.Min((int)(y / scale), rows - 1);
-            for (var x = 0; x < outW; x++)
-            {
-                var srcCol = Math.Min((int)(x / scale), cols - 1);
-                byte gray = range > 0
-                    ? (byte)Math.Clamp((band[srcRow, srcCol] - min) / range * 255, 0, 255)
-                    : (byte)128;
-                pixels[y * outW + x] = gray;
-            }
-        }
-
-        using var image = SKImage.FromBitmap(bitmap);
-        using var data = image.Encode(SKEncodedImageFormat.Png, 90);
-        return data.ToArray();
-    }
+    public byte[] RenderBandPreview(Band band, BandStatistics stats, int maxWidth = 800, int maxHeight = 600) =>
+        RgbCompositeRenderer.RenderGrayscale(band, stats, maxWidth, maxHeight);
 
     /// <summary>
     /// Renders an RGB composite PNG from three bands (one per channel).
@@ -178,63 +70,9 @@ public sealed class RasterService
     public byte[] RenderRgbComposite(
         Band redBand, Band greenBand, Band blueBand,
         BandStatistics redStats, BandStatistics greenStats, BandStatistics blueStats,
-        int maxWidth = 800, int maxHeight = 600)
-    {
-        ArgumentNullException.ThrowIfNull(redBand);
-        ArgumentNullException.ThrowIfNull(greenBand);
-        ArgumentNullException.ThrowIfNull(blueBand);
-        ArgumentNullException.ThrowIfNull(redStats);
-        ArgumentNullException.ThrowIfNull(greenStats);
-        ArgumentNullException.ThrowIfNull(blueStats);
-
-        if (greenBand.Rows != redBand.Rows || greenBand.Columns != redBand.Columns ||
-            blueBand.Rows != redBand.Rows || blueBand.Columns != redBand.Columns)
-            throw new ArgumentException(
-                "All RGB bands must have identical dimensions for composite rendering.");
-
-        var rows = redBand.Rows;
-        var cols = redBand.Columns;
-
-        var scale = Math.Min(1.0, Math.Min((double)maxWidth / cols, (double)maxHeight / rows));
-        var outW = Math.Max(1, (int)(cols * scale));
-        var outH = Math.Max(1, (int)(rows * scale));
-
-        var rRange = redStats.Max - redStats.Min;
-        var gRange = greenStats.Max - greenStats.Min;
-        var bRange = blueStats.Max - blueStats.Min;
-
-        using var bitmap = new SKBitmap(outW, outH, SKColorType.Rgba8888, SKAlphaType.Opaque);
-        var pixels = bitmap.GetPixelSpan();
-
-        for (var y = 0; y < outH; y++)
-        {
-            var srcRow = Math.Min((int)(y / scale), rows - 1);
-            for (var x = 0; x < outW; x++)
-            {
-                var srcCol = Math.Min((int)(x / scale), cols - 1);
-
-                var r = rRange > 0
-                    ? (byte)Math.Clamp((redBand[srcRow, srcCol] - redStats.Min) / rRange * 255, 0, 255)
-                    : (byte)128;
-                var g = gRange > 0
-                    ? (byte)Math.Clamp((greenBand[srcRow, srcCol] - greenStats.Min) / gRange * 255, 0, 255)
-                    : (byte)128;
-                var b = bRange > 0
-                    ? (byte)Math.Clamp((blueBand[srcRow, srcCol] - blueStats.Min) / bRange * 255, 0, 255)
-                    : (byte)128;
-
-                var offset = (y * outW + x) * 4; // RGBA = 4 bytes per pixel
-                pixels[offset] = r;
-                pixels[offset + 1] = g;
-                pixels[offset + 2] = b;
-                pixels[offset + 3] = 255; // Alpha
-            }
-        }
-
-        using var image = SKImage.FromBitmap(bitmap);
-        using var data = image.Encode(SKEncodedImageFormat.Png, 90);
-        return data.ToArray();
-    }
+        int maxWidth = 800, int maxHeight = 600) =>
+        RgbCompositeRenderer.RenderRgb(redBand, greenBand, blueBand,
+            redStats, greenStats, blueStats, maxWidth, maxHeight);
 
     private static void ValidateRasterPath(string filePath)
     {
