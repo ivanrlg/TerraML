@@ -124,6 +124,11 @@ public sealed class Sentinel2ImportService
     private static string ValidateAndResolvePath(string path, string paramName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path, paramName);
+
+        // Check raw input for UNC pattern before GetFullPath (which mangles it on Linux)
+        if (path.StartsWith(@"\\", StringComparison.Ordinal))
+            throw new ArgumentException("UNC/network paths are not allowed.", paramName);
+
         var fullPath = Path.GetFullPath(path);
 
         if (fullPath.StartsWith(@"\\", StringComparison.Ordinal))
