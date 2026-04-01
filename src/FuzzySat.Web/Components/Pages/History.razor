@@ -1,0 +1,228 @@
+@page "/history"
+@rendermode InteractiveServer
+@inject ProjectLoaderService ProjectLoader
+@inject ProjectStateService ProjectState
+@inject NavigationManager Navigation
+@inject NotificationService NotificationService
+
+<PageTitle>History - FuzzySat</PageTitle>
+
+<div class="history-page fs-fade-in">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Project History</h1>
+            <p class="page-subtitle">Browse, load, and manage your saved projects</p>
+        </div>
+        <span class="fs-badge fs-badge-blue">@_projects.Count project@(_projects.Count != 1 ? "s" : "")</span>
+        <div class="header-actions">
+            <RadzenButton Text="Refresh" Icon="refresh" ButtonStyle="ButtonStyle.Secondary"
+                          Size="ButtonSize.Small" Click="@Refresh" />
+            <RadzenButton Text="New Project" Icon="add" ButtonStyle="ButtonStyle.Primary"
+                          Size="ButtonSize.Small" Click="@(() => Navigation.NavigateTo("/project-setup"))" />
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="fs-card" style="text-align: center; padding: 3rem;">
+            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate"
+                                        Size="ProgressBarCircularSize.Medium" />
+            <p style="color: var(--fs-text-secondary); margin-top: 1rem;">Loading projects...</p>
+        </div>
+    }
+    else if (_projects.Count == 0)
+    {
+        <div class="fs-card" style="text-align: center; padding: 3rem;">
+            <span class="material-icons" style="font-size: 3rem; color: var(--fs-text-tertiary); margin-bottom: 1rem;">folder_open</span>
+            <h3 style="color: var(--fs-text-secondary);">No Projects Yet</h3>
+            <p style="color: var(--fs-text-tertiary); max-width: 400px; margin: 0.5rem auto 1.5rem;">
+                Create your first project to start classifying satellite imagery with fuzzy logic.
+            </p>
+            <RadzenButton Text="Create Project" Icon="rocket_launch" ButtonStyle="ButtonStyle.Primary"
+                          Click="@(() => Navigation.NavigateTo("/project-setup"))" />
+        </div>
+    }
+    else
+    {
+        <div class="project-grid">
+            @foreach (var project in _projects)
+            {
+                <div class="project-card fs-scale-in">
+                    <div class="card-header">
+                        <div class="card-title-row">
+                            <span class="material-icons card-icon">@GetStatusIcon(project.Status)</span>
+                            <h3 class="card-title">@project.Name</h3>
+                        </div>
+                        <span class="fs-badge @GetStatusBadgeClass(project.Status)">@project.Status</span>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <span class="material-icons meta-icon">layers</span>
+                            <span>@project.BandCount band@(project.BandCount != 1 ? "s" : "")</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="material-icons meta-icon">category</span>
+                            <span>@project.ClassCount class@(project.ClassCount != 1 ? "es" : "")</span>
+                        </div>
+                        @if (project.ClassificationMethod is not null)
+                        {
+                            <div class="meta-item">
+                                <span class="material-icons meta-icon">psychology</span>
+                                <span>@project.ClassificationMethod</span>
+                            </div>
+                        }
+                    </div>
+
+                    @if (project.OverallAccuracy.HasValue)
+                    {
+                        <div class="card-metrics">
+                            <div class="metric">
+                                <span class="metric-label">Overall Accuracy</span>
+                                <span class="metric-value" style="color: var(--fs-accent-emerald);">
+                                    @(project.OverallAccuracy.Value.ToString("P2"))
+                                </span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Kappa</span>
+                                <span class="metric-value" style="color: var(--fs-accent-blue);">
+                                    @(project.KappaCoefficient?.ToString("F4") ?? "—")
+                                </span>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="card-footer">
+                        <span class="card-date">
+                            <span class="material-icons" style="font-size: 0.85rem;">schedule</span>
+                            @FormatDate(project.LastModified)
+                        </span>
+                        <div class="card-actions">
+                            <RadzenButton Text="Load" Icon="folder_open" ButtonStyle="ButtonStyle.Primary"
+                                          Size="ButtonSize.ExtraSmall" Click="@(() => LoadProject(project.Name))" />
+                            <RadzenButton Icon="delete_outline" ButtonStyle="ButtonStyle.Danger"
+                                          Size="ButtonSize.ExtraSmall" Variant="Variant.Text"
+                                          Click="@(() => ConfirmDelete(project.Name))" title="Delete project" />
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (_showDeleteDialog)
+{
+    <div class="dialog-overlay" @onclick="CancelDelete">
+        <div class="dialog-panel" @onclick:stopPropagation="true">
+            <h3 style="margin: 0 0 0.5rem; color: var(--fs-text-primary);">Delete Project</h3>
+            <p style="color: var(--fs-text-secondary); margin-bottom: 1.5rem;">
+                Are you sure you want to delete <strong>@_deleteTarget</strong>?
+                This will remove the configuration and all associated data (training, classification, validation).
+                This action cannot be undone.
+            </p>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small"
+                              Click="@CancelDelete" />
+                <RadzenButton Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
+                              Click="@ExecuteDelete" />
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ProjectSummary> _projects = [];
+    private bool _loading = true;
+    private bool _showDeleteDialog;
+    private string? _deleteTarget;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Run(() => _projects = ProjectLoader.GetProjectSummaries().OrderByDescending(p => p.LastModified).ToList());
+        _loading = false;
+    }
+
+    private async Task Refresh()
+    {
+        _loading = true;
+        StateHasChanged();
+        await Task.Run(() => _projects = ProjectLoader.GetProjectSummaries().OrderByDescending(p => p.LastModified).ToList());
+        _loading = false;
+    }
+
+    private void LoadProject(string name)
+    {
+        Navigation.NavigateTo($"/project-setup?load={Uri.EscapeDataString(name)}");
+    }
+
+    private void ConfirmDelete(string name)
+    {
+        _deleteTarget = name;
+        _showDeleteDialog = true;
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteDialog = false;
+        _deleteTarget = null;
+    }
+
+    private async Task ExecuteDelete()
+    {
+        if (_deleteTarget is null) return;
+
+        try
+        {
+            ProjectLoader.DeleteProject(_deleteTarget);
+            _projects.RemoveAll(p => p.Name == _deleteTarget);
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Project Deleted",
+                Detail = $"'{_deleteTarget}' has been removed.",
+                Duration = 3000
+            });
+        }
+        catch (Exception)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Delete Failed",
+                Detail = "Could not delete the project. Check logs for details.",
+                Duration = 5000
+            });
+        }
+
+        _showDeleteDialog = false;
+        _deleteTarget = null;
+    }
+
+    private static string GetStatusIcon(ProjectStatus status) => status switch
+    {
+        ProjectStatus.Validated => "verified",
+        ProjectStatus.Classified => "category",
+        ProjectStatus.Trained => "model_training",
+        _ => "tune"
+    };
+
+    private static string GetStatusBadgeClass(ProjectStatus status) => status switch
+    {
+        ProjectStatus.Validated => "fs-badge-emerald",
+        ProjectStatus.Classified => "fs-badge-blue",
+        ProjectStatus.Trained => "fs-badge-amber",
+        _ => "fs-badge-red"
+    };
+
+    private static string FormatDate(DateTime utc)
+    {
+        var local = utc.ToLocalTime();
+        var diff = DateTime.Now - local;
+        if (diff.TotalMinutes < 1) return "Just now";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        return local.ToString("yyyy-MM-dd");
+    }
+}
