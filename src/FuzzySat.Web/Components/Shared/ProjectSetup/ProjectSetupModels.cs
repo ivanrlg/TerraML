@@ -1,6 +1,6 @@
 namespace FuzzySat.Web.Components.Shared.ProjectSetup;
 
-public enum InputMode { DirectPath, ImportSentinel2 }
+public enum InputMode { DirectPath, ImportSentinel2, PreStacked }
 
 public record BandEntry(string Name, int Index, string Description);
 

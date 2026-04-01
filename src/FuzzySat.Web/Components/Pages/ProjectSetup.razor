@@ -202,7 +202,12 @@
             _inputPath = config.InputRasterPath ?? "";
             _bands = config.Bands?.Select(b => new BandEntry(b.Name, b.SourceIndex, b.Description ?? "")).ToList() ?? [];
             _classes = config.Classes?.Select(c => new ClassEntry(c.Name, c.Code, c.Color ?? "#808080")).ToList() ?? [];
-            _inputMode = config.InputMode == "ImportSentinel2" ? InputMode.ImportSentinel2 : InputMode.DirectPath;
+            _inputMode = config.InputMode switch
+            {
+                "ImportSentinel2" => InputMode.ImportSentinel2,
+                "PreStacked" => InputMode.PreStacked,
+                _ => InputMode.DirectPath
+            };
             _importFolderPath = config.ImportFolderPath ?? "";
             _selectedProject = _existingProjects.FirstOrDefault(
                 p => p.Equals(config.ProjectName, StringComparison.OrdinalIgnoreCase));
@@ -314,7 +319,12 @@
         _bands = config.Bands?.Select(b => new BandEntry(b.Name, b.SourceIndex, b.Description ?? "")).ToList() ?? [];
         _classes = config.Classes?.Select(c => new ClassEntry(c.Name, c.Code, c.Color ?? "#808080")).ToList() ?? [];
         _selectedPreset = null;
-        _inputMode = config.InputMode == "ImportSentinel2" ? InputMode.ImportSentinel2 : InputMode.DirectPath;
+        _inputMode = config.InputMode switch
+            {
+                "ImportSentinel2" => InputMode.ImportSentinel2,
+                "PreStacked" => InputMode.PreStacked,
+                _ => InputMode.DirectPath
+            };
         _importFolderPath = config.ImportFolderPath ?? "";
 
         ProjectState.Configuration = config;
@@ -367,7 +377,12 @@
                 ProjectName = _projectName.Trim(),
                 InputRasterPath = string.IsNullOrWhiteSpace(_inputPath) ? null : _inputPath.Trim(),
                 ImportFolderPath = string.IsNullOrWhiteSpace(_importFolderPath) ? null : _importFolderPath.Trim(),
-                InputMode = _inputMode == InputMode.ImportSentinel2 ? "ImportSentinel2" : "DirectPath",
+                InputMode = _inputMode switch
+                {
+                    InputMode.ImportSentinel2 => "ImportSentinel2",
+                    InputMode.PreStacked => "PreStacked",
+                    _ => "DirectPath"
+                },
                 Bands = _bands.Select(b => new BandConfiguration
                 {
                     Name = b.Name,

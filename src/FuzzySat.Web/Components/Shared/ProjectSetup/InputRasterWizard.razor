@@ -24,6 +24,11 @@
             <span class="material-icons" style="font-size: 0.9rem;">cloud_download</span>
             Import Sentinel-2
         </button>
+        <button type="button" class="mode-btn @(CurrentMode == InputMode.PreStacked ? "mode-active" : "")"
+                @onclick="() => SetMode(InputMode.PreStacked)">
+            <span class="material-icons" style="font-size: 0.9rem;">layers</span>
+            Pre-stacked
+        </button>
     </div>
 
     @if (CurrentMode == InputMode.DirectPath)
@@ -37,6 +42,101 @@
                 </button>
             </div>
         </div>
+    }
+    else if (CurrentMode == InputMode.PreStacked)
+    {
+        @* Pre-stacked multiband raster mode *@
+        <div class="field-group">
+            <label class="field-label">Path to multiband raster file (.tif, .vrt, .jp2)</label>
+            <div class="path-input">
+                <RadzenTextBox @bind-Value="@_preStackedPath" Placeholder="Path to pre-stacked multiband image" Style="width: 100%;"
+                    Disabled="@_preStackedLoading" />
+                <button type="button" class="detect-btn" @onclick="LoadPreStackedRaster" disabled="@_preStackedLoading"
+                    title="Load and inspect bands">
+                    <span class="material-icons">search</span>
+                    <span>Load</span>
+                </button>
+            </div>
+            @if (_preStackedError is not null)
+            {
+                <p class="field-error">@_preStackedError</p>
+            }
+        </div>
+
+        @if (_preStackedInfo is not null)
+        {
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+                <span class="format-badge">@_preStackedInfo.DriverName — @_preStackedInfo.Rows x @_preStackedInfo.Columns</span>
+                @if (_preStackedSensor is not null)
+                {
+                    <span class="format-badge" style="background: var(--fs-accent-emerald); color: white;">@_preStackedSensor detected</span>
+                }
+            </div>
+
+            @if (_preStackedInfo.Bands.Count > 0)
+            {
+                <div class="import-band-section">
+                    <div class="quick-filters">
+                        <button type="button" class="filter-btn @(_preStackedSelectedBands.Count == _preStackedInfo.BandCount ? "filter-btn-active" : "")"
+                                @onclick="PreStackedSelectAll">All (@_preStackedInfo.BandCount)</button>
+                        <button type="button" class="filter-btn filter-btn-muted" @onclick="PreStackedSelectNone">None</button>
+                    </div>
+
+                    <div class="band-grid">
+                        @foreach (var band in _preStackedInfo.Bands)
+                        {
+                            var isSelected = _preStackedSelectedBands.Contains(band.Index);
+                            var bandLabel = _preStackedSensorBandNames is not null && band.Index - 1 < _preStackedSensorBandNames.Count
+                                ? _preStackedSensorBandNames[band.Index - 1]
+                                : $"Band {band.Index}";
+                            <button type="button"
+                                    class="band-card @(isSelected ? "band-selected" : "")"
+                                    aria-pressed="@isSelected"
+                                    @onclick="() => TogglePreStackedBand(band.Index)">
+                                <div class="band-card-top">
+                                    <span class="band-name">@bandLabel</span>
+                                    <span class="band-res">@band.DataType</span>
+                                </div>
+                                <div class="band-card-detail">
+                                    <span>#@band.Index</span>
+                                    @if (band.ColorInterpretation is not null)
+                                    {
+                                        <span>@band.ColorInterpretation</span>
+                                    }
+                                </div>
+                            </button>
+                        }
+                    </div>
+
+                    @if (_preStackedSelectedBands.Count > 0 && _preStackedSelectedBands.Count < _preStackedInfo.BandCount)
+                    {
+                        <div style="margin-top: 0.5rem;">
+                            <RadzenButton Text="@($"Use {_preStackedSelectedBands.Count} Selected Bands")"
+                                          Icon="check_circle" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small"
+                                          Click="@ApplyPreStackedSubset" IsBusy="@_preStackedBuildingVrt" />
+                        </div>
+                    }
+                    else if (_preStackedSelectedBands.Count == _preStackedInfo.BandCount)
+                    {
+                        <div class="import-success" style="margin-top: 0.5rem;">
+                            <span class="material-icons" style="color: var(--fs-accent-emerald);">check_circle</span>
+                            <span>All @_preStackedInfo.BandCount bands selected</span>
+                        </div>
+                    }
+                </div>
+            }
+
+            @* Format conversion hint *@
+            @if (_preStackedInfo.DriverName != "GTiff" && _preStackedInfo.DriverName != "VRT")
+            {
+                <div class="info-banner info-warning" style="margin-top: 0.5rem;">
+                    <span class="material-icons">info</span>
+                    <span>Format: @_preStackedInfo.DriverName — Consider converting to GeoTIFF for best performance.</span>
+                    <RadzenButton Text="Convert to GeoTIFF" Icon="transform" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.ExtraSmall"
+                                  Click="@ConvertPreStackedToGeoTiff" IsBusy="@_preStackedConverting" style="margin-left: 0.5rem;" />
+                </div>
+            }
+        }
     }
     else
     {
@@ -518,6 +618,188 @@
         _ => "Unknown"
     };
 
+    // --- Pre-stacked mode state ---
+    private string _preStackedPath = "";
+    private string? _preStackedError;
+    private RasterInfo? _preStackedInfo;
+    private string? _preStackedSensor;
+    private IReadOnlyList<string>? _preStackedSensorBandNames;
+    private HashSet<int> _preStackedSelectedBands = [];
+    private IReadOnlyList<int>? _preStackedOriginalIndices; // maps VRT band → original source band
+    private bool _preStackedLoading;
+    private bool _preStackedBuildingVrt;
+    private bool _preStackedConverting;
+
+    private async Task LoadPreStackedRaster()
+    {
+        _preStackedError = null;
+        _preStackedInfo = null;
+        _preStackedSensor = null;
+        _preStackedSensorBandNames = null;
+        _preStackedSelectedBands = [];
+        _preStackedOriginalIndices = null;
+
+        if (string.IsNullOrWhiteSpace(_preStackedPath))
+        {
+            _preStackedError = "Please enter a path.";
+            return;
+        }
+
+        try
+        {
+            _preStackedLoading = true;
+            StateHasChanged();
+
+            var info = await Task.Run(() => RasterService.GetInfo(_preStackedPath));
+            _preStackedInfo = info;
+
+            // Auto-detect sensor
+            _preStackedSensor = SensorDetector.DetectFromBandCount(info.BandCount);
+            if (_preStackedSensor is not null)
+            {
+                _preStackedSensorBandNames = SensorDetector.GetBandNames(_preStackedSensor);
+                await OnSensorDetected.InvokeAsync(_preStackedSensor);
+            }
+
+            // Select all bands by default
+            _preStackedSelectedBands = Enumerable.Range(1, info.BandCount).ToHashSet();
+
+            // Set input path and raster info
+            await InputPathChanged.InvokeAsync(_preStackedPath);
+            await RasterInfoChanged.InvokeAsync(info);
+            await RasterErrorChanged.InvokeAsync(null);
+
+            // Sync band configuration
+            await SyncPreStackedBands();
+        }
+        catch (FileNotFoundException)
+        {
+            _preStackedError = "File not found.";
+            await RasterInfoChanged.InvokeAsync(null);
+            await RasterErrorChanged.InvokeAsync("File not found");
+        }
+        catch (Exception ex)
+        {
+            _preStackedError = "Cannot read raster file.";
+            await RasterInfoChanged.InvokeAsync(null);
+            await RasterErrorChanged.InvokeAsync("Cannot read raster file");
+            Logger.LogWarning(ex, "Failed to load pre-stacked raster at '{Path}'", _preStackedPath);
+        }
+        finally
+        {
+            _preStackedLoading = false;
+        }
+    }
+
+    private void TogglePreStackedBand(int index)
+    {
+        if (!_preStackedSelectedBands.Remove(index))
+            _preStackedSelectedBands.Add(index);
+    }
+
+    private void PreStackedSelectAll()
+    {
+        if (_preStackedInfo is null) return;
+        _preStackedSelectedBands = Enumerable.Range(1, _preStackedInfo.BandCount).ToHashSet();
+    }
+
+    private void PreStackedSelectNone()
+    {
+        _preStackedSelectedBands.Clear();
+    }
+
+    private async Task SyncPreStackedBands()
+    {
+        if (_preStackedInfo is null) return;
+        var bands = _preStackedSelectedBands.Order().Select((idx, i) =>
+        {
+            // If we have an original index mapping (post-subset VRT), use it for naming
+            var originalIdx = _preStackedOriginalIndices is not null && i < _preStackedOriginalIndices.Count
+                ? _preStackedOriginalIndices[i]
+                : idx;
+            var name = _preStackedSensorBandNames is not null && originalIdx - 1 < _preStackedSensorBandNames.Count
+                ? _preStackedSensorBandNames[originalIdx - 1]
+                : $"Band{originalIdx}";
+            return new BandEntry(name, idx - 1, _preStackedInfo.Bands.FirstOrDefault(b => b.Index == idx)?.Description ?? "");
+        }).ToList();
+        await OnBandsImported.InvokeAsync(bands);
+    }
+
+    private async Task ApplyPreStackedSubset()
+    {
+        if (_preStackedInfo is null || _preStackedSelectedBands.Count == 0) return;
+
+        try
+        {
+            _preStackedBuildingVrt = true;
+            StateHasChanged();
+
+            var indices = _preStackedSelectedBands.Order().ToList();
+            var vrtPath = Path.ChangeExtension(_preStackedPath, null) + "_subset.vrt";
+
+            await Task.Run(() => GdalRasterUtils.CreateBandSubsetVrt(_preStackedPath, indices, vrtPath));
+
+            await InputPathChanged.InvokeAsync(vrtPath);
+            var info = await Task.Run(() => RasterService.GetInfo(vrtPath));
+            await RasterInfoChanged.InvokeAsync(info);
+
+            // Update local state to reflect the active VRT, preserving original index mapping
+            _preStackedOriginalIndices = indices;
+            _preStackedPath = vrtPath;
+            _preStackedInfo = info;
+            _preStackedSelectedBands = Enumerable.Range(1, indices.Count).ToHashSet();
+            await SyncPreStackedBands();
+
+            NotificationService.Notify(NotificationSeverity.Success, "Subset Created",
+                $"VRT with {indices.Count} bands created.", duration: 3000);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Subset Failed", ex.Message, duration: 5000);
+            Logger.LogWarning(ex, "Failed to create band subset VRT");
+        }
+        finally
+        {
+            _preStackedBuildingVrt = false;
+        }
+    }
+
+    private async Task ConvertPreStackedToGeoTiff()
+    {
+        if (_preStackedInfo is null) return;
+
+        try
+        {
+            _preStackedConverting = true;
+            StateHasChanged();
+
+            var ext = Path.GetExtension(_preStackedPath);
+            var outputPath = string.Equals(ext, ".tif", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(ext, ".tiff", StringComparison.OrdinalIgnoreCase)
+                ? Path.ChangeExtension(_preStackedPath, null) + "_converted.tif"
+                : Path.ChangeExtension(_preStackedPath, ".tif");
+            await Task.Run(() => GdalRasterUtils.TranslateFormat(_preStackedPath, outputPath));
+
+            _preStackedPath = outputPath;
+            await InputPathChanged.InvokeAsync(outputPath);
+            var info = await Task.Run(() => RasterService.GetInfo(outputPath));
+            _preStackedInfo = info;
+            await RasterInfoChanged.InvokeAsync(info);
+
+            NotificationService.Notify(NotificationSeverity.Success, "Conversion Complete",
+                $"Converted to GeoTIFF: {Path.GetFileName(outputPath)}", duration: 3000);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Conversion Failed", ex.Message, duration: 5000);
+            Logger.LogWarning(ex, "Failed to convert raster to GeoTIFF");
+        }
+        finally
+        {
+            _preStackedConverting = false;
+        }
+    }
+
     /// <summary>Reset internal import state (called by parent on Reset).</summary>
     public void Reset()
     {
@@ -536,6 +818,17 @@
         _importComplete = false;
         _lastImportProgress = null;
         _buildError = null;
+        // Pre-stacked state
+        _preStackedPath = "";
+        _preStackedError = null;
+        _preStackedInfo = null;
+        _preStackedSensor = null;
+        _preStackedSensorBandNames = null;
+        _preStackedSelectedBands = [];
+        _preStackedOriginalIndices = null;
+        _preStackedLoading = false;
+        _preStackedBuildingVrt = false;
+        _preStackedConverting = false;
     }
 
     public void Dispose()

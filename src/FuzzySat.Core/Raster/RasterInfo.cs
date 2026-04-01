@@ -33,6 +33,12 @@ public sealed class RasterInfo
     public double[]? GeoTransform { get; }
 
     /// <summary>
+    /// Gets per-band metadata (index, data type, description, color interpretation).
+    /// Empty if band introspection was not performed.
+    /// </summary>
+    public IReadOnlyList<BandInfo> Bands { get; }
+
+    /// <summary>
     /// Creates raster metadata.
     /// </summary>
     public RasterInfo(
@@ -43,7 +49,8 @@ public sealed class RasterInfo
         string dataType,
         string driverName,
         string? projection = null,
-        double[]? geoTransform = null)
+        double[]? geoTransform = null,
+        IReadOnlyList<BandInfo>? bands = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
         ArgumentException.ThrowIfNullOrWhiteSpace(dataType, nameof(dataType));
@@ -61,5 +68,6 @@ public sealed class RasterInfo
         DriverName = driverName;
         Projection = projection;
         GeoTransform = geoTransform is { Length: 6 } ? (double[])geoTransform.Clone() : null;
+        Bands = bands is not null ? bands.ToArray() : [];
     }
 }
