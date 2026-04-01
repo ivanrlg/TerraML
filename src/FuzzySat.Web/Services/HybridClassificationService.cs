@@ -104,6 +104,7 @@ public sealed class HybridClassificationService
         "LightGBM" => LightGbmClassifier.Train(samples, extractor),
         "SVM" => SvmClassifier.Train(samples, extractor),
         "Logistic Regression" => LogisticRegressionClassifier.Train(samples, extractor),
+        "MLP Neural Network" => NeuralNetClassifier.Train(samples, extractor),
         _ => throw new ArgumentException($"Unknown hybrid method: '{method}'.")
     };
 }

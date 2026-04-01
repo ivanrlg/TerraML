@@ -449,7 +449,8 @@
         new("SDCA", "model_training", "var(--fs-accent-amber)", "Max Entropy", "Stochastic Dual Coordinate Ascent classifier"),
         new("LightGBM", "bolt", "var(--fs-accent-violet)", "Gradient Boosting", "LightGBM gradient boosting with fuzzy features"),
         new("SVM", "linear_scale", "var(--fs-accent-cyan)", "LinearSvm/OVA", "Support Vector Machine with fuzzy features"),
-        new("Logistic Regression", "query_stats", "var(--fs-accent-red)", "LbfgsMaxEntropy", "Logistic regression producing calibrated probabilities")
+        new("Logistic Regression", "query_stats", "var(--fs-accent-red)", "LbfgsMaxEntropy", "Logistic regression producing calibrated probabilities"),
+        new("MLP Neural Network", "neurology", "var(--fs-accent-amber)", "TorchSharp MLP", "3-layer neural network with early stopping")
     ];
 
     private record MethodInfo(string Name, string Icon, string Color, string Formula, string Hint);
