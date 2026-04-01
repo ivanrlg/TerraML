@@ -1,6 +1,6 @@
 # EPICs Activos - FuzzySat
 
-> **Ultima actualizacion**: 2026-04-01 (post PR #35 — Issue #34 completado)
+> **Ultima actualizacion**: 2026-04-01 (post PR #37 — Issue #36 completado)
 > **Proposito**: Punto central de informacion de EPICs en desarrollo.
 > Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
 
@@ -161,16 +161,17 @@ Auto-save, auto-load, compatibilidad retroactiva con proyectos existentes.
 - **Status**: **COMPLETADO**
 - **Priority**: P2
 - **Folder**: [epic-009-ml-advanced-classifiers/](epic-009-ml-advanced-classifiers/)
-- **GitHub PR**: [#33](https://github.com/ivanrlg/FuzzySat/pull/33) (merged), fix [#35](https://github.com/ivanrlg/FuzzySat/pull/35) (merged)
-- **Micro-commits**: 23 (Epic) + 7 (fix #34)
-- **Tests**: 295 Core tests (289 Epic + 6 RawFeatureExtractor)
+- **GitHub PR**: [#33](https://github.com/ivanrlg/FuzzySat/pull/33), [#35](https://github.com/ivanrlg/FuzzySat/pull/35), [#37](https://github.com/ivanrlg/FuzzySat/pull/37) (all merged)
+- **Tests**: 302 Core tests
 
 **Implementado**:
 - 7 clasificadores: Random Forest, SDCA, LightGBM, SVM, Logistic Regression, MLP Neural Network, KMeans
 - 2 ensembles: Voting (majority + weighted), Stacking (meta-learner)
 - IFeatureExtractor interface + RawFeatureExtractor (fix #34 — meta-learner degraded features)
+- Pure ML mode: 6 clasificadores con raw bands sin fuzzy features (issue #36)
 - CrossValidator (stratified k-fold) + ModelComparisonEngine + Blazor UI
 - MlClassifierBase abstract class (shared ML.NET pipeline)
+- UI agrupada por categoria: Fuzzy / Hybrid / Pure ML / Ensemble
 
 **Documentos**:
 - [00-overview.md](epic-009-ml-advanced-classifiers/00-overview.md) — Objetivo y alcance
