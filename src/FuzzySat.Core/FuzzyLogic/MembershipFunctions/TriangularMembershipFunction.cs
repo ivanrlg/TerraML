@@ -49,8 +49,10 @@ public sealed class TriangularMembershipFunction : IMembershipFunction
     /// <inheritdoc />
     public double Evaluate(double x)
     {
-        if (x <= Left || x >= Right) return 0.0;
-        if (x <= Center) return (x - Left) / (Center - Left);
+        if (x <= Left || x >= Right)
+            return 0.0;
+        if (x <= Center)
+            return (x - Left) / (Center - Left);
         return (Right - x) / (Right - Center);
     }
 

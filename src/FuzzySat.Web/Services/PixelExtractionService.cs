@@ -23,8 +23,10 @@ public sealed class PixelExtractionService
         ArgumentException.ThrowIfNullOrWhiteSpace(className);
 
         // Normalize: ensure start <= end
-        if (startRow > endRow) (startRow, endRow) = (endRow, startRow);
-        if (startCol > endCol) (startCol, endCol) = (endCol, startCol);
+        if (startRow > endRow)
+            (startRow, endRow) = (endRow, startRow);
+        if (startCol > endCol)
+            (startCol, endCol) = (endCol, startCol);
 
         // Clamp to image bounds
         startRow = Math.Clamp(startRow, 0, image.Rows - 1);

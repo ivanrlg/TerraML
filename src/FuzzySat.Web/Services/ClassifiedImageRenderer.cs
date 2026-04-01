@@ -143,7 +143,8 @@ public sealed class ClassifiedImageRenderer
     private static (byte R, byte G, byte B) ParseHex(string hex)
     {
         var s = hex.TrimStart('#');
-        if (s.Length < 6) return (128, 128, 128);
+        if (s.Length < 6)
+            return (128, 128, 128);
         return (
             Convert.ToByte(s[..2], 16),
             Convert.ToByte(s[2..4], 16),

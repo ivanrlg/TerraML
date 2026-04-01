@@ -39,7 +39,9 @@ public class FuzzyRuleTests
         // Band1 at center (1.0), Band2 at center (1.0), Band3 at 1 sigma (exp(-0.5))
         var bandValues = new Dictionary<string, double>
         {
-            ["Band1"] = 100.0, ["Band2"] = 80.0, ["Band3"] = 70.0
+            ["Band1"] = 100.0,
+            ["Band2"] = 80.0,
+            ["Band3"] = 70.0
         };
 
         var result = rule.Evaluate(bandValues);
@@ -59,7 +61,8 @@ public class FuzzyRuleTests
         // Band1 at center (1.0), Band2 far away (near 0)
         var bandValues = new Dictionary<string, double>
         {
-            ["Band1"] = 100.0, ["Band2"] = 200.0
+            ["Band1"] = 100.0,
+            ["Band2"] = 200.0
         };
 
         rule.Evaluate(bandValues).Should().BeLessThan(1e-50);

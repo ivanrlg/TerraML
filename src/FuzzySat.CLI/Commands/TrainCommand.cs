@@ -82,7 +82,8 @@ public static class TrainCommand
                 for (var i = 1; i < lines.Length; i++)
                 {
                     var line = lines[i].Trim();
-                    if (string.IsNullOrEmpty(line)) continue;
+                    if (string.IsNullOrEmpty(line))
+                        continue;
 
                     var parts = line.Split(',');
                     if (parts.Length != header.Length)

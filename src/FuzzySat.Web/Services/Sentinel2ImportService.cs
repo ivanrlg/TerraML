@@ -43,9 +43,19 @@ public sealed class Sentinel2ImportService
     /// </summary>
     private static readonly Dictionary<string, int> NativeResolution = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["B01"] = 60, ["B02"] = 10, ["B03"] = 10, ["B04"] = 10,
-        ["B05"] = 20, ["B06"] = 20, ["B07"] = 20, ["B08"] = 10,
-        ["B8A"] = 20, ["B09"] = 60, ["B10"] = 60, ["B11"] = 20, ["B12"] = 20
+        ["B01"] = 60,
+        ["B02"] = 10,
+        ["B03"] = 10,
+        ["B04"] = 10,
+        ["B05"] = 20,
+        ["B06"] = 20,
+        ["B07"] = 20,
+        ["B08"] = 10,
+        ["B8A"] = 20,
+        ["B09"] = 60,
+        ["B10"] = 60,
+        ["B11"] = 20,
+        ["B12"] = 20
     };
 
     /// <summary>
@@ -53,9 +63,19 @@ public sealed class Sentinel2ImportService
     /// </summary>
     private static readonly Dictionary<string, int> BandSortOrder = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["B01"] = 1, ["B02"] = 2, ["B03"] = 3, ["B04"] = 4,
-        ["B05"] = 5, ["B06"] = 6, ["B07"] = 7, ["B08"] = 8,
-        ["B8A"] = 9, ["B09"] = 10, ["B10"] = 11, ["B11"] = 12, ["B12"] = 13
+        ["B01"] = 1,
+        ["B02"] = 2,
+        ["B03"] = 3,
+        ["B04"] = 4,
+        ["B05"] = 5,
+        ["B06"] = 6,
+        ["B07"] = 7,
+        ["B08"] = 8,
+        ["B8A"] = 9,
+        ["B09"] = 10,
+        ["B10"] = 11,
+        ["B11"] = 12,
+        ["B12"] = 13
     };
 
     public enum InputFormat { BandFolder, SafePackage, ZipArchive, Unknown }
@@ -87,10 +107,12 @@ public sealed class Sentinel2ImportService
 
     private static void EnsureInitialized()
     {
-        if (_initialized) return;
+        if (_initialized)
+            return;
         lock (InitLock)
         {
-            if (_initialized) return;
+            if (_initialized)
+                return;
             GdalBase.ConfigureAll();
             _initialized = true;
         }
@@ -180,7 +202,8 @@ public sealed class Sentinel2ImportService
             try
             {
                 using var dataset = Gdal.Open(file, Access.GA_ReadOnly);
-                if (dataset is null) continue;
+                if (dataset is null)
+                    continue;
 
                 var gt = new double[6];
                 dataset.GetGeoTransform(gt);
