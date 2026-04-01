@@ -1,0 +1,12 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - fuzzysat-data:/app/data
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+
+volumes:
+  fuzzysat-data:
