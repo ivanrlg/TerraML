@@ -1,6 +1,6 @@
 # EPICs Activos - FuzzySat
 
-> **Ultima actualizacion**: 2026-04-01 (post PR #39 — ClassifierBenchmark)
+> **Ultima actualizacion**: 2026-04-01 (post PR #40 — VisualizeCommand + CLI Tests)
 > **Proposito**: Punto central de informacion de EPICs en desarrollo.
 > Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
 
@@ -10,8 +10,8 @@
 
 | Estado | Cantidad | EPICs |
 |--------|----------|-------|
-| Completado | 6 | #1 Core Engine MVP, #3 Advanced Features, #4 ML Hybrid, #7 Classified Output, #8 Project Persistence, #9 Advanced ML Classifiers |
-| Casi Completado | 1 | #2 I/O & CLI (~80%) |
+| Completado | 7 | #1 Core Engine MVP, #2 I/O & CLI, #3 Advanced Features, #4 ML Hybrid, #7 Classified Output, #8 Project Persistence, #9 Advanced ML Classifiers |
+| Casi Completado | 0 | — |
 | Parcial | 1 | #5 Blazor Web (~85%) |
 | En Progreso | 1 | #10 Input UX Redesign & Homepage (~75%) |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
@@ -34,18 +34,20 @@ Unit tests validados contra datos de la tesis original.
 
 ---
 
-## Epic #2 - I/O & CLI — CASI COMPLETADO
+## Epic #2 - I/O & CLI — COMPLETADO
 
-- **Status**: **~80% completado**
+- **Status**: **COMPLETADO** (PR #40 mergeado 2026-04-01)
 - **Priority**: P1
 - **Folder**: [epic-002-io-cli/](epic-002-io-cli/)
-- **Micro-commits**: 10/11 completados
-- **Pendiente**: VisualizeCommand, tests CLI
+- **Micro-commits**: 11/11 completados
+- **GitHub PR**: [#40](https://github.com/ivanrlg/FuzzySat/pull/40) (merged)
+- **Tests**: 16 CLI tests + 14 Visualization tests
 
-**Completado**: GDAL raster reader/writer, CLI structure, sample config, InfoCommand,
-TrainCommand (CSV→JSON), ClassifyCommand (progress bar + GeoTIFF output con georeferencing),
-ValidateCommand (confusion matrix + Kappa + per-class metrics). TrainingSessionDto compartido.
-**Pendiente**: VisualizeCommand (false color composite → PNG), tests CLI.
+**Completado**: GDAL raster reader/writer, CLI structure, sample config, 5 commands
+(InfoCommand, TrainCommand, ClassifyCommand, ValidateCommand, VisualizeCommand).
+VisualizeCommand: RGB composite PNG export, selective band loading via ReadBands(),
+Spectre stats table. Core/Visualization extraction (BandStatistics, BandStatisticsCalculator,
+RgbCompositeRenderer) — rendering logic reusable from CLI, Web, and API.
 
 ---
 

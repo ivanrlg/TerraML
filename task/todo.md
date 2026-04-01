@@ -8,13 +8,13 @@
 
 ## Estado Actual
 
-> **Proyecto al ~82% global** (subio de 80% tras Epic #4 completado)
-> - Core Engine: **100%** (PCA + 7 ML classifiers + ensemble + comparison + benchmark, 310+ Core tests)
-> - CLI: **80%** funcional (4 comandos wired, falta VisualizeCommand — PR #40 pendiente)
+> **Proyecto al ~85% global** (subio de 82% tras Epic #2 completado)
+> - Core Engine: **100%** (PCA + 7 ML classifiers + ensemble + comparison + benchmark, 316 Core tests)
+> - CLI: **100%** funcional (5 comandos: info, train, classify, validate, visualize + 16 CLI tests)
 > - API: 0% (template default)
 > - Web: **90%** (9 classification methods, Model Comparison page, ensemble UI)
 > - CI/CD: 30% (solo build+test)
-> - Tests totales: **390+** (310+ Core + 91 Web)
+> - Tests totales: **438** (316 Core + 16 CLI + 106 Web)
 
 ---
 
@@ -153,9 +153,11 @@
 
 > Ver [Epic #6 plan](../docs/epics/epic-006-gap-to-100/01-plan.md) para detalle completo.
 
-### Fase 2 — CLI Pendiente
-- [ ] Crear VisualizeCommand (false color composite → PNG)
-- [ ] Tests CLI
+### Fase 2 — CLI (PR #40, COMPLETADA)
+- [x] VisualizeCommand (false color composite → PNG, ReadBands selective loading)
+- [x] CLI test project (16 tests: 5 commands + root command)
+- [x] Core/Visualization extraction (BandStatistics, Calculator, Renderer)
+- [x] 14 Visualization tests (BandStatisticsCalculator + RgbCompositeRenderer)
 
 ### Fase 3A — Web Infrastructure (PR #17) — COMPLETADA
 - [x] ProjectStateService (scoped, cross-page state bus)
