@@ -1,0 +1,37 @@
+name: Question
+description: Ask a question about FuzzySat usage or architecture
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question? We're happy to help!
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What would you like to know?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of FuzzySat does this relate to?
+      options:
+        - Fuzzy logic concepts
+        - Getting started / setup
+        - CLI usage
+        - Web application
+        - Training / classification workflow
+        - Architecture / contributing
+        - Other
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Any relevant details, code snippets, or screenshots.
