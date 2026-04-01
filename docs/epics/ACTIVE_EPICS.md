@@ -13,7 +13,7 @@
 | Completado | 5 | #1 Core Engine MVP, #3 Advanced Features, #7 Classified Output, #8 Project Persistence, #9 Advanced ML Classifiers |
 | Casi Completado | 2 | #2 I/O & CLI (~80%), #4 ML Hybrid (~90%) |
 | Parcial | 1 | #5 Blazor Web (~85%) |
-| En Progreso | 1 | #10 Input UX Redesign & Homepage (~50%) |
+| En Progreso | 1 | #10 Input UX Redesign & Homepage (~75%) |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 
 ---
@@ -182,7 +182,7 @@ Auto-save, auto-load, compatibilidad retroactiva con proyectos existentes.
 
 ## Epic #10 - Input UX Redesign & Homepage Overhaul — EN PROGRESO
 
-- **Status**: **~50% completado** (Fases 1-2 mergeadas, Fases 3-4 pendientes)
+- **Status**: **~75% completado** (Fases 1-2 mergeadas, Fase 4 en PR, Fase 3 pendiente)
 - **Priority**: P1
 - **Folder**: [epic-010-input-ux-homepage/](epic-010-input-ux-homepage/)
 - **GitHub PR**: [#32](https://github.com/ivanrlg/FuzzySat/pull/32) (merged)
@@ -200,9 +200,11 @@ tesis a una pagina dedicada.
 - Fixes adicionales: spectral chart auto-scaling, thinner selection borders,
   new project state reset, 3 rondas de review bot resueltas
 
+**En PR**:
+4. Homepage profesional: stats de herramienta, workflow actualizado, about section
+
 **Pendiente**:
 3. Soporte imagenes pre-stacked + conversion in-app
-4. Homepage workflow-oriented + pagina Thesis dedicada
 
 **Documentos**:
 - [00-overview.md](epic-010-input-ux-homepage/00-overview.md) — Objetivo y alcance
