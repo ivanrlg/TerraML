@@ -52,23 +52,16 @@ jobs:
             -reporttypes:"HtmlInline_AzurePipelines;Cobertura"
 
       - name: Check coverage threshold
+        shell: bash
         run: |
-          COVERAGE=$(python3 -c "
-          import xml.etree.ElementTree as ET
-          tree = ET.parse('./TestResults/CoverageReport/Cobertura.xml')
-          root = tree.getroot()
-          rate = float(root.attrib.get('line-rate', '0'))
-          print(f'{rate * 100:.1f}')
-          ")
+          COVERAGE=$(python3 -c "import xml.etree.ElementTree as ET; root = ET.parse('./TestResults/CoverageReport/Cobertura.xml').getroot(); print(f'{float(root.attrib.get(\"line-rate\", \"0\")) * 100:.1f}')")
           echo "Line coverage: ${COVERAGE}%"
-          python3 -c "
-          rate = float('${COVERAGE}')
-          if rate < 70.0:
-              print(f'FAIL: Coverage {rate}% is below 70% threshold')
-              exit(1)
-          else:
-              print(f'PASS: Coverage {rate}% meets 70% threshold')
-          "
+          if python3 -c "import sys; sys.exit(0 if float('${COVERAGE}') >= 70.0 else 1)"; then
+            echo "PASS: Coverage ${COVERAGE}% meets 70% threshold"
+          else
+            echo "FAIL: Coverage ${COVERAGE}% is below 70% threshold"
+            exit 1
+          fi
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
