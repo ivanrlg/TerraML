@@ -294,19 +294,21 @@
                             <span class="material-icons" style="font-size: 1rem; color: var(--fs-accent-cyan);">show_chart</span>
                             <span>Spectral Signatures (Mean)</span>
                         </div>
-                        <RadzenChart Style="height: 200px;">
+                        <RadzenChart Style="height: 220px;">
                             @foreach (var series in _spectralSeries)
                             {
                                 <RadzenLineSeries Data="@series.Points" CategoryProperty="Band" ValueProperty="Value"
                                                   Title="@series.Name" Stroke="@series.Color" StrokeWidth="2">
-                                    <RadzenMarkers MarkerType="MarkerType.Circle" Size="4" Stroke="@series.Color" Fill="@series.Color" />
+                                    <RadzenMarkers MarkerType="MarkerType.Circle" Size="5" Stroke="@series.Color" Fill="@series.Color" />
                                 </RadzenLineSeries>
                             }
-                            <RadzenCategoryAxis />
-                            <RadzenValueAxis>
+                            <RadzenCategoryAxis Padding="20">
+                                <RadzenGridLines Visible="false" />
+                            </RadzenCategoryAxis>
+                            <RadzenValueAxis Min="@_spectralYMin" Max="@_spectralYMax" FormatString="{0:F3}">
                                 <RadzenGridLines Visible="true" />
                             </RadzenValueAxis>
-                            <RadzenLegend Visible="false" />
+                            <RadzenLegend Visible="@(_spectralSeries.Count > 1)" Position="LegendPosition.Bottom" />
                         </RadzenChart>
                     </div>
                 }
@@ -360,6 +362,8 @@
     private List<string> _bandNames = [];
     private List<ClassCard> _classCards = [];
     private List<SpectralSeries> _spectralSeries = [];
+    private double _spectralYMin = 0;
+    private double _spectralYMax = 1;
     private List<TrainingRegion> _regions = [];
 
     private const long MaxPixels = 50_000_000;
@@ -795,6 +799,7 @@
         _spectralSeries = [];
         var colorMap = _classOptions.ToDictionary(c => c.Name, c => c.Color);
 
+        var allValues = new List<double>();
         var grouped = _samples.GroupBy(s => s.ClassName);
         foreach (var group in grouped)
         {
@@ -802,7 +807,8 @@
             foreach (var band in _bandNames)
             {
                 var mean = group.Average(s => s.BandValues.GetValueOrDefault(band, 0));
-                points.Add(new SpectralPoint(band, Math.Round(mean, 2)));
+                points.Add(new SpectralPoint(band, Math.Round(mean, 4)));
+                allValues.Add(mean);
             }
 
             _spectralSeries.Add(new SpectralSeries(
@@ -810,6 +816,22 @@
                 colorMap.GetValueOrDefault(group.Key, "#808080"),
                 points
             ));
+        }
+
+        // Auto-scale Y-axis to actual data range with 10% padding
+        if (allValues.Count > 0)
+        {
+            var dataMin = allValues.Min();
+            var dataMax = allValues.Max();
+            var range = dataMax - dataMin;
+            var padding = range > 0 ? range * 0.1 : Math.Abs(dataMax) * 0.1 + 0.001;
+            _spectralYMin = Math.Max(0, dataMin - padding);
+            _spectralYMax = dataMax + padding;
+        }
+        else
+        {
+            _spectralYMin = 0;
+            _spectralYMax = 1;
         }
     }
 

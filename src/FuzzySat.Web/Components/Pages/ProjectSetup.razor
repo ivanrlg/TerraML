@@ -3,7 +3,9 @@
 @using System.Text.Json
 @using FuzzySat.Core.Configuration
 @using FuzzySat.Core.Classification
+@using FuzzySat.Core.Raster
 @using FuzzySat.Web.Services
+@using FuzzySat.Web.Components.Shared.ProjectSetup
 @inject NotificationService NotificationService
 @inject ILogger<ProjectSetup> Logger
 @inject ProjectStateService ProjectState
@@ -53,215 +55,37 @@
             </div>
 
             @* Input Raster *@
-            <div class="form-section">
-                <div class="form-section-header">
-                    <span class="material-icons section-icon" style="color: var(--fs-accent-cyan);">satellite_alt</span>
-                    <span>Input Raster</span>
-                </div>
-
-                @* Mode toggle *@
-                <div class="input-mode-toggle">
-                    <button type="button" class="mode-btn @(_inputMode == InputMode.DirectPath ? "mode-active" : "")"
-                            @onclick="() => _inputMode = InputMode.DirectPath">
-                        <span class="material-icons" style="font-size: 0.9rem;">description</span>
-                        Direct Path
-                    </button>
-                    <button type="button" class="mode-btn @(_inputMode == InputMode.ImportSentinel2 ? "mode-active" : "")"
-                            @onclick="() => _inputMode = InputMode.ImportSentinel2">
-                        <span class="material-icons" style="font-size: 0.9rem;">cloud_download</span>
-                        Import Sentinel-2
-                    </button>
-                </div>
-
-                @if (_inputMode == InputMode.DirectPath)
-                {
-                    <div class="field-group">
-                        <label class="field-label">Path to raster file (.tif, .vrt, .jp2)</label>
-                        <div class="path-input">
-                            <RadzenTextBox Value="@_inputPath" Change="@OnInputPathChanged" Placeholder="Path to multispectral image" Style="width: 100%;" />
-                            <button type="button" class="browse-btn" aria-label="Browse for input raster" @onclick="BrowseRaster" title="Browse for input raster">
-                                <span class="material-icons">folder_open</span>
-                            </button>
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    @* Import Sentinel-2 inline wizard *@
-                    <div class="field-group">
-                        <label class="field-label">Path to folder with Sentinel-2 band files</label>
-                        <div class="path-input">
-                            <RadzenTextBox @bind-Value="@_importFolderPath" Placeholder="e.g., C:\Downloads\Barinas_S2" Style="width: 100%;"
-                                Disabled="@_isImporting" />
-                            <button type="button" class="detect-btn" @onclick="DetectSentinel2Source" disabled="@_isImporting"
-                                title="Detect format and discover bands">
-                                <span class="material-icons">search</span>
-                                <span>Detect</span>
-                            </button>
-                        </div>
-                        @if (_importSourceError is not null)
-                        {
-                            <p class="field-error">@_importSourceError</p>
-                        }
-                    </div>
-
-                    @if (_importDetectedFormat is not null)
-                    {
-                        <span class="format-badge">@FormatLabel(_importDetectedFormat.Value)</span>
-                    }
-
-                    @if (_discoveredBands.Count > 0)
-                    {
-                        @* Band selection *@
-                        <div class="import-band-section">
-                            <div class="quick-filters">
-                                @foreach (var res in _availableResolutions)
-                                {
-                                    var count = _discoveredBands.Count(b => b.ResolutionMeters == res);
-                                    <button type="button" class="filter-btn" @onclick="() => SelectImportByResolution(res)">
-                                        All @(res)m (@count)
-                                    </button>
-                                }
-                                <button type="button" class="filter-btn" @onclick="SelectImportAll">All</button>
-                                <button type="button" class="filter-btn filter-btn-muted" @onclick="SelectImportNone">None</button>
-                            </div>
-
-                            <div class="band-grid">
-                                @foreach (var band in _discoveredBands)
-                                {
-                                    var isSelected = _importSelectedBands.Contains(band.BandName);
-                                    <button type="button"
-                                            class="band-card @(isSelected ? "band-selected" : "")"
-                                            aria-pressed="@isSelected"
-                                            @onclick="() => ToggleImportBand(band.BandName)">
-                                        <div class="band-card-top">
-                                            <span class="band-name">@band.BandName</span>
-                                            <span class="band-res">@(band.ResolutionMeters)m</span>
-                                        </div>
-                                        <div class="band-card-detail">
-                                            <span>@band.Width x @band.Height</span>
-                                            <span>@band.DataType</span>
-                                        </div>
-                                    </button>
-                                }
-                            </div>
-
-                            @if (_importSelectedBands.Count > 0 && HasMixedImportResolutions())
-                            {
-                                <div class="info-banner info-warning">
-                                    <span class="material-icons">warning</span>
-                                    <span>Selected bands have different dimensions. Select bands from a single resolution group.</span>
-                                </div>
-                            }
-
-                            @if (_importSelectedBands.Count > 0 && !HasMixedImportResolutions())
-                            {
-                                <div class="import-output-row">
-                                    <div class="field-group" style="flex: 1;">
-                                        <label class="field-label">Output VRT Path</label>
-                                        <RadzenTextBox @bind-Value="@_importOutputPath" Style="width: 100%;" Disabled="@_isImporting" />
-                                    </div>
-                                </div>
-
-                                @if (!_importComplete)
-                                {
-                                    <RadzenButton Text="@(_isImporting ? "Importing..." : "Create VRT")"
-                                        Icon="@(_isImporting ? "hourglass_top" : "build")"
-                                        ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
-                                        Click="@RunSentinel2Import"
-                                        Disabled="@_isImporting" class="rz-mt-2" />
-
-                                    @if (_isImporting && _lastImportProgress is not null)
-                                    {
-                                        <div class="progress-area">
-                                            <RadzenProgressBar Value="@ImportProgressPercent()" ShowValue="false" Style="height: 6px;" />
-                                            <p class="progress-text">@_lastImportProgress.Status (@_lastImportProgress.CurrentBand / @_lastImportProgress.TotalBands)</p>
-                                        </div>
-                                    }
-                                }
-                                else
-                                {
-                                    <div class="import-success">
-                                        <span class="material-icons" style="color: var(--fs-accent-emerald);">check_circle</span>
-                                        <span>VRT created with @_importSelectedBands.Count bands — path and bands auto-configured below</span>
-                                    </div>
-                                }
-                            }
-                        </div>
-                    }
-                }
-            </div>
+            <InputRasterWizard @ref="_inputRasterWizard"
+                CurrentMode="@_inputMode"
+                CurrentModeChanged="@(m => _inputMode = m)"
+                InputPath="@_inputPath"
+                InputPathChanged="@OnInputPathChanged"
+                ImportFolderPath="@_importFolderPath"
+                ImportFolderPathChanged="@(p => _importFolderPath = p)"
+                RasterInfo="@_rasterInfo"
+                RasterInfoChanged="@(r => _rasterInfo = r)"
+                RasterError="@_rasterError"
+                RasterErrorChanged="@(e => _rasterError = e)"
+                OnBandsImported="@OnBandsImported"
+                OnSensorDetected="@OnSensorDetected" />
 
             @* Sensor Preset *@
-            <div class="form-section">
-                <div class="form-section-header">
-                    <span class="material-icons section-icon" style="color: var(--fs-accent-cyan);">satellite_alt</span>
-                    <span>Sensor Preset</span>
-                </div>
-                <div class="preset-grid">
-                    @foreach (var preset in _presets)
-                    {
-                        <button type="button" class="preset-btn @(_selectedPreset == preset.Name ? "preset-active" : "")"
-                                @onclick="() => ApplyPreset(preset)">
-                            <span class="preset-name">@preset.Name</span>
-                            <span class="preset-detail">@preset.Bands bands @@ @preset.Resolution</span>
-                        </button>
-                    }
-                </div>
-            </div>
+            <SensorPresetSelector
+                SelectedPreset="@_selectedPreset"
+                SelectedPresetChanged="@(p => { _selectedPreset = p; _presetAutoDetected = false; })"
+                Presets="@_presets"
+                AutoDetected="@_presetAutoDetected"
+                OnPresetApplied="@OnPresetApplied" />
 
             @* Bands *@
-            <div class="form-section">
-                <div class="form-section-header">
-                    <span class="material-icons section-icon" style="color: var(--fs-accent-emerald);">layers</span>
-                    <span>Band Configuration</span>
-                    <span class="count-badge mono-text">@_bands.Count bands</span>
-                </div>
-                <RadzenDataGrid Data="@_bands" TItem="BandEntry" AllowColumnResize="true" Density="Density.Compact">
-                    <Columns>
-                        <RadzenDataGridColumn TItem="BandEntry" Property="Name" Title="Band Name" />
-                        <RadzenDataGridColumn TItem="BandEntry" Property="Index" Title="Index" Width="80px">
-                            <Template Context="item">
-                                <span class="mono-text">@item.Index</span>
-                            </Template>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="BandEntry" Property="Description" Title="Description" />
-                    </Columns>
-                </RadzenDataGrid>
-                <RadzenButton Text="Add Band" Icon="add" Click="@AddBand" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" class="rz-mt-2" />
-            </div>
+            <BandConfigurationPanel
+                Bands="@_bands"
+                BandsChanged="@(b => _bands = b)" />
 
             @* Classes *@
-            <div class="form-section">
-                <div class="form-section-header">
-                    <span class="material-icons section-icon" style="color: var(--fs-accent-amber);">palette</span>
-                    <span>Land Cover Classes</span>
-                    <span class="count-badge mono-text">@_classes.Count classes</span>
-                </div>
-                <RadzenDataGrid Data="@_classes" TItem="ClassEntry" AllowColumnResize="true" Density="Density.Compact">
-                    <Columns>
-                        <RadzenDataGridColumn TItem="ClassEntry" Property="Name" Title="Class Name">
-                            <Template Context="item">
-                                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <span style="width: 12px; height: 12px; border-radius: 50%; background: @item.Color; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1);"></span>
-                                    @item.Name
-                                </div>
-                            </Template>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="ClassEntry" Property="Code" Title="Code" Width="80px">
-                            <Template Context="item">
-                                <span class="mono-text">@item.Code</span>
-                            </Template>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="ClassEntry" Property="Color" Title="Color" Width="120px">
-                            <Template Context="item">
-                                <span class="mono-text" style="color: @item.Color;">@item.Color</span>
-                            </Template>
-                        </RadzenDataGridColumn>
-                    </Columns>
-                </RadzenDataGrid>
-                <RadzenButton Text="Add Class" Icon="add" Click="@AddClass" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" class="rz-mt-2" />
-            </div>
+            <LandCoverClassPanel
+                Classes="@_classes"
+                ClassesChanged="@(c => _classes = c)" />
         </div>
 
         @* Summary Panel *@
@@ -324,10 +148,14 @@
 </div>
 
 @code {
-    // --- Existing state ---
+    private InputRasterWizard? _inputRasterWizard;
+
     private string _projectName = "";
     private string _inputPath = "";
+    private string _importFolderPath = "";
     private string? _selectedPreset = "ASTER";
+    private bool _presetAutoDetected = false;
+    private InputMode _inputMode = InputMode.DirectPath;
     private bool _isSaving = false;
     private RasterInfo? _rasterInfo;
     private string? _rasterError;
@@ -349,19 +177,6 @@
         new("Custom", 0, "-")
     ];
 
-    // --- Import state ---
-    private InputMode _inputMode = InputMode.DirectPath;
-    private string _importFolderPath = "";
-    private string _importOutputPath = "";
-    private string? _importSourceError;
-    private Sentinel2ImportService.InputFormat? _importDetectedFormat;
-    private List<Sentinel2ImportService.Sentinel2BandInfo> _discoveredBands = [];
-    private HashSet<string> _importSelectedBands = [];
-    private IReadOnlyList<int> _availableResolutions = [];
-    private bool _isImporting;
-    private bool _importComplete;
-    private Sentinel2ImportService.ImportProgress? _lastImportProgress;
-
     private static readonly HashSet<string> ReservedFileNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "CON", "PRN", "AUX", "NUL",
@@ -369,29 +184,19 @@
         "LPT1","LPT2","LPT3","LPT4","LPT5","LPT6","LPT7","LPT8","LPT9"
     };
 
-    private static readonly Dictionary<string, string> S2BandDescriptions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["B01"] = "Coastal Aerosol", ["B02"] = "Blue", ["B03"] = "Green", ["B04"] = "Red",
-        ["B05"] = "Red Edge 1", ["B06"] = "Red Edge 2", ["B07"] = "Red Edge 3",
-        ["B08"] = "NIR", ["B8A"] = "NIR Narrow", ["B09"] = "Water Vapour",
-        ["B10"] = "Cirrus", ["B11"] = "SWIR 1", ["B12"] = "SWIR 2"
-    };
-
     protected override async Task OnInitializedAsync()
     {
         _existingProjects = ProjectLoader.ListProjects().ToList();
 
-        // Pick up raster path from Sentinel-2 Import tool (legacy, if navigating from old page)
         if (!string.IsNullOrWhiteSpace(ProjectState.ImportedRasterPath))
         {
             _inputPath = ProjectState.ImportedRasterPath;
             ProjectState.ImportedRasterPath = null;
-            await OnInputPathChanged(_inputPath);
+            await LoadRasterInfo(_inputPath);
         }
 
         if (ProjectState.HasProject)
         {
-            // Project already loaded (e.g., by MainLayout auto-load) — populate UI fields
             var config = ProjectState.Configuration!;
             _projectName = config.ProjectName ?? "";
             _inputPath = config.InputRasterPath ?? "";
@@ -403,11 +208,10 @@
                 p => p.Equals(config.ProjectName, StringComparison.OrdinalIgnoreCase));
 
             if (!string.IsNullOrWhiteSpace(_inputPath))
-                await OnInputPathChanged(_inputPath);
+                await LoadRasterInfo(_inputPath);
         }
         else
         {
-            // Auto-load last used project
             var lastProject = ProjectLoader.GetLastProject();
             if (lastProject is not null && _existingProjects.Contains(lastProject, StringComparer.OrdinalIgnoreCase))
             {
@@ -417,20 +221,15 @@
         }
     }
 
-    // --- Input Raster (Direct Path mode) ---
-
-    private async Task OnInputPathChanged(string newPath)
+    private async Task LoadRasterInfo(string path)
     {
-        _inputPath = newPath;
         _rasterInfo = null;
         _rasterError = null;
-
-        if (string.IsNullOrWhiteSpace(newPath)) return;
+        if (string.IsNullOrWhiteSpace(path)) return;
 
         try
         {
-            var info = await Task.Run(() => RasterService.GetInfo(newPath));
-            _rasterInfo = info;
+            _rasterInfo = await Task.Run(() => RasterService.GetInfo(path));
         }
         catch (FileNotFoundException)
         {
@@ -439,210 +238,62 @@
         catch (Exception ex)
         {
             _rasterError = "Cannot read raster";
-            Logger.LogWarning(ex, "Failed to read raster info for '{Path}'", newPath);
+            Logger.LogWarning(ex, "Failed to read raster info for '{Path}'", path);
         }
     }
 
-    // --- Import Sentinel-2 ---
-
-    private async Task DetectSentinel2Source()
+    private void OnInputPathChanged(string newPath)
     {
-        _importSourceError = null;
-        _importDetectedFormat = null;
-        _discoveredBands = [];
-        _importSelectedBands = [];
-        _availableResolutions = [];
-        _importComplete = false;
+        _inputPath = newPath;
+    }
 
-        if (string.IsNullOrWhiteSpace(_importFolderPath))
+    private void OnBandsImported(List<BandEntry> bands)
+    {
+        _bands = bands;
+        // Update dynamic preset to reflect actual band count
+        UpdateDynamicPreset();
+    }
+
+    private void OnSensorDetected(string sensorName)
+    {
+        _selectedPreset = sensorName;
+        _presetAutoDetected = true;
+        UpdateDynamicPreset();
+    }
+
+    private void OnPresetApplied(List<BandEntry> bands)
+    {
+        _bands = bands;
+        _presetAutoDetected = false;
+        UpdateDynamicPreset();
+    }
+
+    /// <summary>Update the Sentinel-2 preset entry to show actual imported band count.</summary>
+    private void UpdateDynamicPreset()
+    {
+        if (_selectedPreset == "Sentinel-2" && _bands.Count > 0 && _bands.Count != 13)
         {
-            _importSourceError = "Please enter a path.";
-            return;
-        }
-
-        try
-        {
-            _isImporting = true;
-            StateHasChanged();
-
-            var format = await Task.Run(() => ImportService.DetectFormat(_importFolderPath));
-            _importDetectedFormat = format;
-
-            if (format == Sentinel2ImportService.InputFormat.Unknown)
+            // Determine resolution label from band count
+            var resLabel = _bands.Count switch
             {
-                _importSourceError = "No supported Sentinel-2 data found at this path.";
-                return;
-            }
-            if (format == Sentinel2ImportService.InputFormat.SafePackage)
-            {
-                _importSourceError = ".SAFE package support coming soon. Use the extracted band TIFFs from Copernicus Browser.";
-                return;
-            }
-            if (format == Sentinel2ImportService.InputFormat.ZipArchive)
-            {
-                _importSourceError = "Please extract the .zip file first, then select the extracted folder.";
-                return;
-            }
-
-            var bands = await Task.Run(() => ImportService.DiscoverBands(_importFolderPath));
-            if (bands.Count == 0)
-            {
-                _importSourceError = "No Sentinel-2 band files found (expected filenames like B02.tif, B04_10m.tif, etc.)";
-                return;
-            }
-
-            _discoveredBands = bands;
-            _availableResolutions = Sentinel2ImportService.GetAvailableResolutions(bands);
-
-            // Auto-select: all bands if same dimensions (e.g. Copernicus Browser resampled),
-            // otherwise only finest resolution
-            var allSameDimensions = bands.Count > 0
-                && bands.All(b => b.Width == bands[0].Width && b.Height == bands[0].Height);
-            if (allSameDimensions)
-            {
-                _importSelectedBands = bands.Select(b => b.BandName)
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            }
-            else
-            {
-                var finest = _availableResolutions.FirstOrDefault();
-                if (finest > 0)
-                {
-                    _importSelectedBands = bands
-                        .Where(b => b.ResolutionMeters == finest)
-                        .Select(b => b.BandName)
-                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-                }
-            }
-
-            _importOutputPath = Path.Combine(Path.GetFullPath(_importFolderPath), "sentinel2_stack.vrt");
+                3 => "60m",
+                4 => "10m",
+                6 => "20m",
+                _ => "mixed"
+            };
+            // Update the Sentinel-2 preset entry to show actual count
+            var idx = _presets.FindIndex(p => p.Name == "Sentinel-2");
+            if (idx >= 0)
+                _presets[idx] = new SensorPreset("Sentinel-2", _bands.Count, resLabel);
         }
-        catch (ArgumentException ex)
+        else if (_selectedPreset == "Sentinel-2")
         {
-            _importSourceError = ex.Message;
-        }
-        catch (Exception ex)
-        {
-            _importSourceError = "Failed to read source directory.";
-            Logger.LogWarning(ex, "Failed to detect Sentinel-2 source at '{Path}'", _importFolderPath);
-        }
-        finally
-        {
-            _isImporting = false;
+            // Restore default Sentinel-2 preset
+            var idx = _presets.FindIndex(p => p.Name == "Sentinel-2");
+            if (idx >= 0)
+                _presets[idx] = new SensorPreset("Sentinel-2", 13, "10m");
         }
     }
-
-    private void ToggleImportBand(string bandName)
-    {
-        if (!_importSelectedBands.Remove(bandName))
-            _importSelectedBands.Add(bandName);
-        _importComplete = false;
-    }
-
-    private void SelectImportByResolution(int resolution)
-    {
-        _importSelectedBands = _discoveredBands
-            .Where(b => b.ResolutionMeters == resolution)
-            .Select(b => b.BandName)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _importComplete = false;
-    }
-
-    private void SelectImportAll()
-    {
-        _importSelectedBands = _discoveredBands.Select(b => b.BandName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _importComplete = false;
-    }
-
-    private void SelectImportNone()
-    {
-        _importSelectedBands.Clear();
-        _importComplete = false;
-    }
-
-    private bool HasMixedImportResolutions()
-    {
-        var selected = _discoveredBands.Where(b => _importSelectedBands.Contains(b.BandName)).ToList();
-        if (selected.Count <= 1) return false;
-        var first = (selected[0].Width, selected[0].Height);
-        return selected.Any(b => b.Width != first.Width || b.Height != first.Height);
-    }
-
-    private async Task RunSentinel2Import()
-    {
-        if (string.IsNullOrWhiteSpace(_importOutputPath))
-        {
-            NotificationService.Notify(NotificationSeverity.Warning, "Missing Output Path",
-                "Please specify an output VRT path.", duration: 4000);
-            return;
-        }
-
-        var selectedBandInfos = _discoveredBands
-            .Where(b => _importSelectedBands.Contains(b.BandName))
-            .ToList();
-        if (selectedBandInfos.Count == 0) return;
-
-        _isImporting = true;
-        _importComplete = false;
-        _lastImportProgress = null;
-        StateHasChanged();
-
-        try
-        {
-            var options = new Sentinel2ImportService.ImportOptions(selectedBandInfos, _importOutputPath);
-            var progress = new Progress<Sentinel2ImportService.ImportProgress>(p =>
-            {
-                _lastImportProgress = p;
-                InvokeAsync(StateHasChanged);
-            });
-
-            var result = await ImportService.BuildVrtAsync(options, progress);
-            _importOutputPath = result;
-            _importComplete = true;
-
-            // Auto-fill input path and load raster info
-            _inputPath = result;
-            await OnInputPathChanged(result);
-
-            // Auto-populate bands from imported selection
-            _bands = selectedBandInfos.Select((b, i) => new BandEntry(
-                b.BandName,
-                i,
-                S2BandDescriptions.GetValueOrDefault(b.BandName, "")
-            )).ToList();
-            _selectedPreset = null;
-
-            NotificationService.Notify(NotificationSeverity.Success, "Import Complete",
-                $"VRT created with {selectedBandInfos.Count} bands. Bands auto-configured.", duration: 5000);
-        }
-        catch (InvalidOperationException ex)
-        {
-            NotificationService.Notify(NotificationSeverity.Error, "Import Failed", ex.Message, duration: 6000);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to build VRT from Sentinel-2 bands");
-            NotificationService.Notify(NotificationSeverity.Error, "Import Failed",
-                "An error occurred during import. Check the logs for details.", duration: 6000);
-        }
-        finally
-        {
-            _isImporting = false;
-        }
-    }
-
-    private double ImportProgressPercent() =>
-        _lastImportProgress is null || _lastImportProgress.TotalBands == 0
-            ? 0
-            : (double)_lastImportProgress.CurrentBand / _lastImportProgress.TotalBands * 100;
-
-    private static string FormatLabel(Sentinel2ImportService.InputFormat format) => format switch
-    {
-        Sentinel2ImportService.InputFormat.BandFolder => "Band Folder",
-        Sentinel2ImportService.InputFormat.SafePackage => ".SAFE Package",
-        Sentinel2ImportService.InputFormat.ZipArchive => "ZIP Archive",
-        _ => "Unknown"
-    };
 
     // --- Load / Save / Reset ---
 
@@ -663,20 +314,17 @@
         _bands = config.Bands?.Select(b => new BandEntry(b.Name, b.SourceIndex, b.Description ?? "")).ToList() ?? [];
         _classes = config.Classes?.Select(c => new ClassEntry(c.Name, c.Code, c.Color ?? "#808080")).ToList() ?? [];
         _selectedPreset = null;
-
-        // Restore input mode and Sentinel-2 folder path
         _inputMode = config.InputMode == "ImportSentinel2" ? InputMode.ImportSentinel2 : InputMode.DirectPath;
         _importFolderPath = config.ImportFolderPath ?? "";
 
         ProjectState.Configuration = config;
 
-        // Restore persisted project state (training, classification, validation)
         await PersistenceService.RestoreProjectStateAsync(_selectedProject);
 
         _rasterInfo = null;
         _rasterError = null;
         if (!string.IsNullOrWhiteSpace(_inputPath))
-            await OnInputPathChanged(_inputPath);
+            await LoadRasterInfo(_inputPath);
 
         var hasData = ProjectState.HasTrainingSession || ProjectState.HasClassificationResult;
         NotificationService.Notify(NotificationSeverity.Success, "Project Loaded",
@@ -746,8 +394,24 @@
                 return;
             }
 
+            // Detect if this is a new/renamed project (compare sanitized names)
+            var previousName = ProjectState.Configuration?.ProjectName;
+            var previousSafeName = previousName is null
+                ? null
+                : string.Join("_", previousName.Trim().Split(Path.GetInvalidFileNameChars()))
+                    .Trim('_').Trim('.');
+            var isNewProject = previousSafeName is null
+                || !safeName.Equals(previousSafeName, StringComparison.OrdinalIgnoreCase);
+
+            // Save FIRST — only reset state after successful save to avoid data loss
             await ProjectLoader.SaveProjectAsync(safeName, config);
             await ProjectLoader.SaveLastProjectAsync(safeName);
+
+            if (isNewProject)
+            {
+                ProjectState.Reset();
+                _inputRasterWizard?.Reset();
+            }
 
             ProjectState.Configuration = config;
             if (_rasterInfo is not null)
@@ -770,28 +434,24 @@
         }
     }
 
-    private void BrowseRaster()
-    {
-        NotificationService.Notify(NotificationSeverity.Info, "Coming Soon",
-            "File browser requires native file dialog integration. Enter the path manually for now.", duration: 4000);
-    }
-
     private void ResetConfiguration()
     {
         _projectName = "";
         _inputPath = "";
         _selectedPreset = "ASTER";
+        _presetAutoDetected = false;
         _inputMode = InputMode.DirectPath;
+        _importFolderPath = "";
+        // Restore default presets
+        _presets =
+        [
+            new("ASTER", 4, "15m"),
+            new("Sentinel-2", 13, "10m"),
+            new("Landsat 8", 11, "30m"),
+            new("Custom", 0, "-")
+        ];
         _rasterInfo = null;
         _rasterError = null;
-        _importFolderPath = "";
-        _importOutputPath = "";
-        _importSourceError = null;
-        _importDetectedFormat = null;
-        _discoveredBands = [];
-        _importSelectedBands = [];
-        _availableResolutions = [];
-        _importComplete = false;
         _bands = [new("VNIR1", 0, "Visible NIR 1"), new("VNIR2", 1, "Visible NIR 2"), new("SWIR1", 2, "Shortwave IR 1"), new("SWIR2", 3, "Shortwave IR 2")];
         _classes =
         [
@@ -800,49 +460,9 @@
             new("Cloud", 6, "#E8ECF4"), new("Shadow", 7, "#6B7280")
         ];
 
+        _inputRasterWizard?.Reset();
         ProjectState.Reset();
         NotificationService.Notify(NotificationSeverity.Info, "Reset",
             "Configuration reset to defaults.", duration: 3000);
     }
-
-    private void ApplyPreset(SensorPreset preset)
-    {
-        _selectedPreset = preset.Name;
-        if (preset.Name == "ASTER")
-        {
-            _bands = [new("VNIR1", 0, "Visible NIR 1"), new("VNIR2", 1, "Visible NIR 2"), new("SWIR1", 2, "Shortwave IR 1"), new("SWIR2", 3, "Shortwave IR 2")];
-        }
-        else if (preset.Name == "Sentinel-2")
-        {
-            _bands =
-            [
-                new("B1", 0, "Coastal Aerosol"), new("B2", 1, "Blue"), new("B3", 2, "Green"), new("B4", 3, "Red"),
-                new("B5", 4, "Red Edge 1"), new("B6", 5, "Red Edge 2"), new("B7", 6, "Red Edge 3"),
-                new("B8", 7, "NIR"), new("B8A", 8, "NIR Narrow"), new("B9", 9, "Water Vapour"),
-                new("B10", 10, "Cirrus"), new("B11", 11, "SWIR 1"), new("B12", 12, "SWIR 2")
-            ];
-        }
-        else if (preset.Name == "Landsat 8")
-        {
-            _bands =
-            [
-                new("B1", 0, "Coastal/Aerosol"), new("B2", 1, "Blue"), new("B3", 2, "Green"), new("B4", 3, "Red"),
-                new("B5", 4, "NIR"), new("B6", 5, "SWIR 1"), new("B7", 6, "SWIR 2"),
-                new("B8", 7, "Panchromatic"), new("B9", 8, "Cirrus"), new("B10", 9, "TIR 1"), new("B11", 10, "TIR 2")
-            ];
-        }
-        else if (preset.Name == "Custom")
-        {
-            _bands = [];
-        }
-    }
-
-    // Fix: reassign list to trigger Radzen DataGrid change detection
-    private void AddBand() => _bands = [.. _bands, new($"Band{_bands.Count + 1}", _bands.Count, "")];
-    private void AddClass() => _classes = [.. _classes, new($"Class{_classes.Count + 1}", _classes.Count + 1, "#808080")];
-
-    private enum InputMode { DirectPath, ImportSentinel2 }
-    private record BandEntry(string Name, int Index, string Description);
-    private record ClassEntry(string Name, int Code, string Color);
-    private record SensorPreset(string Name, int Bands, string Resolution);
 }

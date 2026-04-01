@@ -1,0 +1,41 @@
+<div class="form-section">
+    <div class="form-section-header">
+        <span class="material-icons section-icon" style="color: var(--fs-accent-amber);">palette</span>
+        <span>Land Cover Classes</span>
+        <span class="count-badge mono-text">@Classes.Count classes</span>
+    </div>
+    <RadzenDataGrid Data="@Classes" TItem="ClassEntry" AllowColumnResize="true" Density="Density.Compact">
+        <Columns>
+            <RadzenDataGridColumn TItem="ClassEntry" Property="Name" Title="Class Name">
+                <Template Context="item">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="width: 12px; height: 12px; border-radius: 50%; background: @item.Color; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1);"></span>
+                        @item.Name
+                    </div>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="ClassEntry" Property="Code" Title="Code" Width="80px">
+                <Template Context="item">
+                    <span class="mono-text">@item.Code</span>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="ClassEntry" Property="Color" Title="Color" Width="120px">
+                <Template Context="item">
+                    <span class="mono-text" style="color: @item.Color;">@item.Color</span>
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+    <RadzenButton Text="Add Class" Icon="add" Click="@AddClass" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" class="rz-mt-2" />
+</div>
+
+@code {
+    [Parameter] public List<ClassEntry> Classes { get; set; } = [];
+    [Parameter] public EventCallback<List<ClassEntry>> ClassesChanged { get; set; }
+
+    private async Task AddClass()
+    {
+        Classes = [.. Classes, new($"Class{Classes.Count + 1}", Classes.Count + 1, "#808080")];
+        await ClassesChanged.InvokeAsync(Classes);
+    }
+}
