@@ -485,8 +485,8 @@
         new("ML: Logistic Regression", "query_stats", "var(--fs-accent-red)", "LbfgsMaxEntropy", "Raw bands only — no fuzzy features", "Pure ML"),
         new("ML: MLP Neural Network", "neurology", "var(--fs-accent-amber)", "TorchSharp MLP", "Raw bands only — no fuzzy features", "Pure ML"),
         // Ensemble
-        new("Ensemble (Voting)", "how_to_vote", "var(--fs-accent-emerald)", "Majority Vote", "Combines RF + SDCA + LightGBM by vote", "Ensemble"),
-        new("Ensemble (Stacking)", "stacks", "var(--fs-accent-blue)", "Meta-Learner", "Stacked generalization with OOF predictions", "Ensemble")
+        new("Ensemble (Voting)", "how_to_vote", "var(--fs-accent-emerald)", "Majority Vote", "RF + SDCA + LightGBM majority vote (fuzzy features)", "Ensemble"),
+        new("Ensemble (Stacking)", "stacks", "var(--fs-accent-blue)", "Meta-Learner", "Stacked generalization with OOF predictions (fuzzy features)", "Ensemble")
     ];
 
     private record MethodInfo(string Name, string Icon, string Color, string Formula, string Hint, string Category);
@@ -557,6 +557,7 @@
                     : p.Stage switch
                     {
                         "Building membership functions" => 2,
+                        "Preparing features" => 2,
                         "Training ML model" => 3,
                         "ML model trained" => 3,
                         "Classifying pixels" => 4,

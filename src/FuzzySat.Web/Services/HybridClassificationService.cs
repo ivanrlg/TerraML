@@ -39,7 +39,7 @@ public sealed class HybridClassificationService
         IFeatureExtractor featureExtractor;
         if (isPureML)
         {
-            progress?.Report(new ClassificationProgress("Building membership functions", 0, image.Rows, 0));
+            progress?.Report(new ClassificationProgress("Preparing features", 0, image.Rows, 0));
             featureExtractor = new RawFeatureExtractor(session.BandNames.ToList());
         }
         else
