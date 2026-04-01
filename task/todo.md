@@ -101,6 +101,16 @@
 - [x] 5 pure ML methods in ModelComparison.razor (grouped checkboxes)
 - [x] 6 new tests (301 Core total), 5 micro-commits
 
+### Epic #10 Phase 4 — Homepage Redesign (PR #38, COMPLETADO)
+- [x] Hero: new subtitle (tool-focused), Copernicus Browser CTA
+- [x] Stats bar: tool capabilities (3 modes, 6 ML models, 4 MF types, 13 bands)
+- [x] Workflow: 5 steps matching NavMenu (Explore & Train merged, Compare Models added)
+- [x] Key Capabilities: Fuzzy Engine, Hybrid & Pure ML, Sentinel-2 Ready
+- [x] Remove thesis comparison bar chart
+- [x] Add About section with thesis inspiration text
+- [x] Step badges: "X of 4" → "X of 5" across all pages + added to Validation/ModelComparison
+- [x] CSS cleanup: removed comparison styles, added about styles
+
 ### Epic #5 — Blazor Web (UI scaffolding)
 - [x] Blazor Server project + Radzen 10.0.6
 - [x] MainLayout + NavMenu (sidebar, breadcrumbs)

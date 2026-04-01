@@ -1,6 +1,6 @@
 # EPICs Activos - FuzzySat
 
-> **Ultima actualizacion**: 2026-04-01 (post PR #37 — Issue #36 completado)
+> **Ultima actualizacion**: 2026-04-01 (post PR #38 — Homepage redesign)
 > **Proposito**: Punto central de informacion de EPICs en desarrollo.
 > Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
 
@@ -182,10 +182,10 @@ Auto-save, auto-load, compatibilidad retroactiva con proyectos existentes.
 
 ## Epic #10 - Input UX Redesign & Homepage Overhaul — EN PROGRESO
 
-- **Status**: **~75% completado** (Fases 1-2 mergeadas, Fase 4 en PR, Fase 3 pendiente)
+- **Status**: **~75% completado** (Fases 1-2-4 mergeadas, Fase 3 pendiente)
 - **Priority**: P1
 - **Folder**: [epic-010-input-ux-homepage/](epic-010-input-ux-homepage/)
-- **GitHub PR**: [#32](https://github.com/ivanrlg/FuzzySat/pull/32) (merged)
+- **GitHub PR**: [#32](https://github.com/ivanrlg/FuzzySat/pull/32) (merged), [#38](https://github.com/ivanrlg/FuzzySat/pull/38) (merged)
 - **Creado**: 2026-03-31
 - **Prerequisito**: Epic #8 completado (PR #30)
 
@@ -200,8 +200,10 @@ tesis a una pagina dedicada.
 - Fixes adicionales: spectral chart auto-scaling, thinner selection borders,
   new project state reset, 3 rondas de review bot resueltas
 
-**En PR**:
-4. Homepage profesional: stats de herramienta, workflow actualizado, about section
+**Completado (PR #38)**:
+- Fase 4: Homepage profesional — stats de herramienta (6 ML models, 3 modos, 4 MF types,
+  13 bands), workflow actualizado (5 pasos matching NavMenu), about section con mencion
+  de tesis, link a Copernicus Browser, step badges consistentes en todas las paginas
 
 **Pendiente**:
 3. Soporte imagenes pre-stacked + conversion in-app
