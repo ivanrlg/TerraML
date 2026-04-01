@@ -56,17 +56,23 @@ public static class CrossValidator
             var testSamples = folds[i];
 
             var classifier = classifierFactory(trainSamples);
-
-            var actual = new List<string>();
-            var predicted = new List<string>();
-            foreach (var (label, bandValues) in testSamples)
+            try
             {
-                actual.Add(label);
-                predicted.Add(classifier.ClassifyPixel(bandValues));
-            }
+                var actual = new List<string>();
+                var predicted = new List<string>();
+                foreach (var (label, bandValues) in testSamples)
+                {
+                    actual.Add(label);
+                    predicted.Add(classifier.ClassifyPixel(bandValues));
+                }
 
-            var matrix = new ConfusionMatrix(actual, predicted);
-            foldMetrics.Add(new AccuracyMetrics(matrix));
+                var matrix = new ConfusionMatrix(actual, predicted);
+                foldMetrics.Add(new AccuracyMetrics(matrix));
+            }
+            finally
+            {
+                (classifier as IDisposable)?.Dispose();
+            }
         }
 
         return new CrossValidationResult(foldMetrics);

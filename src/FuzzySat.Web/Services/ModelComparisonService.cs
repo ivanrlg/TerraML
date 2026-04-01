@@ -1,6 +1,5 @@
 using FuzzySat.Core.FuzzyLogic.Classification;
 using FuzzySat.Core.ML;
-using FuzzySat.Core.Raster;
 using FuzzySat.Core.Training;
 
 namespace FuzzySat.Web.Services;

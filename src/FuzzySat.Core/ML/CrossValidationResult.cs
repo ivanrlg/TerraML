@@ -53,6 +53,6 @@ public sealed class CrossValidationResult
 
         var mean = values.Average();
         var sumSqDiff = values.Sum(v => (v - mean) * (v - mean));
-        return Math.Sqrt(sumSqDiff / values.Length);
+        return Math.Sqrt(sumSqDiff / (values.Length - 1));
     }
 }

@@ -7,23 +7,22 @@ namespace FuzzySat.Core.ML;
 /// Stacking ensemble: trains N base classifiers, then a meta-learner
 /// (Logistic Regression) on their out-of-fold predictions.
 /// Prevents data leakage by using k-fold for level-0 predictions.
+/// Implements <see cref="IDisposable"/> to clean up base classifiers that hold native resources.
 /// </summary>
-public sealed class StackingClassifier : IClassifier
+public sealed class StackingClassifier : IClassifier, IDisposable
 {
     private readonly IReadOnlyList<IClassifier> _baseClassifiers;
     private readonly LogisticRegressionClassifier _metaLearner;
-    private readonly FuzzyFeatureExtractor _featureExtractor;
     private readonly string[] _classLabels;
+    private bool _disposed;
 
     private StackingClassifier(
         IReadOnlyList<IClassifier> baseClassifiers,
         LogisticRegressionClassifier metaLearner,
-        FuzzyFeatureExtractor featureExtractor,
         string[] classLabels)
     {
         _baseClassifiers = baseClassifiers;
         _metaLearner = metaLearner;
-        _featureExtractor = featureExtractor;
         _classLabels = classLabels;
     }
 
@@ -32,7 +31,6 @@ public sealed class StackingClassifier : IClassifier
     {
         ArgumentNullException.ThrowIfNull(bandValues);
 
-        // Get predictions from all base classifiers
         var metaFeatures = BuildMetaFeatures(bandValues);
         return _metaLearner.ClassifyPixel(metaFeatures);
     }
@@ -45,7 +43,7 @@ public sealed class StackingClassifier : IClassifier
     /// <param name="baseClassifierFactories">
     /// Factories that train base classifiers from a subset of samples.
     /// </param>
-    /// <param name="numberOfFolds">Number of folds for out-of-fold predictions.</param>
+    /// <param name="numberOfFolds">Number of folds for out-of-fold predictions. Must be at least 2.</param>
     /// <param name="seed">Random seed.</param>
     public static StackingClassifier Train(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> samples,
@@ -60,6 +58,8 @@ public sealed class StackingClassifier : IClassifier
 
         if (baseClassifierFactories.Count == 0)
             throw new ArgumentException("At least one base classifier factory is required.", nameof(baseClassifierFactories));
+        if (numberOfFolds < 2)
+            throw new ArgumentOutOfRangeException(nameof(numberOfFolds), "Must be at least 2.");
         if (samples.Count < numberOfFolds)
             throw new ArgumentException($"Need at least {numberOfFolds} samples for {numberOfFolds}-fold stacking.", nameof(samples));
 
@@ -67,30 +67,12 @@ public sealed class StackingClassifier : IClassifier
         var numBaseClassifiers = baseClassifierFactories.Count;
         var numClasses = classLabels.Length;
 
-        // Create stratified folds
-        var folds = CreateStratifiedFolds(samples, numberOfFolds, seed);
-
         // Generate out-of-fold predictions for meta-learner training
         var oofPredictions = new string[samples.Count][];
         for (var i = 0; i < samples.Count; i++)
             oofPredictions[i] = new string[numBaseClassifiers];
 
-        // Map sample index to fold
-        var sampleToFold = new int[samples.Count];
-        var foldStartIdx = 0;
-        var foldSampleIndices = new List<List<int>>();
-        for (var f = 0; f < numberOfFolds; f++)
-        {
-            var indices = new List<int>();
-            for (var j = 0; j < folds[f].Count; j++)
-                indices.Add(foldStartIdx + j);
-            foldSampleIndices.Add(indices);
-            foldStartIdx += folds[f].Count;
-        }
-
-        // Reindex: we need original sample indices per fold
-        // Since CreateStratifiedFolds shuffles, we need to track which original samples are in each fold
-        // Rebuild: assign fold membership based on stratified split
+        // Assign fold membership via stratified split
         var rng = new Random(seed);
         var byClass = samples
             .Select((s, i) => (s, i))
@@ -122,8 +104,15 @@ public sealed class StackingClassifier : IClassifier
             for (var b = 0; b < numBaseClassifiers; b++)
             {
                 var classifier = baseClassifierFactories[b](trainSamples);
-                foreach (var idx in holdoutIndices)
-                    oofPredictions[idx][b] = classifier.ClassifyPixel(samples[idx].BandValues);
+                try
+                {
+                    foreach (var idx in holdoutIndices)
+                        oofPredictions[idx][b] = classifier.ClassifyPixel(samples[idx].BandValues);
+                }
+                finally
+                {
+                    (classifier as IDisposable)?.Dispose();
+                }
             }
         }
 
@@ -144,7 +133,7 @@ public sealed class StackingClassifier : IClassifier
         foreach (var factory in baseClassifierFactories)
             finalClassifiers.Add(factory(samples));
 
-        return new StackingClassifier(finalClassifiers, metaLearner, featureExtractor, classLabels);
+        return new StackingClassifier(finalClassifiers, metaLearner, classLabels);
     }
 
     private IDictionary<string, double> BuildMetaFeatures(IDictionary<string, double> bandValues)
@@ -191,8 +180,8 @@ public sealed class StackingClassifier : IClassifier
     private static FuzzySat.Core.FuzzyLogic.Rules.FuzzyRuleSet BuildMetaRuleSet(
         string[] classLabels, int numBaseClassifiers, int numClasses)
     {
-        // Create a trivial rule set where membership functions are identity-like
-        // (centered at 0.5 with wide spread to pass through features unchanged)
+        // Trivial rule set with wide Gaussians to pass meta-features through
+        // (membership degree ≈ 1.0 for all 0/1 inputs with sigma=10)
         var metaBandNames = Enumerable.Range(0, numBaseClassifiers * numClasses)
             .Select(i => $"Meta_{i}").ToList();
 
@@ -207,25 +196,14 @@ public sealed class StackingClassifier : IClassifier
         return new FuzzySat.Core.FuzzyLogic.Rules.FuzzyRuleSet(rules);
     }
 
-    private static List<List<(string Label, IDictionary<string, double> BandValues)>> CreateStratifiedFolds(
-        IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> samples,
-        int numberOfFolds, int seed)
+    /// <inheritdoc />
+    public void Dispose()
     {
-        var rng = new Random(seed);
-        var byClass = samples
-            .GroupBy(s => s.Label)
-            .ToDictionary(g => g.Key, g => g.OrderBy(_ => rng.Next()).ToList());
-
-        var folds = new List<List<(string Label, IDictionary<string, double> BandValues)>>();
-        for (var i = 0; i < numberOfFolds; i++)
-            folds.Add([]);
-
-        foreach (var classSamples in byClass.Values)
+        if (!_disposed)
         {
-            for (var i = 0; i < classSamples.Count; i++)
-                folds[i % numberOfFolds].Add(classSamples[i]);
+            foreach (var classifier in _baseClassifiers)
+                (classifier as IDisposable)?.Dispose();
+            _disposed = true;
         }
-
-        return folds;
     }
 }

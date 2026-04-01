@@ -241,7 +241,7 @@ public sealed class NeuralNetClassifier : IClassifier, IDisposable
             batches++;
         }
 
-        return totalLoss / batches;
+        return batches > 0 ? totalLoss / batches : 0.0;
     }
 
     private static (List<int> Train, List<int> Val) StratifiedSplit(
