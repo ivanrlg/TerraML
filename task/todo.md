@@ -85,6 +85,15 @@
 - [x] ModelComparisonService + DI registration + NavMenu link
 - [x] 34 new tests (289 Core total), 23 micro-commits
 
+### Issue #34 — StackingClassifier meta-learner fix (COMPLETADO)
+- [x] IFeatureExtractor interface (decouples classifiers from FuzzyFeatureExtractor)
+- [x] RawFeatureExtractor (pass-through, no membership functions)
+- [x] All classifiers updated: FuzzyFeatureExtractor → IFeatureExtractor params
+- [x] StackingClassifier uses RawFeatureExtractor for meta-learner (fixes degraded features)
+- [x] Removed unused featureExtractor param from StackingClassifier.Train()
+- [x] Removed BuildMetaRuleSet() dead code
+- [x] 6 new tests (295 Core total), 5 micro-commits
+
 ### Epic #5 — Blazor Web (UI scaffolding)
 - [x] Blazor Server project + Radzen 10.0.6
 - [x] MainLayout + NavMenu (sidebar, breadcrumbs)
