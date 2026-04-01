@@ -175,7 +175,9 @@
     private List<Sentinel2ImportService.Sentinel2BandInfo> _discoveredBands = [];
     private HashSet<string> _importSelectedBands = [];
     private IReadOnlyList<int> _availableResolutions = [];
-    private bool _isImporting;
+    private bool _isDetecting;
+    private bool _isBuildingVrt;
+    private bool _isImporting => _isDetecting || _isBuildingVrt;
     private bool _importComplete;
     private Sentinel2ImportService.ImportProgress? _lastImportProgress;
 
@@ -248,7 +250,7 @@
 
         try
         {
-            _isImporting = true;
+            _isDetecting = true;
             StateHasChanged();
 
             var format = await Task.Run(() => ImportService.DetectFormat(_importFolderPath));
@@ -325,7 +327,7 @@
         }
         finally
         {
-            _isImporting = false;
+            _isDetecting = false;
         }
     }
 
@@ -358,7 +360,7 @@
             .ToList();
         if (selectedBandInfos.Count == 0) return;
 
-        _isImporting = true;
+        _isBuildingVrt = true;
         _importComplete = false;
         _lastImportProgress = null;
         await InvokeAsync(StateHasChanged);
@@ -390,11 +392,10 @@
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Auto-build VRT failed");
-            // Don't show error notification for auto-build — user can retry via re-detect
         }
         finally
         {
-            _isImporting = false;
+            _isBuildingVrt = false;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -469,6 +470,8 @@
     /// <summary>Reset internal import state (called by parent on Reset).</summary>
     public void Reset()
     {
+        _isDetecting = false;
+        _isBuildingVrt = false;
         _importFolderPath = "";
         _importOutputPath = "";
         _importSourceError = null;
