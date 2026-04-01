@@ -457,13 +457,24 @@
 
     private record MethodInfo(string Name, string Icon, string Color, string Formula, string Hint);
 
-    private List<StageInfo> _stages =
-    [
-        new(1, "Loading Raster"),
-        new(2, "Computing MFs"),
-        new(3, "Fuzzy Inference"),
-        new(4, "Writing Output")
-    ];
+    private List<StageInfo> _stages = GetStagesForMethod("Pure Fuzzy");
+
+    private static List<StageInfo> GetStagesForMethod(string method) => method == "Pure Fuzzy"
+        ?
+        [
+            new(1, "Loading Raster"),
+            new(2, "Computing MFs"),
+            new(3, "Fuzzy Inference"),
+            new(4, "Writing Output")
+        ]
+        :
+        [
+            new(1, "Loading Raster"),
+            new(2, "Building Features"),
+            new(3, "Training Model"),
+            new(4, "Classifying Pixels"),
+            new(5, "Writing Output")
+        ];
 
     private string GetStageClass(int order)
     {
@@ -482,6 +493,7 @@
         _completed = false;
         _progress = 0;
         _currentStage = 1;
+        _stages = GetStagesForMethod(_classificationMethod);
         _classCounts = null;
         _statusMessage = "Loading raster bands...";
         StateHasChanged();
@@ -498,16 +510,26 @@
             var progress = new Progress<ClassificationProgress>(p =>
             {
                 _progress = p.Percentage;
-                _currentStage = p.Stage switch
-                {
-                    "Building membership functions" => 2,
-                    "Initializing inference engine" => 2,
-                    "Training ML model" or "ML model trained" => 2,
-                    "Classifying pixels" => 3,
-                    "Building result" => 4,
-                    "Complete" => 5,
-                    _ => _currentStage
-                };
+                _currentStage = _classificationMethod == "Pure Fuzzy"
+                    ? p.Stage switch
+                    {
+                        "Building membership functions" => 2,
+                        "Initializing inference engine" => 2,
+                        "Classifying pixels" => 3,
+                        "Building result" => 4,
+                        "Complete" => 5,
+                        _ => _currentStage
+                    }
+                    : p.Stage switch
+                    {
+                        "Building membership functions" => 2,
+                        "Training ML model" => 3,
+                        "ML model trained" => 3,
+                        "Classifying pixels" => 4,
+                        "Building result" => 5,
+                        "Complete" => 6,
+                        _ => _currentStage
+                    };
                 _statusMessage = p.Stage switch
                 {
                     "Classifying pixels" => $"Classifying row {p.CurrentRow}/{p.TotalRows} ({p.Percentage:F0}%)",
