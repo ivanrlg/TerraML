@@ -1,5 +1,4 @@
 using FuzzySat.Core.FuzzyLogic.Classification;
-using FuzzySat.Core.Validation;
 
 namespace FuzzySat.Core.ML;
 
@@ -39,7 +38,6 @@ public sealed class StackingClassifier : IClassifier, IDisposable
     /// Trains a stacking ensemble using out-of-fold predictions for meta-learner training.
     /// </summary>
     /// <param name="samples">All labeled training samples.</param>
-    /// <param name="featureExtractor">Fuzzy feature extractor.</param>
     /// <param name="baseClassifierFactories">
     /// Factories that train base classifiers from a subset of samples.
     /// </param>
@@ -47,13 +45,11 @@ public sealed class StackingClassifier : IClassifier, IDisposable
     /// <param name="seed">Random seed.</param>
     public static StackingClassifier Train(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> samples,
-        FuzzyFeatureExtractor featureExtractor,
         IReadOnlyList<Func<IReadOnlyList<(string Label, IDictionary<string, double> BandValues)>, IClassifier>> baseClassifierFactories,
         int numberOfFolds = 3,
         int seed = 42)
     {
         ArgumentNullException.ThrowIfNull(samples);
-        ArgumentNullException.ThrowIfNull(featureExtractor);
         ArgumentNullException.ThrowIfNull(baseClassifierFactories);
 
         if (baseClassifierFactories.Count == 0)
@@ -119,11 +115,10 @@ public sealed class StackingClassifier : IClassifier, IDisposable
         // Build meta-features from OOF predictions (one-hot encoded)
         var metaFeatures = BuildMetaTrainingData(oofPredictions, samples, classLabels, numBaseClassifiers);
 
-        // Build meta-feature extractor (identity — features are already computed)
-        var metaRuleSet = BuildMetaRuleSet(classLabels, numBaseClassifiers, numClasses);
+        // Raw pass-through extractor — meta-features are already one-hot, no MF needed
         var metaBandNames = Enumerable.Range(0, numBaseClassifiers * numClasses)
             .Select(i => $"Meta_{i}").ToList();
-        var metaExtractor = new FuzzyFeatureExtractor(metaRuleSet, metaBandNames);
+        var metaExtractor = new RawFeatureExtractor(metaBandNames);
 
         // Train meta-learner on meta-features
         var metaLearner = LogisticRegressionClassifier.Train(metaFeatures, metaExtractor);
@@ -175,25 +170,6 @@ public sealed class StackingClassifier : IClassifier, IDisposable
             result.Add((samples[i].Label, features));
         }
         return result;
-    }
-
-    private static FuzzySat.Core.FuzzyLogic.Rules.FuzzyRuleSet BuildMetaRuleSet(
-        string[] classLabels, int numBaseClassifiers, int numClasses)
-    {
-        // Trivial rule set with wide Gaussians to pass meta-features through
-        // (membership degree ≈ 1.0 for all 0/1 inputs with sigma=10)
-        var metaBandNames = Enumerable.Range(0, numBaseClassifiers * numClasses)
-            .Select(i => $"Meta_{i}").ToList();
-
-        var rules = classLabels.Select(label =>
-            new FuzzySat.Core.FuzzyLogic.Rules.FuzzyRule(label,
-                metaBandNames.ToDictionary(
-                    b => b,
-                    b => (FuzzySat.Core.FuzzyLogic.MembershipFunctions.IMembershipFunction)
-                        new FuzzySat.Core.FuzzyLogic.MembershipFunctions.GaussianMembershipFunction(
-                            $"MF_{label}_{b}", 0.5, 10.0)))).ToList();
-
-        return new FuzzySat.Core.FuzzyLogic.Rules.FuzzyRuleSet(rules);
     }
 
     /// <inheritdoc />

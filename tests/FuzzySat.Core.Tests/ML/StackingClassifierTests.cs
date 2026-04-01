@@ -19,7 +19,7 @@ public class StackingClassifierTests
             fold => HybridClassifier.TrainSdca(fold, extractor)
         };
 
-        var stacking = StackingClassifier.Train(samples, extractor, factories, numberOfFolds: 3);
+        var stacking = StackingClassifier.Train(samples, factories, numberOfFolds: 3);
 
         stacking.ClassifyPixel(new Dictionary<string, double> { ["B1"] = 100.0, ["B2"] = 150.0 })
             .Should().Be("Urban");
@@ -33,7 +33,7 @@ public class StackingClassifierTests
         var (extractor, samples) = MakeTrainingData();
         var factories = new List<Func<IReadOnlyList<(string Label, IDictionary<string, double> BandValues)>, IClassifier>>();
 
-        var act = () => StackingClassifier.Train(samples, extractor, factories);
+        var act = () => StackingClassifier.Train(samples, factories);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -48,7 +48,7 @@ public class StackingClassifierTests
             fold => HybridClassifier.TrainRandomForest(fold, extractor, numberOfTrees: 10)
         };
 
-        var stacking = StackingClassifier.Train(samples, extractor, factories, numberOfFolds: 3);
+        var stacking = StackingClassifier.Train(samples, factories, numberOfFolds: 3);
 
         var result = stacking.ClassifyPixel(new Dictionary<string, double> { ["B1"] = 100.0, ["B2"] = 150.0 });
         result.Should().NotBeNullOrEmpty();
