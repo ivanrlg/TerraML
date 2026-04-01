@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per-class producer's/user's accuracy
 - **Hybrid ML Pipeline**: ML.NET integration with FuzzyFeatureExtractor,
   HybridClassifier (Random Forest + SDCA), and KMeansClusterer
-- **CLI**: 4 commands (classify, train, validate, info) with Spectre.Console
+- **CLI**: 5 commands (classify, train, validate, info, visualize) with Spectre.Console
   rich output
 - **Blazor Web App**: 6-page wizard flow with Leaflet maps, band viewer,
   training area drawing, and classification pipeline

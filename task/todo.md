@@ -14,7 +14,7 @@
 > - API: Removido (no necesario, Web cubre todos los workflows)
 > - Web: **98%** (History page completada, Leaflet deferred)
 > - CI/CD: 30% (solo build+test)
-> - Tests totales: **483** (349 Core + 16 CLI + 118 Web)
+> - Tests totales: **484** (349 Core + 16 CLI + 119 Web)
 
 ---
 

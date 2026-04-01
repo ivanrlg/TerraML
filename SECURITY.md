@@ -9,7 +9,7 @@
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in FuzzySat, please report it
-**responsibly** by emailing **ivan@fuzzysat.dev**.
+**responsibly** by emailing **ivanrlg@gmail.com**.
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
