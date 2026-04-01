@@ -8,13 +8,13 @@
 
 ## Estado Actual
 
-> **Proyecto al ~85% global** (subio de 82% tras Epic #2 completado)
-> - Core Engine: **100%** (PCA + 7 ML classifiers + ensemble + comparison + benchmark, 316 Core tests)
-> - CLI: **100%** funcional (5 comandos: info, train, classify, validate, visualize + 16 CLI tests)
-> - API: 0% (template default)
-> - Web: **90%** (9 classification methods, Model Comparison page, ensemble UI)
+> **Proyecto al ~88% global** (subio de 85% tras Epic #10 Phase 3 + API removal)
+> - Core Engine: **100%** (PCA + 7 ML classifiers + ensemble + benchmark, 349 Core tests)
+> - CLI: **100%** (5 comandos + 16 CLI tests)
+> - API: Removido (no necesario, Web cubre todos los workflows)
+> - Web: **92%** (9 classification methods, Model Comparison, pre-stacked import)
 > - CI/CD: 30% (solo build+test)
-> - Tests totales: **438** (316 Core + 16 CLI + 106 Web)
+> - Tests totales: **471** (349 Core + 16 CLI + 106 Web)
 
 ---
 
@@ -111,6 +111,15 @@
 - [x] Add About section with thesis inspiration text
 - [x] Step badges: "X of 4" → "X of 5" across all pages + added to Validation/ModelComparison
 - [x] CSS cleanup: removed comparison styles, added about styles
+
+### Epic #10 Phase 3 — Pre-stacked Image Support (PR #41, COMPLETADO)
+- [x] BandInfo record + RasterInfo.Bands per-band metadata introspection
+- [x] SensorDetector (Sentinel-2, Landsat, NAIP) + band name lookup
+- [x] GdalRasterUtils (CreateBandSubsetVrt + TranslateFormat + path validation)
+- [x] Pre-stacked mode in InputRasterWizard (3rd tab, band grid, sensor badge)
+- [x] Band subsetting VRT + format conversion (JP2→TIF)
+- [x] FuzzySat.Api removed (unused template)
+- [x] 24 new tests (SensorDetector + BandInfo)
 
 ### Epic #5 — Blazor Web (UI scaffolding)
 - [x] Blazor Server project + Radzen 10.0.6
@@ -230,12 +239,8 @@
 - [ ] leaflet-interop.js + LeafletMap.razor
 - [ ] History page
 
-### Fase 4 — API (P2)
-- [ ] Eliminar weather forecast template
-- [ ] Controllers: Info, Train, Classify, Validate, Export
-- [ ] DTOs + Swagger/OpenAPI
-- [ ] Error handling middleware
-- [ ] Tests API
+### Fase 4 — API (REMOVIDO)
+- [x] FuzzySat.Api project eliminado (PR #41) — Web UI cubre todos los workflows
 
 ### Fase 5 — CI/CD (P2)
 - [ ] Code coverage threshold en CI

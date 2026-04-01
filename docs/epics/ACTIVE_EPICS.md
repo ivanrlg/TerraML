@@ -1,6 +1,6 @@
 # EPICs Activos - FuzzySat
 
-> **Ultima actualizacion**: 2026-04-01 (post PR #40 — VisualizeCommand + CLI Tests)
+> **Ultima actualizacion**: 2026-04-01 (post PR #41 — Pre-stacked support + API removal)
 > **Proposito**: Punto central de informacion de EPICs en desarrollo.
 > Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
 
@@ -10,10 +10,8 @@
 
 | Estado | Cantidad | EPICs |
 |--------|----------|-------|
-| Completado | 7 | #1 Core Engine MVP, #2 I/O & CLI, #3 Advanced Features, #4 ML Hybrid, #7 Classified Output, #8 Project Persistence, #9 Advanced ML Classifiers |
-| Casi Completado | 0 | — |
-| Parcial | 1 | #5 Blazor Web (~85%) |
-| En Progreso | 1 | #10 Input UX Redesign & Homepage (~75%) |
+| Completado | 8 | #1 Core, #2 CLI, #3 Advanced, #4 ML Hybrid, #7 Classified Output, #8 Persistence, #9 ML Advanced, #10 Input UX |
+| Parcial | 1 | #5 Blazor Web (~92%) |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 
 ---
@@ -183,33 +181,21 @@ Auto-save, auto-load, compatibilidad retroactiva con proyectos existentes.
 
 ---
 
-## Epic #10 - Input UX Redesign & Homepage Overhaul — EN PROGRESO
+## Epic #10 - Input UX Redesign & Homepage Overhaul — COMPLETADO
 
-- **Status**: **~75% completado** (Fases 1-2-4 mergeadas, Fase 3 pendiente)
+- **Status**: **COMPLETADO** (Fases 1-4 mergeadas)
 - **Priority**: P1
 - **Folder**: [epic-010-input-ux-homepage/](epic-010-input-ux-homepage/)
-- **GitHub PR**: [#32](https://github.com/ivanrlg/FuzzySat/pull/32) (merged), [#38](https://github.com/ivanrlg/FuzzySat/pull/38) (merged)
+- **GitHub PR**: [#32](https://github.com/ivanrlg/FuzzySat/pull/32), [#38](https://github.com/ivanrlg/FuzzySat/pull/38), [#41](https://github.com/ivanrlg/FuzzySat/pull/41) (all merged)
 - **Creado**: 2026-03-31
-- **Prerequisito**: Epic #8 completado (PR #30)
 
-**Objetivo**: Redisenar el flujo de importacion raster (punto mas debil del UX actual) y
-reorganizar el homepage para enfocarse en el uso de la herramienta, moviendo datos de la
-tesis a una pagina dedicada.
-
-**Completado (PR #32)**:
-- Fase 1: Componentizar ProjectSetup.razor (848→280 lineas, 5 componentes modulares)
-- Fase 2: Smart Import Wizard (auto-detect Sentinel-2, auto-build VRT, preset dinamico,
-  band names B01 normalizados, CancellationToken, IDisposable)
-- Fixes adicionales: spectral chart auto-scaling, thinner selection borders,
-  new project state reset, 3 rondas de review bot resueltas
-
-**Completado (PR #38)**:
-- Fase 4: Homepage profesional — stats de herramienta (6 ML models, 3 modos, 4 MF types,
-  13 bands), workflow actualizado (5 pasos matching NavMenu), about section con mencion
-  de tesis, link a Copernicus Browser, step badges consistentes en todas las paginas
-
-**Pendiente**:
-3. Soporte imagenes pre-stacked + conversion in-app
+**Completado**:
+- Fase 1: Componentizar ProjectSetup.razor (848→280 lineas, 5 componentes)
+- Fase 2: Smart Import Wizard (Sentinel-2 auto-detect, VRT, presets)
+- Fase 3: Pre-stacked multiband support (BandInfo introspection, SensorDetector,
+  GdalRasterUtils VRT subset + format conversion, 3-mode InputRasterWizard)
+- Fase 4: Homepage profesional (tool-focused stats, 5-step workflow, about section)
+- API project removed (unused weatherforecast template)
 
 **Documentos**:
 - [00-overview.md](epic-010-input-ux-homepage/00-overview.md) — Objetivo y alcance
