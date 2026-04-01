@@ -120,7 +120,7 @@
                     {
                         <div class="import-success" style="margin-top: 0.5rem;">
                             <span class="material-icons" style="color: var(--fs-accent-emerald);">check_circle</span>
-                            <span>All @_preStackedInfo.BandCount bands selected — using original file</span>
+                            <span>All @_preStackedInfo.BandCount bands selected</span>
                         </div>
                     }
                 </div>
@@ -625,6 +625,7 @@
     private string? _preStackedSensor;
     private IReadOnlyList<string>? _preStackedSensorBandNames;
     private HashSet<int> _preStackedSelectedBands = [];
+    private IReadOnlyList<int>? _preStackedOriginalIndices; // maps VRT band → original source band
     private bool _preStackedLoading;
     private bool _preStackedBuildingVrt;
     private bool _preStackedConverting;
@@ -636,6 +637,7 @@
         _preStackedSensor = null;
         _preStackedSensorBandNames = null;
         _preStackedSelectedBands = [];
+        _preStackedOriginalIndices = null;
 
         if (string.IsNullOrWhiteSpace(_preStackedPath))
         {
@@ -711,10 +713,14 @@
         if (_preStackedInfo is null) return;
         var bands = _preStackedSelectedBands.Order().Select((idx, i) =>
         {
-            var name = _preStackedSensorBandNames is not null && idx - 1 < _preStackedSensorBandNames.Count
-                ? _preStackedSensorBandNames[idx - 1]
-                : $"Band{idx}";
-            return new BandEntry(name, i, _preStackedInfo.Bands.FirstOrDefault(b => b.Index == idx)?.Description ?? "");
+            // If we have an original index mapping (post-subset VRT), use it for naming
+            var originalIdx = _preStackedOriginalIndices is not null && i < _preStackedOriginalIndices.Count
+                ? _preStackedOriginalIndices[i]
+                : idx;
+            var name = _preStackedSensorBandNames is not null && originalIdx - 1 < _preStackedSensorBandNames.Count
+                ? _preStackedSensorBandNames[originalIdx - 1]
+                : $"Band{originalIdx}";
+            return new BandEntry(name, idx - 1, _preStackedInfo.Bands.FirstOrDefault(b => b.Index == idx)?.Description ?? "");
         }).ToList();
         await OnBandsImported.InvokeAsync(bands);
     }
@@ -737,7 +743,8 @@
             var info = await Task.Run(() => RasterService.GetInfo(vrtPath));
             await RasterInfoChanged.InvokeAsync(info);
 
-            // Update local state to reflect the active VRT
+            // Update local state to reflect the active VRT, preserving original index mapping
+            _preStackedOriginalIndices = indices;
             _preStackedPath = vrtPath;
             _preStackedInfo = info;
             _preStackedSelectedBands = Enumerable.Range(1, indices.Count).ToHashSet();
@@ -818,6 +825,7 @@
         _preStackedSensor = null;
         _preStackedSensorBandNames = null;
         _preStackedSelectedBands = [];
+        _preStackedOriginalIndices = null;
         _preStackedLoading = false;
         _preStackedBuildingVrt = false;
         _preStackedConverting = false;

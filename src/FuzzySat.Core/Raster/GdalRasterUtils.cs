@@ -77,8 +77,8 @@ public static class GdalRasterUtils
                 new XAttribute("band", i + 1),
                 new XElement("SimpleSource",
                     new XElement("SourceFilename",
-                        new XAttribute("relativeToVRT", "0"),
-                        Path.GetFullPath(sourcePath)),
+                        new XAttribute("relativeToVRT", "1"),
+                        Path.GetFileName(sourcePath)),
                     new XElement("SourceBand", srcBandIdx),
                     new XElement("SrcRect",
                         new XAttribute("xOff", 0),
@@ -142,10 +142,12 @@ public static class GdalRasterUtils
     /// </summary>
     private static void ValidateOutputPath(string sourcePath, string outputPath)
     {
-        var sourceDir = Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? "";
-        var outputFull = Path.GetFullPath(outputPath);
+        var sourceDir = (Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? "")
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var outputDir = (Path.GetDirectoryName(Path.GetFullPath(outputPath)) ?? "")
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-        if (!outputFull.StartsWith(sourceDir, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(sourceDir, outputDir, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException(
                 "Output path must reside in the same directory as the source file.", nameof(outputPath));
     }
