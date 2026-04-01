@@ -392,19 +392,24 @@
                 return;
             }
 
-            // If project name changed, clear training/classification from previous project
+            // Detect if this is a new/renamed project (compare sanitized names)
             var previousName = ProjectState.Configuration?.ProjectName;
-            var isNewProject = previousName is null
-                || !safeName.Equals(previousName, StringComparison.OrdinalIgnoreCase);
+            var previousSafeName = previousName is null
+                ? null
+                : string.Join("_", previousName.Trim().Split(Path.GetInvalidFileNameChars()))
+                    .Trim('_').Trim('.');
+            var isNewProject = previousSafeName is null
+                || !safeName.Equals(previousSafeName, StringComparison.OrdinalIgnoreCase);
+
+            // Save FIRST — only reset state after successful save to avoid data loss
+            await ProjectLoader.SaveProjectAsync(safeName, config);
+            await ProjectLoader.SaveLastProjectAsync(safeName);
 
             if (isNewProject)
             {
                 ProjectState.Reset();
                 _inputRasterWizard?.Reset();
             }
-
-            await ProjectLoader.SaveProjectAsync(safeName, config);
-            await ProjectLoader.SaveLastProjectAsync(safeName);
 
             ProjectState.Configuration = config;
             if (_rasterInfo is not null)
