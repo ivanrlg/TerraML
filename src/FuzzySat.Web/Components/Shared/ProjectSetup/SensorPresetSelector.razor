@@ -39,11 +39,25 @@
         SelectedPreset = preset.Name;
         await SelectedPresetChanged.InvokeAsync(preset.Name);
 
-        var bands = BuildBandsForPreset(preset.Name);
+        var bands = BuildBandsForPreset(preset);
         await OnPresetApplied.InvokeAsync(bands);
     }
 
-    private static List<BandEntry> BuildBandsForPreset(string presetName) => presetName switch
+    /// <summary>
+    /// Build band list for a preset. For Sentinel-2, respects the preset's band count
+    /// (which may have been dynamically updated to match the import selection).
+    /// </summary>
+    private static List<BandEntry> BuildBandsForPreset(SensorPreset preset)
+    {
+        var allBands = GetFullBandList(preset.Name);
+        // If preset has a specific band count (e.g., dynamic "4 bands @ 10m"),
+        // return only that many bands from the full list
+        if (preset.Bands > 0 && preset.Bands < allBands.Count)
+            return allBands.Take(preset.Bands).ToList();
+        return allBands;
+    }
+
+    private static List<BandEntry> GetFullBandList(string presetName) => presetName switch
     {
         "ASTER" =>
         [
