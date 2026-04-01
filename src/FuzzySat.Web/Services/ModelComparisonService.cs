@@ -32,9 +32,12 @@ public sealed class ModelComparisonService
 
         // Build rule set in Web layer (handles MF type selection)
         var hasHybrid = selectedMethods.Any(m => !m.StartsWith("ML: ", StringComparison.Ordinal));
-        var ruleSet = hasHybrid
-            ? ClassificationService.BuildRuleSet(session, membershipFunctionType)
-            : null;
+        FuzzySat.Core.FuzzyLogic.Rules.FuzzyRuleSet? ruleSet = null;
+        if (hasHybrid)
+        {
+            progress?.Report("Building rule set...");
+            ruleSet = ClassificationService.BuildRuleSet(session, membershipFunctionType);
+        }
 
         var samples = trainingSamples
             .Select(s => (s.ClassName, (IDictionary<string, double>)new Dictionary<string, double>(s.BandValues)))

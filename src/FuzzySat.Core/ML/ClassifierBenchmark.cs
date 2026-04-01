@@ -9,6 +9,11 @@ namespace FuzzySat.Core.ML;
 /// </summary>
 public static class ClassifierBenchmark
 {
+    private static readonly HashSet<string> SupportedMethods = new(StringComparer.Ordinal)
+    {
+        "Random Forest", "SDCA", "LightGBM", "SVM", "Logistic Regression",
+        "ML: Random Forest", "ML: SDCA", "ML: LightGBM", "ML: SVM", "ML: Logistic Regression"
+    };
     /// <summary>
     /// Runs a cross-validated benchmark comparing the specified classification methods.
     /// </summary>
@@ -39,6 +44,14 @@ public static class ClassifierBenchmark
         if (methodNames.Count == 0)
             throw new ArgumentException("At least one method name is required.", nameof(methodNames));
 
+        // Validate all method names before building extractors — ensures unknown methods
+        // always raise the correct error rather than being misclassified as hybrid/pure-ML.
+        foreach (var name in methodNames)
+        {
+            if (!SupportedMethods.Contains(name))
+                throw new ArgumentException($"Unknown classification method: '{name}'.", nameof(methodNames));
+        }
+
         progress?.Report("Building features...");
 
         var hasHybrid = methodNames.Any(m => !m.StartsWith("ML: ", StringComparison.Ordinal));
@@ -50,12 +63,12 @@ public static class ClassifierBenchmark
             if (ruleSet is null)
                 throw new ArgumentException(
                     "A FuzzyRuleSet is required when hybrid methods are selected.", nameof(ruleSet));
-            fuzzyExtractor = new FuzzyFeatureExtractor(ruleSet, bandNames.ToList());
+            fuzzyExtractor = new FuzzyFeatureExtractor(ruleSet, bandNames);
         }
 
         IFeatureExtractor? rawExtractor = null;
         if (hasPureML)
-            rawExtractor = new RawFeatureExtractor(bandNames.ToList());
+            rawExtractor = new RawFeatureExtractor(bandNames);
 
         var factories = new List<(string Name,
             Func<IReadOnlyList<(string Label, IDictionary<string, double> BandValues)>, IClassifier> Factory)>();

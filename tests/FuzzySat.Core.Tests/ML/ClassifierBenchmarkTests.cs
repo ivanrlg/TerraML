@@ -108,7 +108,7 @@ public class ClassifierBenchmarkTests
     }
 
     [Fact]
-    public void RunBenchmark_Cancellation_ThrowsOperationCancelled()
+    public void RunBenchmark_Cancellation_ThrowsOperationCanceledException()
     {
         var (ruleSet, samples) = MakeTrainingData();
         using var cts = new CancellationTokenSource();
