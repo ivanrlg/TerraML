@@ -450,7 +450,9 @@
         new("LightGBM", "bolt", "var(--fs-accent-violet)", "Gradient Boosting", "LightGBM gradient boosting with fuzzy features"),
         new("SVM", "linear_scale", "var(--fs-accent-cyan)", "LinearSvm/OVA", "Support Vector Machine with fuzzy features"),
         new("Logistic Regression", "query_stats", "var(--fs-accent-red)", "LbfgsMaxEntropy", "Logistic regression producing calibrated probabilities"),
-        new("MLP Neural Network", "neurology", "var(--fs-accent-amber)", "TorchSharp MLP", "3-layer neural network with early stopping")
+        new("MLP Neural Network", "neurology", "var(--fs-accent-amber)", "TorchSharp MLP", "3-layer neural network with early stopping"),
+        new("Ensemble (Voting)", "how_to_vote", "var(--fs-accent-emerald)", "Majority Vote", "Combines RF + SDCA + LightGBM by majority vote"),
+        new("Ensemble (Stacking)", "stacks", "var(--fs-accent-blue)", "Meta-Learner", "Stacked generalization with out-of-fold predictions")
     ];
 
     private record MethodInfo(string Name, string Icon, string Color, string Formula, string Hint);

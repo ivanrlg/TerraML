@@ -105,6 +105,31 @@ public sealed class HybridClassificationService
         "SVM" => SvmClassifier.Train(samples, extractor),
         "Logistic Regression" => LogisticRegressionClassifier.Train(samples, extractor),
         "MLP Neural Network" => NeuralNetClassifier.Train(samples, extractor),
+        "Ensemble (Voting)" => TrainVotingEnsemble(samples, extractor),
+        "Ensemble (Stacking)" => StackingClassifier.Train(samples, extractor,
+            GetDefaultBaseFactories(extractor), numberOfFolds: 3),
         _ => throw new ArgumentException($"Unknown hybrid method: '{method}'.")
     };
+
+    private static EnsembleClassifier TrainVotingEnsemble(
+        List<(string, IDictionary<string, double>)> samples,
+        FuzzyFeatureExtractor extractor)
+    {
+        var classifiers = new FuzzySat.Core.FuzzyLogic.Classification.IClassifier[]
+        {
+            HybridClassifier.TrainRandomForest(samples, extractor),
+            HybridClassifier.TrainSdca(samples, extractor),
+            LightGbmClassifier.Train(samples, extractor)
+        };
+        return EnsembleClassifier.MajorityVote(classifiers);
+    }
+
+    private static List<Func<IReadOnlyList<(string Label, IDictionary<string, double> BandValues)>,
+        FuzzySat.Core.FuzzyLogic.Classification.IClassifier>> GetDefaultBaseFactories(
+        FuzzyFeatureExtractor extractor) =>
+    [
+        fold => HybridClassifier.TrainRandomForest(fold, extractor, numberOfTrees: 50),
+        fold => HybridClassifier.TrainSdca(fold, extractor),
+        fold => LightGbmClassifier.Train(fold, extractor)
+    ];
 }
