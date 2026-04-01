@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FuzzySat.Core.Configuration;
+using FuzzySat.Core.Persistence;
 using Microsoft.Extensions.Options;
 
 namespace FuzzySat.Web.Services;
@@ -117,6 +118,132 @@ public sealed class ProjectLoaderService
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _logger.LogWarning(ex, "Failed to read last project marker");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Returns lightweight summaries for all persisted projects.
+    /// Reads each project's config JSON and checks for artifact files to determine status.
+    /// Skips corrupt or unreadable projects.
+    /// </summary>
+    public IReadOnlyList<ProjectSummary> GetProjectSummaries()
+    {
+        var names = ListProjects();
+        var summaries = new List<ProjectSummary>(names.Count);
+
+        foreach (var name in names)
+        {
+            try
+            {
+                var config = LoadProject(name);
+                if (config is null) continue;
+
+                var dataDir = Path.Combine(_projectDir, name);
+                var status = DetermineStatus(dataDir);
+                var lastModified = GetLastModified(name, dataDir);
+
+                ClassificationOptionsDto? classOpts = null;
+                ValidationResultDto? validation = null;
+
+                if (status >= ProjectStatus.Classified)
+                    classOpts = ReadJson<ClassificationOptionsDto>(Path.Combine(dataDir, "classification-options.json"));
+
+                if (status >= ProjectStatus.Validated)
+                    validation = ReadJson<ValidationResultDto>(Path.Combine(dataDir, "validation-result.json"));
+
+                summaries.Add(new ProjectSummary
+                {
+                    Name = config.ProjectName,
+                    BandCount = config.Bands.Count,
+                    ClassCount = config.Classes.Count,
+                    ClassificationMethod = classOpts?.ClassificationMethod,
+                    OverallAccuracy = validation?.OverallAccuracy,
+                    KappaCoefficient = validation?.KappaCoefficient,
+                    LastModified = lastModified,
+                    Status = status
+                });
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+            {
+                _logger.LogWarning(ex, "Skipping project '{Name}' due to read error", name);
+            }
+        }
+
+        return summaries;
+    }
+
+    /// <summary>
+    /// Deletes a project configuration file and its data directory.
+    /// Throws ArgumentException if name attempts path traversal.
+    /// </summary>
+    public void DeleteProject(string name)
+    {
+        var configPath = ResolveSafePath(name);
+
+        if (File.Exists(configPath))
+            File.Delete(configPath);
+
+        var dataDir = Path.Combine(_projectDir, name);
+        var resolvedDataDir = Path.GetFullPath(dataDir);
+        var relative = Path.GetRelativePath(_projectDir, resolvedDataDir);
+        if (relative.StartsWith("..", StringComparison.Ordinal))
+            throw new ArgumentException("Invalid project name: path traversal detected.", nameof(name));
+
+        if (Directory.Exists(resolvedDataDir))
+            Directory.Delete(resolvedDataDir, true);
+    }
+
+    private static ProjectStatus DetermineStatus(string dataDir)
+    {
+        if (!Directory.Exists(dataDir))
+            return ProjectStatus.Configured;
+
+        if (File.Exists(Path.Combine(dataDir, "validation-result.json")))
+            return ProjectStatus.Validated;
+
+        if (File.Exists(Path.Combine(dataDir, "classification-meta.json")))
+            return ProjectStatus.Classified;
+
+        if (File.Exists(Path.Combine(dataDir, "training-session.json")))
+            return ProjectStatus.Trained;
+
+        return ProjectStatus.Configured;
+    }
+
+    private DateTime GetLastModified(string name, string dataDir)
+    {
+        var configPath = Path.Combine(_projectDir, $"{name}.json");
+        var configTime = File.Exists(configPath) ? File.GetLastWriteTimeUtc(configPath) : DateTime.MinValue;
+
+        if (!Directory.Exists(dataDir))
+            return configTime;
+
+        try
+        {
+            var artifactTime = Directory.EnumerateFiles(dataDir)
+                .Select(f => File.GetLastWriteTimeUtc(f))
+                .DefaultIfEmpty(DateTime.MinValue)
+                .Max();
+
+            return artifactTime > configTime ? artifactTime : configTime;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return configTime;
+        }
+    }
+
+    private static T? ReadJson<T>(string path) where T : class
+    {
+        if (!File.Exists(path)) return null;
+        try
+        {
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<T>(json, JsonOptions);
+        }
+        catch (Exception ex) when (ex is JsonException or IOException)
+        {
             return null;
         }
     }
