@@ -48,13 +48,7 @@ public sealed class HybridClassificationService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var classifier = options.ClassificationMethod switch
-        {
-            "Random Forest" => HybridClassifier.TrainRandomForest(mlSamples, featureExtractor),
-            "SDCA" => HybridClassifier.TrainSdca(mlSamples, featureExtractor),
-            _ => throw new ArgumentException(
-                $"Unknown hybrid method: '{options.ClassificationMethod}'.", nameof(options))
-        };
+        var classifier = TrainClassifier(options.ClassificationMethod, mlSamples, featureExtractor);
 
         progress?.Report(new ClassificationProgress("ML model trained", 0, image.Rows, 15));
 
@@ -96,4 +90,18 @@ public sealed class HybridClassificationService
 
         return result;
     }
+
+    /// <summary>
+    /// Trains the appropriate ML classifier based on the method name.
+    /// </summary>
+    private static FuzzySat.Core.FuzzyLogic.Classification.IClassifier TrainClassifier(
+        string method,
+        List<(string, IDictionary<string, double>)> samples,
+        FuzzyFeatureExtractor extractor) => method switch
+    {
+        "Random Forest" => HybridClassifier.TrainRandomForest(samples, extractor),
+        "SDCA" => HybridClassifier.TrainSdca(samples, extractor),
+        "LightGBM" => LightGbmClassifier.Train(samples, extractor),
+        _ => throw new ArgumentException($"Unknown hybrid method: '{method}'.")
+    };
 }
