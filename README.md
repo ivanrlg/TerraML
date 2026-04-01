@@ -1,19 +1,17 @@
 <div align="center">
 
-# FuzzySat
+# Terra ML
 
-**Satellite image classification powered by fuzzy logic inference**
+**Hybrid fuzzy logic + machine learning for satellite image classification**
 
-A modern C#/.NET 10 reimplementation of a 2008 thesis that outperformed
-Maximum Likelihood, Decision Tree, and Minimum Distance classifiers.
+A C#/.NET 10 platform combining fuzzy inference with modern ML classifiers
+for multispectral satellite imagery.
 
 
 <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10" /></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License" /></a>
 <img src="https://img.shields.io/badge/Tests-484%20passing-brightgreen" alt="484 Tests" />
 <img src="https://img.shields.io/badge/C%23-13-239120?logo=csharp" alt="C# 13" />
-<img src="https://img.shields.io/badge/OA-81.87%25-blue" alt="Overall Accuracy" />
-<img src="https://img.shields.io/badge/%CE%BA-0.7637-blue" alt="Kappa" />
 
 </div>
 
@@ -23,68 +21,20 @@ Maximum Likelihood, Decision Tree, and Minimum Distance classifiers.
 
 | | |
 |---|---|
-| **81.87% Overall Accuracy** | Outperformed Maximum Likelihood by 7.6% on ASTER imagery |
+| **3 Classification Modes** | Fuzzy logic, hybrid (fuzzy+ML), and pure ML |
 | **4 Membership Functions** | Gaussian, Triangular, Trapezoidal, Generalized Bell |
 | **Hybrid ML Pipeline** | ML.NET Random Forest + SDCA using fuzzy features |
 | **GDAL Raster I/O** | Read GeoTIFF with geospatial metadata; write classified rasters |
-| **484 Unit Tests** | Core + CLI + Web — mathematical correctness validated against thesis data |
+| **484 Unit Tests** | 349 Core + 119 Web + 16 CLI -- mathematical correctness validated |
 | **Explainable AI** | Every membership degree and firing strength is inspectable |
-
----
-
-## Listen: The FuzzySat Story (NotebookLM Podcasts)
-
-> The full story of this project in podcast-style narratives generated with Google NotebookLM.
-
-### English: The Resurrection
-
-https://github.com/user-attachments/assets/d0927a55-e265-4e03-ad3b-e22915ba88a4
-
-### Espanol: La Resurreccion
-
-https://github.com/user-attachments/assets/e0f93bfc-7f02-4af7-876e-2a6649c89ad2
-
-From a 2008 thesis archived in a Venezuelan university to a modern open-source tool --
-these episodes cover the fuzzy logic engine, why pure fuzzy isn't enough in 2026,
-how the hybrid ML.NET pipeline uses membership degrees as enriched features,
-and the jump from ASTER (4 bands, 15m) to Sentinel-2 (13 bands, 10m).
-
-*Scripts: [English](docs/SCRIPT_NOTEBOOKLM_EN.md) | [Espanol](docs/SCRIPT_NOTEBOOKLM.md)*
-
----
-
-## About & Motivation
-
-In 2008, a thesis at Universidad de Los Andes (Merida, Venezuela) proposed a fuzzy logic
-classifier for satellite imagery. It achieved **81.87% Overall Accuracy**, outperforming
-Maximum Likelihood, Decision Tree, and Minimum Distance classifiers on ASTER multispectral
-data. But the implementation required MATLAB and IDRISI -- proprietary software costing
-thousands of dollars. The thesis was archived. 105 pages of algorithms that nobody could
-replicate without paying for licenses.
-
-**18 years later**, everything that was expensive is now free:
-
-| | 2008 | 2026 |
-|:---|:---|:---|
-| **Imagery** | ASTER (4 bands, 15m, restricted access) | Sentinel-2 (13 bands, 10m, free via [Copernicus](https://dataspace.copernicus.eu/)) |
-| **Software** | MATLAB + IDRISI (proprietary) | C# / .NET 10 + GDAL (open source) |
-| **ML** | Not integrated | ML.NET Random Forest + SDCA (free) |
-| **Sharing** | Not possible | GitHub, MIT license, anyone can use it |
-
-FuzzySat is a modern reimplementation of that thesis -- open, honest, and extensible.
-The fuzzy logic engine is faithful to the original algorithm, and the hybrid ML pipeline
-extends it with modern machine learning for improved accuracy.
 
 ---
 
 ## Table of Contents
 
-- [Listen: FuzzySat — La Resurreccion](#listen-fuzzysat--la-resurreccion)
-- [About & Motivation](#about--motivation)
 - [Mathematical Foundation](#mathematical-foundation)
 - [Architecture](#architecture)
 - [Classification Pipeline](#classification-pipeline)
-- [Benchmark Results](#benchmark-results)
 - [Limitations & Why Hybrid](#limitations--why-hybrid)
 - [Quick Start](#quick-start)
 - [Membership Functions](#membership-functions)
@@ -95,7 +45,8 @@ extends it with modern machine learning for improved accuracy.
 - [Tech Stack](#tech-stack)
 - [API Quick Reference](#api-quick-reference)
 - [Project Structure](#project-structure)
-- [Academic Citation](#academic-citation)
+- [Supported Satellite Platforms](#supported-satellite-platforms)
+- [Origin](#origin)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -261,28 +212,6 @@ flowchart LR
 
 ---
 
-## Benchmark Results
-
-### Original Thesis (2008) -- ASTER Imagery, Merida, Venezuela
-
-| Classifier | Overall Accuracy | Kappa (kappa) | Improvement |
-|:---|:---:|:---:|:---:|
-| **Fuzzy Logic (FuzzySat)** | **81.87%** | **0.7637** | -- |
-| Maximum Likelihood | 74.27% | 0.6650 | +7.60% |
-| Decision Tree (CART) | 63.74% | 0.5312 | +18.13% |
-| Minimum Distance | 56.14% | 0.4233 | +25.73% |
-
-> The fuzzy classifier outperformed all traditional methods on 7 land cover classes
-> using 4 ASTER spectral bands (VNIR1, VNIR2, SWIR1, SWIR2).
-
-**Context**: These results were state-of-the-art for the methods compared in 2008.
-Modern approaches like Convolutional Neural Networks (CNN) and Support Vector Machines (SVM)
-can achieve 90-95% on similar tasks. FuzzySat addresses this gap through its
-[hybrid ML pipeline](#hybrid-ml-pipeline), which uses fuzzy membership degrees as enriched
-features for ML.NET classifiers.
-
----
-
 ## Limitations & Why Hybrid
 
 ### The Limitation of Pure Fuzzy Logic
@@ -402,11 +331,11 @@ Console.WriteLine($"OA: {cm.OverallAccuracy:P2}, Kappa: {cm.KappaCoefficient:F4}
 
 ## Membership Functions
 
-FuzzySat implements four membership function types:
+Terra ML implements four membership function types:
 
 | Type | Formula | Shape | Use Case |
 |:---|:---|:---:|:---|
-| **Gaussian** | $\mu(x) = e^{-\frac{1}{2}\left(\frac{x-c}{\sigma}\right)^2}$ | Bell curve | Default (thesis algorithm) |
+| **Gaussian** | $\mu(x) = e^{-\frac{1}{2}\left(\frac{x-c}{\sigma}\right)^2}$ | Bell curve | Default |
 | **Triangular** | Linear rise/fall, peak at center | Triangle | Sharp class boundaries |
 | **Trapezoidal** | Linear slopes with flat plateau | Trapezoid | Wide acceptance ranges |
 | **Generalized Bell** | $\mu(x) = \frac{1}{1+\left\|\frac{x-c}{w}\right\|^{2s}}$ | Adjustable bell | Tunable steepness |
@@ -436,7 +365,7 @@ var ndvi = SpectralIndexCalculator.Ndvi(nirBand, redBand);
 
 ## Hybrid ML Pipeline
 
-FuzzySat bridges fuzzy logic and machine learning by using membership degrees as ML features:
+Terra ML bridges fuzzy logic and machine learning by using membership degrees as ML features:
 
 ```mermaid
 flowchart LR
@@ -500,7 +429,7 @@ Run from `src/FuzzySat.CLI/`. Built with [System.CommandLine](https://github.com
 
 ## Blazor Web Application
 
-FuzzySat includes a server-side Blazor web app with a wizard-flow interface:
+Terra ML includes a server-side Blazor web app with a wizard-flow interface:
 
 | Page | Purpose |
 |:---|:---|
@@ -631,53 +560,28 @@ FuzzySat/
 
 ---
 
-## Academic Citation
+## Origin
 
-```bibtex
-@thesis{labrador2008fuzzy,
-  title      = {Desarrollo de un Clasificador de Imagenes Satelitales
-                Basado en Logica Difusa},
-  author     = {Labrador Gonzalez, Ivan Ramon Jose},
-  year       = {2008},
-  month      = {November},
-  school     = {Universidad de Los Andes},
-  address    = {Merida, Venezuela},
-  type       = {Bachelor's Thesis},
-  department = {Investigacion de Operaciones},
-  pages      = {105}
-}
-```
-
-If you use FuzzySat in your research, please cite the original thesis and this repository.
+This project was inspired by a [2008 undergraduate thesis](docs/THESIS.md) on fuzzy logic
+satellite image classification at Universidad de Los Andes, Venezuela. The original concept
+has been significantly extended with modern ML classifiers, multiple membership function types,
+Sentinel-2 support, and open-source tooling.
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md)
-for details on our development workflow, branch naming, and PR process.
-
-Key principles:
+Terra ML follows a structured development methodology:
 
 - **Micro-commits**: Each commit has a single objective, under 200 lines
-- **PR review**: All PRs reviewed by automated bots (Copilot + CI) before merge
+- **PR review**: All PRs reviewed by automated bots (Claude Code Review + GitHub Copilot) before merge
 - **Epic-based**: Work organized into 5 Epics with defined scope and acceptance criteria
-- **Test-driven**: Core algorithms validated against known thesis values
+- **Test-driven**: Core algorithms validated against known mathematical results
 
-See also: [Code of Conduct](CODE_OF_CONDUCT.md) | [Security Policy](SECURITY.md) | [Changelog](CHANGELOG.md)
+See [CLAUDE.md](CLAUDE.md) for the complete development workflow.
 
 ---
 
 ## License
 
 This project is licensed under the **MIT License** -- see [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">
-  <em>
-    Based on the original thesis (105 pages, November 2008).<br/>
-    Reimplemented to bring fuzzy logic satellite classification<br/>
-    to the open-source community with modern tools and free data.
-  </em>
-</p>
