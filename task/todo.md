@@ -8,13 +8,13 @@
 
 ## Estado Actual
 
-> **Proyecto al ~76% global** (subio de 74% tras PR #25 + Phase 3F)
-> - Core Engine: **100%** (PCA implementado, 242 Core tests)
+> **Proyecto al ~80% global** (subio de 76% tras Epic #9)
+> - Core Engine: **100%** (PCA + 7 ML classifiers + ensemble + comparison, 289 Core tests)
 > - CLI: **80%** funcional (4 comandos wired, falta VisualizeCommand)
 > - API: 0% (template default)
-> - Web: **86%** (Explore & Train merge, zoom, state persistence, inline classes)
+> - Web: **90%** (9 classification methods, Model Comparison page, ensemble UI)
 > - CI/CD: 30% (solo build+test)
-> - Tests totales: **333** (242 Core + 91 Web)
+> - Tests totales: **380+** (289 Core + 91 Web)
 
 ---
 
@@ -69,6 +69,21 @@
 - [x] HybridClassifier — Random Forest (FastForest/OVA)
 - [x] HybridClassifier — SDCA MaximumEntropy
 - [x] KMeansClusterer + tests
+
+### Epic #9 — Advanced ML Classifiers & Ensemble Methods (COMPLETADO)
+- [x] MlClassifierBase abstract class (extracted from HybridClassifier)
+- [x] HybridClassifier refactored to extend MlClassifierBase
+- [x] Stratified k-fold CrossValidator + CrossValidationResult
+- [x] LightGBM classifier (Microsoft.ML.LightGbm 5.0.0) + tests + Web
+- [x] SVM classifier (LinearSvm/OVA) + tests + Web
+- [x] Logistic Regression classifier (LbfgsMaximumEntropy) + tests + Web
+- [x] MLP Neural Network (TorchSharp 0.105.0, SpectralMLP) + tests + Web
+- [x] EnsembleClassifier (Voting: majority + weighted) + tests + Web
+- [x] StackingClassifier (meta-learner with OOF predictions) + tests + Web
+- [x] ModelComparisonEngine + ModelComparisonResult + tests
+- [x] ModelComparison.razor page (checkboxes, k-fold, chart, "Use Best Model")
+- [x] ModelComparisonService + DI registration + NavMenu link
+- [x] 34 new tests (289 Core total), 23 micro-commits
 
 ### Epic #5 — Blazor Web (UI scaffolding)
 - [x] Blazor Server project + Radzen 10.0.6

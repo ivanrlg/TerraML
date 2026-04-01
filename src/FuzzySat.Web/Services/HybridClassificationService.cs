@@ -6,15 +6,15 @@ using FuzzySat.Core.Training;
 namespace FuzzySat.Web.Services;
 
 /// <summary>
-/// Bridges Core's HybridClassifier (ML.NET Random Forest / SDCA) to async Web
-/// operations with progress reporting. Uses fuzzy membership degrees as enriched
-/// features for ML training, then classifies pixel-by-pixel.
+/// Bridges Core's ML classifiers to async Web operations with progress reporting.
+/// Uses fuzzy membership degrees as enriched features for ML training,
+/// then classifies pixel-by-pixel (or in batches for neural network).
 /// Registered as singleton since it holds no mutable state.
 /// </summary>
 public sealed class HybridClassificationService
 {
     /// <summary>
-    /// Classifies a multispectral image using an ML.NET hybrid classifier
+    /// Classifies a multispectral image using an ML classifier
     /// trained on fuzzy-enriched features from the given training samples.
     /// Must be called from a background thread (via Task.Run) to avoid blocking Blazor UI.
     /// </summary>
@@ -48,20 +48,55 @@ public sealed class HybridClassificationService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var classifier = options.ClassificationMethod switch
+        var classifier = TrainClassifier(options.ClassificationMethod, mlSamples, featureExtractor);
+
+        try
         {
-            "Random Forest" => HybridClassifier.TrainRandomForest(mlSamples, featureExtractor),
-            "SDCA" => HybridClassifier.TrainSdca(mlSamples, featureExtractor),
-            _ => throw new ArgumentException(
-                $"Unknown hybrid method: '{options.ClassificationMethod}'.", nameof(options))
-        };
+            progress?.Report(new ClassificationProgress("ML model trained", 0, image.Rows, 15));
 
-        progress?.Report(new ClassificationProgress("ML model trained", 0, image.Rows, 15));
+            // Stage 3: Classify pixels
+            var classMap = new string[image.Rows, image.Columns];
+            var confidenceMap = new double[image.Rows, image.Columns];
 
-        // Stage 3: Classify pixel-by-pixel using the hybrid classifier
-        var classMap = new string[image.Rows, image.Columns];
-        var confidenceMap = new double[image.Rows, image.Columns];
+            if (classifier is NeuralNetClassifier neuralNet)
+            {
+                // Batch path for neural network — avoids per-pixel tensor allocation
+                ClassifyBatch(neuralNet, image, featureExtractor, classMap, confidenceMap,
+                    progress, cancellationToken);
+            }
+            else
+            {
+                // Per-pixel path for ML.NET classifiers
+                ClassifyPerPixel(classifier, image, classMap, confidenceMap,
+                    progress, cancellationToken);
+            }
 
+            // Stage 4: Build result
+            progress?.Report(new ClassificationProgress("Building result", image.Rows, image.Rows, 98));
+
+            var classes = session.ClassNames
+                .Select((name, i) => new LandCoverClass { Name = name, Code = i + 1 })
+                .ToList();
+
+            var result = new ClassificationResult(classMap, confidenceMap, classes);
+            progress?.Report(new ClassificationProgress("Complete", image.Rows, image.Rows, 100));
+
+            return result;
+        }
+        finally
+        {
+            (classifier as IDisposable)?.Dispose();
+        }
+    }
+
+    private static void ClassifyPerPixel(
+        FuzzySat.Core.FuzzyLogic.Classification.IClassifier classifier,
+        MultispectralImage image,
+        string[,] classMap,
+        double[,] confidenceMap,
+        IProgress<ClassificationProgress>? progress,
+        CancellationToken cancellationToken)
+    {
         for (var row = 0; row < image.Rows; row++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -70,30 +105,105 @@ public sealed class HybridClassificationService
             {
                 var pixel = image.GetPixelVector(row, col);
                 var bandValues = (IDictionary<string, double>)pixel.BandValues;
-
                 classMap[row, col] = classifier.ClassifyPixel(bandValues);
-                // HybridClassifier doesn't provide confidence, use 1.0 for predicted class
                 confidenceMap[row, col] = 1.0;
             }
 
             if (row % 10 == 0 || row == image.Rows - 1)
             {
-                var pct = 15.0 + (row + 1.0) / image.Rows * 80.0; // 15-95%
+                var pct = 15.0 + (row + 1.0) / image.Rows * 80.0;
                 progress?.Report(new ClassificationProgress(
                     "Classifying pixels", row + 1, image.Rows, pct));
             }
         }
-
-        // Stage 4: Build result
-        progress?.Report(new ClassificationProgress("Building result", image.Rows, image.Rows, 98));
-
-        var classes = session.ClassNames
-            .Select((name, i) => new LandCoverClass { Name = name, Code = i + 1 })
-            .ToList();
-
-        var result = new ClassificationResult(classMap, confidenceMap, classes);
-        progress?.Report(new ClassificationProgress("Complete", image.Rows, image.Rows, 100));
-
-        return result;
     }
+
+    private static void ClassifyBatch(
+        NeuralNetClassifier neuralNet,
+        MultispectralImage image,
+        FuzzyFeatureExtractor featureExtractor,
+        string[,] classMap,
+        double[,] confidenceMap,
+        IProgress<ClassificationProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        const int batchSize = 1024;
+
+        for (var row = 0; row < image.Rows; row++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Extract features for entire row
+            var rowFeatures = new float[image.Columns][];
+            for (var col = 0; col < image.Columns; col++)
+            {
+                var pixel = image.GetPixelVector(row, col);
+                var bandValues = (IDictionary<string, double>)pixel.BandValues;
+                rowFeatures[col] = featureExtractor.ExtractFeatures(bandValues);
+            }
+
+            // Classify row in batches
+            for (var start = 0; start < image.Columns; start += batchSize)
+            {
+                var end = Math.Min(start + batchSize, image.Columns);
+                var batch = rowFeatures[start..end];
+                var labels = neuralNet.ClassifyBatch(batch);
+
+                for (var i = 0; i < labels.Length; i++)
+                {
+                    classMap[row, start + i] = labels[i];
+                    confidenceMap[row, start + i] = 1.0;
+                }
+            }
+
+            if (row % 10 == 0 || row == image.Rows - 1)
+            {
+                var pct = 15.0 + (row + 1.0) / image.Rows * 80.0;
+                progress?.Report(new ClassificationProgress(
+                    "Classifying pixels", row + 1, image.Rows, pct));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Trains the appropriate ML classifier based on the method name.
+    /// </summary>
+    private static FuzzySat.Core.FuzzyLogic.Classification.IClassifier TrainClassifier(
+        string method,
+        List<(string, IDictionary<string, double>)> samples,
+        FuzzyFeatureExtractor extractor) => method switch
+    {
+        "Random Forest" => HybridClassifier.TrainRandomForest(samples, extractor),
+        "SDCA" => HybridClassifier.TrainSdca(samples, extractor),
+        "LightGBM" => LightGbmClassifier.Train(samples, extractor),
+        "SVM" => SvmClassifier.Train(samples, extractor),
+        "Logistic Regression" => LogisticRegressionClassifier.Train(samples, extractor),
+        "MLP Neural Network" => NeuralNetClassifier.Train(samples, extractor),
+        "Ensemble (Voting)" => TrainVotingEnsemble(samples, extractor),
+        "Ensemble (Stacking)" => StackingClassifier.Train(samples, extractor,
+            GetDefaultBaseFactories(extractor), numberOfFolds: 3),
+        _ => throw new ArgumentException($"Unknown hybrid method: '{method}'.")
+    };
+
+    private static EnsembleClassifier TrainVotingEnsemble(
+        List<(string, IDictionary<string, double>)> samples,
+        FuzzyFeatureExtractor extractor)
+    {
+        var classifiers = new FuzzySat.Core.FuzzyLogic.Classification.IClassifier[]
+        {
+            HybridClassifier.TrainRandomForest(samples, extractor),
+            HybridClassifier.TrainSdca(samples, extractor),
+            LightGbmClassifier.Train(samples, extractor)
+        };
+        return EnsembleClassifier.MajorityVote(classifiers);
+    }
+
+    private static List<Func<IReadOnlyList<(string Label, IDictionary<string, double> BandValues)>,
+        FuzzySat.Core.FuzzyLogic.Classification.IClassifier>> GetDefaultBaseFactories(
+        FuzzyFeatureExtractor extractor) =>
+    [
+        fold => HybridClassifier.TrainRandomForest(fold, extractor, numberOfTrees: 50),
+        fold => HybridClassifier.TrainSdca(fold, extractor),
+        fold => LightGbmClassifier.Train(fold, extractor)
+    ];
 }

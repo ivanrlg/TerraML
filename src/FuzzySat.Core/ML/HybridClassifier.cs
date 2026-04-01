@@ -7,37 +7,18 @@ namespace FuzzySat.Core.ML;
 /// <summary>
 /// Hybrid classifier that uses ML.NET with fuzzy membership degrees as features.
 /// Supports Random Forest (FastForest/OVA) and SDCA MaximumEntropy trainers.
-/// Thread-safe: uses lock around PredictionEngine (not thread-safe by design).
+/// Extends <see cref="MlClassifierBase"/> for shared ML.NET pipeline.
+/// Thread-safe: inherits lock-based prediction from base class.
 /// </summary>
-public sealed class HybridClassifier : IClassifier
+public sealed class HybridClassifier : MlClassifierBase
 {
-    private readonly object _lock = new();
-    private readonly PredictionEngine<PixelFeatureData, PixelPrediction> _predictionEngine;
-    private readonly FuzzyFeatureExtractor _featureExtractor;
-
     private HybridClassifier(
         MLContext mlContext,
         ITransformer model,
         FuzzyFeatureExtractor featureExtractor,
         SchemaDefinition inputSchema)
+        : base(mlContext, model, featureExtractor, inputSchema)
     {
-        _featureExtractor = featureExtractor;
-        _predictionEngine = mlContext.Model.CreatePredictionEngine<PixelFeatureData, PixelPrediction>(
-            model, inputSchemaDefinition: inputSchema);
-    }
-
-    /// <inheritdoc />
-    public string ClassifyPixel(IDictionary<string, double> bandValues)
-    {
-        ArgumentNullException.ThrowIfNull(bandValues);
-
-        var features = _featureExtractor.ExtractFeatures(bandValues);
-        var input = new PixelFeatureData { Features = features };
-
-        lock (_lock)
-        {
-            return _predictionEngine.Predict(input).PredictedLabel;
-        }
     }
 
     /// <summary>
@@ -54,10 +35,11 @@ public sealed class HybridClassifier : IClassifier
         if (numberOfTrees < 1)
             throw new ArgumentOutOfRangeException(nameof(numberOfTrees), "Must be at least 1.");
 
-        return Train(trainingSamples, featureExtractor, (mlContext, _) =>
+        return TrainBase(trainingSamples, featureExtractor, (mlContext, _) =>
             mlContext.MulticlassClassification.Trainers.OneVersusAll(
                 mlContext.BinaryClassification.Trainers.FastForest(
-                    numberOfTrees: numberOfTrees)));
+                    numberOfTrees: numberOfTrees)),
+            (ctx, model, ext, schema) => new HybridClassifier(ctx, model, ext, schema));
     }
 
     /// <summary>
@@ -74,54 +56,9 @@ public sealed class HybridClassifier : IClassifier
         if (maximumNumberOfIterations < 1)
             throw new ArgumentOutOfRangeException(nameof(maximumNumberOfIterations), "Must be at least 1.");
 
-        return Train(trainingSamples, featureExtractor, (mlContext, _) =>
+        return TrainBase(trainingSamples, featureExtractor, (mlContext, _) =>
             mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy(
-                maximumNumberOfIterations: maximumNumberOfIterations));
-    }
-
-    private static HybridClassifier Train(
-        IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> trainingSamples,
-        FuzzyFeatureExtractor featureExtractor,
-        Func<MLContext, int, IEstimator<ITransformer>> trainerFactory)
-    {
-        ArgumentNullException.ThrowIfNull(trainingSamples);
-        ArgumentNullException.ThrowIfNull(featureExtractor);
-
-        if (trainingSamples.Count == 0)
-            throw new ArgumentException("At least one training sample is required.", nameof(trainingSamples));
-
-        // Validate samples
-        for (var i = 0; i < trainingSamples.Count; i++)
-        {
-            if (string.IsNullOrWhiteSpace(trainingSamples[i].Label))
-                throw new ArgumentException($"Sample at index {i} has a null or whitespace label.", nameof(trainingSamples));
-            if (trainingSamples[i].BandValues is null)
-                throw new ArgumentException($"Sample at index {i} has null band values.", nameof(trainingSamples));
-        }
-
-        var mlContext = new MLContext(seed: 42);
-        var featureCount = featureExtractor.FeatureNames.Count;
-
-        var dataList = new List<PixelFeatureData>();
-        foreach (var (label, bandValues) in trainingSamples)
-        {
-            dataList.Add(new PixelFeatureData
-            {
-                Label = label,
-                Features = featureExtractor.ExtractFeatures(bandValues)
-            });
-        }
-
-        var schemaDef = SchemaDefinition.Create(typeof(PixelFeatureData));
-        schemaDef["Features"].ColumnType = new VectorDataViewType(NumberDataViewType.Single, featureCount);
-        var dataView = mlContext.Data.LoadFromEnumerable(dataList, schemaDef);
-
-        var pipeline = mlContext.Transforms.Conversion.MapValueToKey("Label")
-            .Append(trainerFactory(mlContext, featureCount))
-            .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
-
-        var model = pipeline.Fit(dataView);
-
-        return new HybridClassifier(mlContext, model, featureExtractor, schemaDef);
+                maximumNumberOfIterations: maximumNumberOfIterations),
+            (ctx, model, ext, schema) => new HybridClassifier(ctx, model, ext, schema));
     }
 }

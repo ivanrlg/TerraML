@@ -1,0 +1,268 @@
+@page "/model-comparison"
+@rendermode InteractiveServer
+@inject NotificationService NotificationService
+@inject ProjectStateService ProjectState
+@inject ModelComparisonService ComparisonSvc
+@inject NavigationManager Navigation
+
+<PageTitle>Model Comparison - FuzzySat</PageTitle>
+
+<div class="model-comparison-page fs-fade-in">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Model Comparison</h1>
+            <p class="page-subtitle">Cross-validation benchmark of classification methods</p>
+        </div>
+    </div>
+
+    @if (!ProjectState.HasTrainingSession || ProjectState.TrainingSamples is null || ProjectState.TrainingSamples.Count == 0)
+    {
+        <div class="fs-card" style="text-align: center; padding: 3rem;">
+            <span class="material-icons" style="font-size: 3rem; color: var(--fs-text-tertiary); margin-bottom: 1rem;">compare</span>
+            <h3 style="color: var(--fs-text-secondary);">Training Data Required</h3>
+            <p style="color: var(--fs-text-tertiary);">
+                Upload training samples in <a href="/training" style="color: var(--fs-accent-blue);">Training</a> first.
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="fs-card" style="margin-bottom: 1.5rem;">
+            <h3 class="card-title">
+                <span class="material-icons" style="color: var(--fs-accent-blue);">tune</span>
+                Configuration
+            </h3>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label class="field-label">Membership Function</label>
+                    <RadzenDropDown @bind-Value="_mfType" Data="_mfTypes"
+                                    Style="width: 100%;" Disabled="@_isRunning" />
+                </div>
+                <div>
+                    <label class="field-label">Cross-Validation Folds</label>
+                    <RadzenDropDown @bind-Value="_numberOfFolds" Data="_foldOptions"
+                                    Style="width: 100%;" Disabled="@_isRunning" />
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label class="field-label">Select Methods to Compare</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                    @foreach (var method in _availableMethods)
+                    {
+                        <label style="display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.6rem;
+                                      border-radius: 6px; background: var(--fs-surface-alt); cursor: pointer;">
+                            <RadzenCheckBox @bind-Value="method.Selected" Disabled="@_isRunning" />
+                            <span style="font-size: 0.85rem;">@method.Name</span>
+                        </label>
+                    }
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 0.78rem; color: var(--fs-text-tertiary);">
+                    <span class="material-icons" style="font-size: 0.85rem; vertical-align: middle;">info_outline</span>
+                    MLP Neural Network and Ensemble methods are excluded &mdash;
+                    MLP is too slow for repeated cross-validation folds, and ensembles are meta-classifiers
+                    that combine the methods above.
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <RadzenButton Text="@(_isRunning ? "Running..." : "Run Comparison")"
+                              Icon="play_arrow" ButtonStyle="ButtonStyle.Primary"
+                              Click="@RunComparison"
+                              Disabled="@(_isRunning || !_availableMethods.Any(m => m.Selected))"
+                              IsBusy="@_isRunning" />
+                @if (_isRunning)
+                {
+                    <span style="color: var(--fs-text-tertiary); font-size: 0.85rem;">@_progressMessage</span>
+                }
+            </div>
+        </div>
+
+        @if (_result is not null)
+        {
+            <div class="fs-card" style="margin-bottom: 1.5rem;">
+                <h3 class="card-title">
+                    <span class="material-icons" style="color: var(--fs-accent-emerald);">leaderboard</span>
+                    Results (@_result.Results.Count methods, @_numberOfFolds-fold CV)
+                </h3>
+
+                <RadzenDataGrid Data="@_result.Results" TItem="FuzzySat.Core.ML.ClassifierResult"
+                                AllowSorting="true" Style="margin-bottom: 1rem;"
+                                RowRender="@HighlightBest">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="FuzzySat.Core.ML.ClassifierResult" Property="Name"
+                                              Title="Method" Width="180px" />
+                        <RadzenDataGridColumn TItem="FuzzySat.Core.ML.ClassifierResult" Title="OA"
+                                              Width="120px" SortOrder="SortOrder.Descending">
+                            <Template Context="r">
+                                @($"{r.MeanOA:P1} ± {r.StdOA:P1}")
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="FuzzySat.Core.ML.ClassifierResult" Title="Kappa"
+                                              Width="120px">
+                            <Template Context="r">
+                                @($"{r.MeanKappa:F3} ± {r.StdKappa:F3}")
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="FuzzySat.Core.ML.ClassifierResult" Title="Time"
+                                              Width="100px">
+                            <Template Context="r">
+                                @($"{r.TrainingTimeMs}ms")
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+
+                <RadzenChart Style="height: 300px;">
+                    <RadzenBarSeries Data="@_result.Results" CategoryProperty="Name" ValueProperty="MeanOA"
+                                     Title="Overall Accuracy" />
+                    <RadzenCategoryAxis />
+                    <RadzenValueAxis Min="0" Max="1" FormatString="{0:P0}" />
+                </RadzenChart>
+
+                <div style="margin-top: 1rem; text-align: center;">
+                    <RadzenButton Text="@($"Use Best Model: {_result.BestModel.Name}")"
+                                  Icon="star" ButtonStyle="ButtonStyle.Success"
+                                  Click="@UseBestModel" />
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .model-comparison-page {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+    .page-header {
+        margin-bottom: 1.5rem;
+    }
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--fs-text-primary);
+        margin: 0;
+    }
+    .page-subtitle {
+        color: var(--fs-text-tertiary);
+        font-size: 0.9rem;
+        margin: 0.25rem 0 0 0;
+    }
+    .card-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    .field-label {
+        display: block;
+        font-size: 0.8rem;
+        color: var(--fs-text-secondary);
+        margin-bottom: 0.3rem;
+    }
+</style>
+
+@code {
+    private string _mfType = "Gaussian";
+    private int _numberOfFolds = 5;
+    private bool _isRunning;
+    private string _progressMessage = "";
+    private FuzzySat.Core.ML.ModelComparisonResult? _result;
+    private CancellationTokenSource? _cts;
+
+    private List<string> _mfTypes = ["Gaussian", "Triangular", "Trapezoidal", "Bell"];
+    private List<int> _foldOptions = [3, 5, 10];
+
+    private List<MethodSelection> _availableMethods =
+    [
+        new("Random Forest", true),
+        new("SDCA", true),
+        new("LightGBM", true),
+        new("SVM", true),
+        new("Logistic Regression", true)
+    ];
+
+    private class MethodSelection
+    {
+        public string Name { get; set; }
+        public bool Selected { get; set; }
+        public MethodSelection(string name, bool selected) { Name = name; Selected = selected; }
+    }
+
+    private void HighlightBest(RowRenderEventArgs<FuzzySat.Core.ML.ClassifierResult> args)
+    {
+        if (_result is not null && args.Data == _result.BestModel)
+        {
+            args.Attributes.Add("style", "background: rgba(16, 185, 129, 0.1);");
+        }
+    }
+
+    private async Task RunComparison()
+    {
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        _isRunning = true;
+        _result = null;
+        _progressMessage = "Starting...";
+        StateHasChanged();
+
+        try
+        {
+            var session = ProjectState.TrainingSession!;
+            var samples = ProjectState.TrainingSamples!;
+            var selectedMethods = _availableMethods.Where(m => m.Selected).Select(m => m.Name).ToList();
+            var mfType = _mfType;
+            var folds = _numberOfFolds;
+            var ct = _cts.Token;
+
+            var progress = new Progress<string>(msg =>
+            {
+                _progressMessage = msg;
+                InvokeAsync(StateHasChanged);
+            });
+
+            _result = await Task.Run(() =>
+                ComparisonSvc.Compare(session, samples, mfType, selectedMethods, folds, progress, ct));
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Summary = "Comparison Complete",
+                Detail = $"Best: {_result.BestModel.Name} (Kappa={_result.BestModel.MeanKappa:F3})",
+                Severity = NotificationSeverity.Success,
+                Duration = 5000
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            _progressMessage = "Comparison cancelled.";
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Summary = "Comparison Failed",
+                Detail = ex.Message,
+                Severity = NotificationSeverity.Error,
+                Duration = 8000
+            });
+        }
+        finally
+        {
+            _isRunning = false;
+            StateHasChanged();
+        }
+    }
+
+    private void UseBestModel()
+    {
+        if (_result is not null)
+        {
+            Navigation.NavigateTo($"/classification?method={Uri.EscapeDataString(_result.BestModel.Name)}");
+        }
+    }
+}
