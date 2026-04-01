@@ -7,6 +7,7 @@ services:
       - fuzzysat-data:/app/data
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      - ProjectStorage__BasePath=/app/data
 
 volumes:
   fuzzysat-data:

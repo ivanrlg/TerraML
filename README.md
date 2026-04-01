@@ -297,8 +297,9 @@ ML sees it. Two systems working together: one understands the physics of spectra
 reflectance (fuzzy logic), the other finds complex statistical patterns (ML classifiers).
 
 Terra ML includes a **Model Comparison** tool with k-fold cross-validation that lets
-you benchmark all 6 classifiers (RF, SDCA, LightGBM, SVM, LR, MLP) in both hybrid and
+you benchmark 5 production classifiers (RF, SDCA, LightGBM, SVM, LR) in both hybrid and
 pure ML modes side by side, so you can verify the benefit for your specific dataset.
+MLP is available for classification but excluded from repeated CV due to training time.
 
 ---
 
@@ -391,10 +392,12 @@ Or build and run directly:
 
 ```bash
 docker build -t terra-ml .
-docker run -p 8080:8080 -v terra-ml-data:/app/data terra-ml
+docker run -p 8080:8080 \
+    -e ProjectStorage__BasePath=/app/data \
+    -v fuzzysat-data:/app/data terra-ml
 ```
 
-The `docker-compose.yml` mounts a named volume (`fuzzysat-data`) at `/app/data` for persistent project storage. The image uses a multi-stage build (SDK for compilation, ASP.NET runtime for execution) to keep the final image small.
+The `docker-compose.yml` mounts a named volume (`fuzzysat-data`) at `/app/data` for persistent project storage. You must set `ProjectStorage__BasePath=/app/data` so that projects are saved to the mounted volume instead of the container's default path. The image uses a multi-stage build (SDK for compilation, ASP.NET runtime for execution) to keep the final image small.
 
 ---
 
@@ -522,7 +525,7 @@ For 4 bands and 7 classes, the fuzzy extractor produces 4 + 7 x 5 = **39 feature
 | **Ensemble (Voting)** | Majority / weighted vote | Combines multiple classifiers |
 | **Stacking** | OOF meta-learner (LogReg) | Learns optimal classifier combination |
 
-All classifiers implement `IClassifier` and can be used interchangeably in the classification pipeline. The **Model Comparison** tool benchmarks all methods with k-fold cross-validation.
+All listed classifiers implement `IClassifier` and can be used interchangeably in the classification pipeline. The **Model Comparison** tool benchmarks the 5 core methods (RF, SDCA, LightGBM, SVM, LR) with k-fold cross-validation.
 
 ---
 
@@ -569,7 +572,7 @@ dotnet run --project src/FuzzySat.Web
 |:---|:---|:---:|
 | **Framework** | .NET | 10.0 (LTS) |
 | **Language** | C# | 13 |
-| **Raster I/O** | GDAL via MaxRev.Gdal.Core | 3.12.3 |
+| **Raster I/O** | GDAL via MaxRev.Gdal.Core | 3.12.x |
 | **ML** | Microsoft.ML + FastTree + LightGBM | 5.0.0 |
 | **Neural Network** | TorchSharp | 0.105.0 |
 | **CLI** | System.CommandLine | 3.0.0-preview |
