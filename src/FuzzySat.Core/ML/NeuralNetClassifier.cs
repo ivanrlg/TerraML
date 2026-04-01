@@ -13,13 +13,13 @@ public sealed class NeuralNetClassifier : IClassifier, IDisposable
 {
     private readonly object _lock = new();
     private readonly SpectralMLP _model;
-    private readonly FuzzyFeatureExtractor _featureExtractor;
+    private readonly IFeatureExtractor _featureExtractor;
     private readonly string[] _classLabels;
     private bool _disposed;
 
     private NeuralNetClassifier(
         SpectralMLP model,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         string[] classLabels)
     {
         _model = model;
@@ -81,16 +81,16 @@ public sealed class NeuralNetClassifier : IClassifier, IDisposable
     }
 
     /// <summary>
-    /// Trains a neural network classifier on fuzzy-enriched features.
+    /// Trains a neural network classifier on extracted features.
     /// </summary>
     /// <param name="trainingSamples">Labeled training data.</param>
-    /// <param name="featureExtractor">Fuzzy feature extractor.</param>
+    /// <param name="featureExtractor">Feature extractor for transforming band values into ML features.</param>
     /// <param name="options">Training hyperparameters (optional, uses defaults).</param>
     /// <param name="progress">Optional progress callback receiving epoch info.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static NeuralNetClassifier Train(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> trainingSamples,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         NeuralNetTrainingOptions? options = null,
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)

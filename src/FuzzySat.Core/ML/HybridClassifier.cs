@@ -5,7 +5,7 @@ using Microsoft.ML.Data;
 namespace FuzzySat.Core.ML;
 
 /// <summary>
-/// Hybrid classifier that uses ML.NET with fuzzy membership degrees as features.
+/// Hybrid classifier that uses ML.NET with an <see cref="IFeatureExtractor"/> for features.
 /// Supports Random Forest (FastForest/OVA) and SDCA MaximumEntropy trainers.
 /// Extends <see cref="MlClassifierBase"/> for shared ML.NET pipeline.
 /// Thread-safe: inherits lock-based prediction from base class.
@@ -15,7 +15,7 @@ public sealed class HybridClassifier : MlClassifierBase
     private HybridClassifier(
         MLContext mlContext,
         ITransformer model,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         SchemaDefinition inputSchema)
         : base(mlContext, model, featureExtractor, inputSchema)
     {
@@ -25,11 +25,11 @@ public sealed class HybridClassifier : MlClassifierBase
     /// Trains a hybrid classifier using a Random Forest (FastForest/OVA) trainer.
     /// </summary>
     /// <param name="trainingSamples">Labeled training data.</param>
-    /// <param name="featureExtractor">Fuzzy feature extractor.</param>
+    /// <param name="featureExtractor">Feature extractor for transforming band values into ML features.</param>
     /// <param name="numberOfTrees">Number of trees in the forest. Must be at least 1.</param>
     public static HybridClassifier TrainRandomForest(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> trainingSamples,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         int numberOfTrees = 100)
     {
         if (numberOfTrees < 1)
@@ -46,11 +46,11 @@ public sealed class HybridClassifier : MlClassifierBase
     /// Trains a hybrid classifier using SDCA MaximumEntropy trainer.
     /// </summary>
     /// <param name="trainingSamples">Labeled training data.</param>
-    /// <param name="featureExtractor">Fuzzy feature extractor.</param>
+    /// <param name="featureExtractor">Feature extractor for transforming band values into ML features.</param>
     /// <param name="maximumNumberOfIterations">Max iterations. Must be at least 1.</param>
     public static HybridClassifier TrainSdca(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> trainingSamples,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         int maximumNumberOfIterations = 100)
     {
         if (maximumNumberOfIterations < 1)

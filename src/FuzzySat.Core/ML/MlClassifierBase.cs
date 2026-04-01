@@ -5,7 +5,8 @@ using Microsoft.ML.Data;
 namespace FuzzySat.Core.ML;
 
 /// <summary>
-/// Abstract base class for ML.NET classifiers that use fuzzy membership degrees as features.
+/// Abstract base class for ML.NET classifiers that use an <see cref="IFeatureExtractor"/>
+/// to produce feature vectors from pixel band values.
 /// Encapsulates the shared pipeline: MLContext creation, schema definition, data loading,
 /// MapValueToKey/MapKeyToValue, PredictionEngine with thread-safe lock.
 /// Subclasses only provide the <see cref="IEstimator{TTransformer}"/> trainer.
@@ -14,7 +15,7 @@ public abstract class MlClassifierBase : IClassifier
 {
     private readonly object _lock = new();
     private readonly PredictionEngine<PixelFeatureData, PixelPrediction> _predictionEngine;
-    private readonly FuzzyFeatureExtractor _featureExtractor;
+    private readonly IFeatureExtractor _featureExtractor;
 
     /// <summary>
     /// Initializes a new instance from a trained ML.NET model.
@@ -22,7 +23,7 @@ public abstract class MlClassifierBase : IClassifier
     protected MlClassifierBase(
         MLContext mlContext,
         ITransformer model,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         SchemaDefinition inputSchema)
     {
         _featureExtractor = featureExtractor;
@@ -50,7 +51,7 @@ public abstract class MlClassifierBase : IClassifier
     /// </summary>
     /// <typeparam name="T">The concrete classifier type.</typeparam>
     /// <param name="trainingSamples">Labeled training data (class name + band values).</param>
-    /// <param name="featureExtractor">Fuzzy feature extractor.</param>
+    /// <param name="featureExtractor">Feature extractor for transforming band values into ML features.</param>
     /// <param name="trainerFactory">
     /// Factory that receives an <see cref="MLContext"/> and the feature count,
     /// and returns the trainer estimator to append to the pipeline.
@@ -61,9 +62,9 @@ public abstract class MlClassifierBase : IClassifier
     /// </param>
     protected static T TrainBase<T>(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> trainingSamples,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         Func<MLContext, int, IEstimator<ITransformer>> trainerFactory,
-        Func<MLContext, ITransformer, FuzzyFeatureExtractor, SchemaDefinition, T> constructor)
+        Func<MLContext, ITransformer, IFeatureExtractor, SchemaDefinition, T> constructor)
         where T : MlClassifierBase
     {
         ArgumentNullException.ThrowIfNull(trainingSamples);

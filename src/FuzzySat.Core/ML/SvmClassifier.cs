@@ -13,21 +13,21 @@ public sealed class SvmClassifier : MlClassifierBase
     private SvmClassifier(
         MLContext mlContext,
         ITransformer model,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         SchemaDefinition inputSchema)
         : base(mlContext, model, featureExtractor, inputSchema)
     {
     }
 
     /// <summary>
-    /// Trains an SVM multiclass classifier (LinearSvm/OVA) on fuzzy-enriched features.
+    /// Trains an SVM multiclass classifier (LinearSvm/OVA) on extracted features.
     /// </summary>
     /// <param name="trainingSamples">Labeled training data.</param>
-    /// <param name="featureExtractor">Fuzzy feature extractor.</param>
+    /// <param name="featureExtractor">Feature extractor for transforming band values into ML features.</param>
     /// <param name="numberOfIterations">Number of training iterations. Must be at least 1.</param>
     public static SvmClassifier Train(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> trainingSamples,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         int numberOfIterations = 100)
     {
         if (numberOfIterations < 1)
