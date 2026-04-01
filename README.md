@@ -10,7 +10,7 @@ for multispectral satellite imagery.
 
 <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10" /></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License" /></a>
-<img src="https://img.shields.io/badge/Tests-260%20passing-brightgreen" alt="260 Tests" />
+<img src="https://img.shields.io/badge/Tests-484%20passing-brightgreen" alt="484 Tests" />
 <img src="https://img.shields.io/badge/C%23-13-239120?logo=csharp" alt="C# 13" />
 
 </div>
@@ -25,7 +25,7 @@ for multispectral satellite imagery.
 | **4 Membership Functions** | Gaussian, Triangular, Trapezoidal, Generalized Bell |
 | **Hybrid ML Pipeline** | ML.NET Random Forest + SDCA using fuzzy features |
 | **GDAL Raster I/O** | Read GeoTIFF with geospatial metadata; write classified rasters |
-| **260 Unit Tests** | 242 Core + 18 Web -- mathematical correctness validated |
+| **484 Unit Tests** | 349 Core + 119 Web + 16 CLI -- mathematical correctness validated |
 | **Explainable AI** | Every membership degree and firing strength is inspectable |
 
 ---
@@ -268,7 +268,7 @@ git clone https://github.com/ivanrlg/FuzzySat.git
 cd FuzzySat
 
 dotnet build
-dotnet test     # 260 tests
+dotnet test     # 484 tests
 ```
 
 ### CLI Usage
@@ -536,12 +536,12 @@ FuzzySat/
 │   │   ├── Validation/                    # ConfusionMatrix, AccuracyMetrics, Kappa
 │   │   ├── ML/                            # HybridClassifier, KMeans, FeatureExtractor
 │   │   └── Configuration/                 # BandConfig, ClassifierConfig (JSON)
-│   ├── FuzzySat.CLI/                      # Command-line tool (4 commands)
-│   ├── FuzzySat.Api/                      # REST API (ASP.NET Core)
+│   ├── FuzzySat.CLI/                      # Command-line tool (5 commands)
 │   └── FuzzySat.Web/                      # Blazor Server (6 pages, Radzen UI)
 ├── tests/
-│   ├── FuzzySat.Core.Tests/               # 242 unit tests (xUnit + FluentAssertions)
-│   └── FuzzySat.Web.Tests/                # 18 service tests (security, raster, statistics)
+│   ├── FuzzySat.Core.Tests/               # Core unit tests (xUnit + FluentAssertions)
+│   ├── FuzzySat.CLI.Tests/                # CLI command tests
+│   └── FuzzySat.Web.Tests/                # Web service tests
 ├── samples/
 │   └── sample-project.json                # ASTER Merida configuration example
 └── docs/                                  # Epic planning, architecture, troubleshooting
@@ -574,7 +574,7 @@ Sentinel-2 support, and open-source tooling.
 Terra ML follows a structured development methodology:
 
 - **Micro-commits**: Each commit has a single objective, under 200 lines
-- **PR review**: All PRs reviewed by automated bots (Copilot + Codex) before merge
+- **PR review**: All PRs reviewed by automated bots (Claude Code Review + GitHub Copilot) before merge
 - **Epic-based**: Work organized into 5 Epics with defined scope and acceptance criteria
 - **Test-driven**: Core algorithms validated against known mathematical results
 
