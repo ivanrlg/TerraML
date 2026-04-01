@@ -7,7 +7,7 @@ namespace FuzzySat.Core.ML;
 /// for each class-band combination. Produces a feature vector that combines
 /// raw spectral values with fuzzy membership degrees.
 /// </summary>
-public sealed class FuzzyFeatureExtractor
+public sealed class FuzzyFeatureExtractor : IFeatureExtractor
 {
     private readonly FuzzyRuleSet _ruleSet;
     private readonly IReadOnlyList<string> _bandNames;
