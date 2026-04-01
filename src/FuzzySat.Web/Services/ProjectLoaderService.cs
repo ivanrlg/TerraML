@@ -154,6 +154,7 @@ public sealed class ProjectLoaderService
 
                 summaries.Add(new ProjectSummary
                 {
+                    Key = name,
                     Name = config.ProjectName,
                     BandCount = config.Bands.Count,
                     ClassCount = config.Classes.Count,
@@ -164,7 +165,7 @@ public sealed class ProjectLoaderService
                     Status = status
                 });
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
             {
                 _logger.LogWarning(ex, "Skipping project '{Name}' due to read error", name);
             }
@@ -180,15 +181,10 @@ public sealed class ProjectLoaderService
     public void DeleteProject(string name)
     {
         var configPath = ResolveSafePath(name);
+        var resolvedDataDir = ResolveSafeDir(name);
 
         if (File.Exists(configPath))
             File.Delete(configPath);
-
-        var dataDir = Path.Combine(_projectDir, name);
-        var resolvedDataDir = Path.GetFullPath(dataDir);
-        var relative = Path.GetRelativePath(_projectDir, resolvedDataDir);
-        if (relative.StartsWith("..", StringComparison.Ordinal))
-            throw new ArgumentException("Invalid project name: path traversal detected.", nameof(name));
 
         if (Directory.Exists(resolvedDataDir))
             Directory.Delete(resolvedDataDir, true);
@@ -272,5 +268,29 @@ public sealed class ProjectLoaderService
             throw new ArgumentException("Invalid project name: path traversal detected.", nameof(name));
 
         return filePath;
+    }
+
+    /// <summary>
+    /// Resolves a project name to a data directory path within the project directory.
+    /// Uses the same validation rules as ResolveSafePath (separator rejection + containment check).
+    /// </summary>
+    private string ResolveSafeDir(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+
+        if (name.IndexOf(Path.DirectorySeparatorChar) >= 0 ||
+            (Path.AltDirectorySeparatorChar != Path.DirectorySeparatorChar &&
+             name.IndexOf(Path.AltDirectorySeparatorChar) >= 0))
+        {
+            throw new ArgumentException("Invalid project name: directory separators are not allowed.", nameof(name));
+        }
+
+        var dirPath = Path.GetFullPath(Path.Combine(_projectDir, name));
+
+        var relativePath = Path.GetRelativePath(_projectDir, dirPath);
+        if (relativePath.StartsWith("..", StringComparison.Ordinal))
+            throw new ArgumentException("Invalid project name: path traversal detected.", nameof(name));
+
+        return dirPath;
     }
 }

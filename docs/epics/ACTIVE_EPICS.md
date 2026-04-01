@@ -10,8 +10,7 @@
 
 | Estado | Cantidad | EPICs |
 |--------|----------|-------|
-| Completado | 9 | #1 Core, #2 CLI, #3 Advanced, #4 ML Hybrid, #5 Blazor Web, #7 Classified Output, #8 Persistence, #9 ML Advanced, #10 Input UX |
-| Completado | 1 | #11 History Page |
+| Completado | 10 | #1 Core, #2 CLI, #3 Advanced, #4 ML Hybrid, #5 Blazor Web, #7 Classified Output, #8 Persistence, #9 ML Advanced, #10 Input UX, #11 History |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 
 ---

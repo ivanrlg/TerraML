@@ -5,7 +5,12 @@ namespace FuzzySat.Web.Services;
 /// </summary>
 public sealed record ProjectSummary
 {
+    /// <summary>Filename-safe persistence key (used for load/delete operations).</summary>
+    public required string Key { get; init; }
+
+    /// <summary>User-facing display name from ClassifierConfiguration.ProjectName.</summary>
     public required string Name { get; init; }
+
     public int BandCount { get; init; }
     public int ClassCount { get; init; }
     public string? ClassificationMethod { get; init; }

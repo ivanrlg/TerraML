@@ -94,7 +94,7 @@ public class ProjectLoaderServiceTests : IDisposable
     // --- GetProjectSummaries tests ---
 
     [Fact]
-    public async Task GetProjectSummaries_Empty_ReturnsEmpty()
+    public void GetProjectSummaries_Empty_ReturnsEmpty()
     {
         var summaries = _service.GetProjectSummaries();
         summaries.Should().BeEmpty();
@@ -108,6 +108,7 @@ public class ProjectLoaderServiceTests : IDisposable
         var summaries = _service.GetProjectSummaries();
 
         summaries.Should().HaveCount(1);
+        summaries[0].Key.Should().Be("Demo");
         summaries[0].Name.Should().Be("Demo");
         summaries[0].BandCount.Should().Be(1);
         summaries[0].ClassCount.Should().Be(1);
@@ -183,6 +184,20 @@ public class ProjectLoaderServiceTests : IDisposable
 
         summaries.Should().HaveCount(3);
         summaries.Select(s => s.Name).Should().BeEquivalentTo(["Alpha", "Beta", "Gamma"]);
+    }
+
+    [Fact]
+    public async Task GetProjectSummaries_KeyDiffersFromDisplayName()
+    {
+        // Config ProjectName can differ from the filename-safe key
+        var config = CreateTestConfig("My Project (2026)");
+        await _service.SaveProjectAsync("my-project-2026", config);
+
+        var summaries = _service.GetProjectSummaries();
+
+        summaries.Should().HaveCount(1);
+        summaries[0].Key.Should().Be("my-project-2026");
+        summaries[0].Name.Should().Be("My Project (2026)");
     }
 
     // --- DeleteProject tests ---

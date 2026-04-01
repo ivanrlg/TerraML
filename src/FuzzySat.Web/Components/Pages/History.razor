@@ -4,6 +4,7 @@
 @inject ProjectStateService ProjectState
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
+@inject ILogger<History> Logger
 
 <PageTitle>History - FuzzySat</PageTitle>
 
@@ -99,10 +100,10 @@
                         </span>
                         <div class="card-actions">
                             <RadzenButton Text="Load" Icon="folder_open" ButtonStyle="ButtonStyle.Primary"
-                                          Size="ButtonSize.ExtraSmall" Click="@(() => LoadProject(project.Name))" />
+                                          Size="ButtonSize.ExtraSmall" Click="@(() => LoadProject(project.Key))" />
                             <RadzenButton Icon="delete_outline" ButtonStyle="ButtonStyle.Danger"
                                           Size="ButtonSize.ExtraSmall" Variant="Variant.Text"
-                                          Click="@(() => ConfirmDelete(project.Name))" title="Delete project" />
+                                          Click="@(() => ConfirmDelete(project.Key, project.Name))" title="Delete project" />
                         </div>
                     </div>
                 </div>
@@ -117,7 +118,7 @@
         <div class="dialog-panel" @onclick:stopPropagation="true">
             <h3 style="margin: 0 0 0.5rem; color: var(--fs-text-primary);">Delete Project</h3>
             <p style="color: var(--fs-text-secondary); margin-bottom: 1.5rem;">
-                Are you sure you want to delete <strong>@_deleteTarget</strong>?
+                Are you sure you want to delete <strong>@_deleteDisplayName</strong>?
                 This will remove the configuration and all associated data (training, classification, validation).
                 This action cannot be undone.
             </p>
@@ -135,7 +136,8 @@
     private List<ProjectSummary> _projects = [];
     private bool _loading = true;
     private bool _showDeleteDialog;
-    private string? _deleteTarget;
+    private string? _deleteTargetKey;
+    private string? _deleteDisplayName;
 
     protected override async Task OnInitializedAsync()
     {
@@ -151,41 +153,51 @@
         _loading = false;
     }
 
-    private void LoadProject(string name)
+    private void LoadProject(string key)
     {
-        Navigation.NavigateTo($"/project-setup?load={Uri.EscapeDataString(name)}");
+        Navigation.NavigateTo($"/project-setup?load={Uri.EscapeDataString(key)}");
     }
 
-    private void ConfirmDelete(string name)
+    private void ConfirmDelete(string key, string displayName)
     {
-        _deleteTarget = name;
+        _deleteTargetKey = key;
+        _deleteDisplayName = displayName;
         _showDeleteDialog = true;
     }
 
     private void CancelDelete()
     {
         _showDeleteDialog = false;
-        _deleteTarget = null;
+        _deleteTargetKey = null;
+        _deleteDisplayName = null;
     }
 
-    private async Task ExecuteDelete()
+    private void ExecuteDelete()
     {
-        if (_deleteTarget is null) return;
+        if (_deleteTargetKey is null) return;
 
         try
         {
-            ProjectLoader.DeleteProject(_deleteTarget);
-            _projects.RemoveAll(p => p.Name == _deleteTarget);
+            ProjectLoader.DeleteProject(_deleteTargetKey);
+            _projects.RemoveAll(p => p.Key == _deleteTargetKey);
+
+            // If we just deleted the currently active project, clear in-memory state
+            if (string.Equals(ProjectState.Configuration?.ProjectName, _deleteDisplayName, StringComparison.Ordinal))
+            {
+                ProjectState.Reset();
+            }
+
             NotificationService.Notify(new NotificationMessage
             {
                 Severity = NotificationSeverity.Success,
                 Summary = "Project Deleted",
-                Detail = $"'{_deleteTarget}' has been removed.",
+                Detail = $"'{_deleteDisplayName}' has been removed.",
                 Duration = 3000
             });
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Logger.LogError(ex, "Failed to delete project '{Key}'", _deleteTargetKey);
             NotificationService.Notify(new NotificationMessage
             {
                 Severity = NotificationSeverity.Error,
@@ -196,7 +208,8 @@
         }
 
         _showDeleteDialog = false;
-        _deleteTarget = null;
+        _deleteTargetKey = null;
+        _deleteDisplayName = null;
     }
 
     private static string GetStatusIcon(ProjectStatus status) => status switch
