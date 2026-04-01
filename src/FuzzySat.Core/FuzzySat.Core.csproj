@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
-    <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal" Version="3.12.2.472" />
+    <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal" Version="3.12.3.496" />
   </ItemGroup>
 
 </Project>
