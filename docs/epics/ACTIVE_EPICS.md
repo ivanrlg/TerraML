@@ -1,6 +1,6 @@
 # EPICs Activos - FuzzySat
 
-> **Ultima actualizacion**: 2026-04-01 (post PR #38 — Homepage redesign)
+> **Ultima actualizacion**: 2026-04-01 (post PR #39 — ClassifierBenchmark)
 > **Proposito**: Punto central de informacion de EPICs en desarrollo.
 > Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
 
@@ -10,8 +10,8 @@
 
 | Estado | Cantidad | EPICs |
 |--------|----------|-------|
-| Completado | 5 | #1 Core Engine MVP, #3 Advanced Features, #7 Classified Output, #8 Project Persistence, #9 Advanced ML Classifiers |
-| Casi Completado | 2 | #2 I/O & CLI (~80%), #4 ML Hybrid (~90%) |
+| Completado | 6 | #1 Core Engine MVP, #3 Advanced Features, #4 ML Hybrid, #7 Classified Output, #8 Project Persistence, #9 Advanced ML Classifiers |
+| Casi Completado | 1 | #2 I/O & CLI (~80%) |
 | Parcial | 1 | #5 Blazor Web (~85%) |
 | En Progreso | 1 | #10 Input UX Redesign & Homepage (~75%) |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
@@ -62,17 +62,18 @@ SpectralIndexCalculator (NDVI, NDWI, NDBI), ConfidenceMapGenerator, PcaTransform
 
 ---
 
-## Epic #4 - ML Hybrid — CASI COMPLETADO
+## Epic #4 - ML Hybrid — COMPLETADO
 
-- **Status**: **~90% completado**
+- **Status**: **COMPLETADO** (PR #39 mergeado 2026-04-01)
 - **Priority**: P3
 - **Folder**: [epic-004-ml-hybrid/](epic-004-ml-hybrid/)
-- **Micro-commits**: 5/6 completados
-- **Pendiente**: Benchmark orchestrator (fuzzy vs hybrid)
+- **Micro-commits**: 6/6 completados
+- **GitHub PR**: [#39](https://github.com/ivanrlg/FuzzySat/pull/39) (merged)
 
 **Completado**: FuzzyFeatureExtractor (39-111 features), HybridClassifier (Random Forest +
-SDCA MaximumEntropy), KMeansClusterer, 13 tests ML.
-**Pendiente**: ClassifierBenchmark orchestrator (las piezas existen, falta el pegamento).
+SDCA MaximumEntropy), KMeansClusterer, ClassifierBenchmark orchestrator (10 methods,
+SupportedMethods validation, delegates to ModelComparisonEngine). 9 new tests (benchmark),
+13 tests ML. ModelComparisonService refactored to thin adapter.
 
 ---
 

@@ -1,20 +1,20 @@
 # Project TODOs - FuzzySat
 
 > **Archivo central de tracking de progreso.**
-> Ultima actualizacion: 2026-03-31
+> Ultima actualizacion: 2026-04-01
 > **Reconciliado**: Alineado con auditoria de codigo real (Epic #6 gap analysis)
 
 ---
 
 ## Estado Actual
 
-> **Proyecto al ~80% global** (subio de 76% tras Epic #9)
-> - Core Engine: **100%** (PCA + 7 ML classifiers + ensemble + comparison, 289 Core tests)
-> - CLI: **80%** funcional (4 comandos wired, falta VisualizeCommand)
+> **Proyecto al ~82% global** (subio de 80% tras Epic #4 completado)
+> - Core Engine: **100%** (PCA + 7 ML classifiers + ensemble + comparison + benchmark, 310+ Core tests)
+> - CLI: **80%** funcional (4 comandos wired, falta VisualizeCommand — PR #40 pendiente)
 > - API: 0% (template default)
 > - Web: **90%** (9 classification methods, Model Comparison page, ensemble UI)
 > - CI/CD: 30% (solo build+test)
-> - Tests totales: **380+** (289 Core + 91 Web)
+> - Tests totales: **390+** (310+ Core + 91 Web)
 
 ---
 
@@ -63,12 +63,13 @@
 - [x] SpectralIndexCalculator (NDVI, NDWI, NDBI) + tests
 - [x] ConfidenceMapGenerator + tests
 
-### Epic #4 — ML Hybrid (mayoria completada)
+### Epic #4 — ML Hybrid (COMPLETADO)
 - [x] ML.NET dependencies (ML 5.0.0 + FastTree 5.0.0)
 - [x] FuzzyFeatureExtractor (raw bands + membership degrees + firing strengths)
 - [x] HybridClassifier — Random Forest (FastForest/OVA)
 - [x] HybridClassifier — SDCA MaximumEntropy
 - [x] KMeansClusterer + tests
+- [x] ClassifierBenchmark orchestrator (PR #39) — Core entry point, 10 methods, 9 tests
 
 ### Epic #9 — Advanced ML Classifiers & Ensemble Methods (COMPLETADO)
 - [x] MlClassifierBase abstract class (extracted from HybridClassifier)
