@@ -327,6 +327,9 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "method")]
+    public string? MethodFromQuery { get; set; }
+
     private string _classificationMethod = "Pure Fuzzy";
     private string _mfType = "Gaussian";
     private string _andOperator = "Minimum";
@@ -359,9 +362,17 @@
 
     protected override void OnInitialized()
     {
-        // Restore classification options from persisted state if available
+        // Apply query parameter from "Use Best Model" navigation
+        if (!string.IsNullOrEmpty(MethodFromQuery)
+            && _classificationMethods.Any(m => m.Name == MethodFromQuery))
+        {
+            _classificationMethod = MethodFromQuery;
+            _stages = GetStagesForMethod(_classificationMethod);
+        }
+
+        // Restore classification options from persisted state if no query param
         var saved = ProjectState.ClassificationOptions;
-        if (saved is not null)
+        if (saved is not null && string.IsNullOrEmpty(MethodFromQuery))
         {
             _classificationMethod = saved.ClassificationMethod;
             _mfType = saved.MembershipFunctionType;

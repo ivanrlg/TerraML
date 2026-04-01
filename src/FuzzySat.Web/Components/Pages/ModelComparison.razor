@@ -173,6 +173,7 @@
     private bool _isRunning;
     private string _progressMessage = "";
     private FuzzySat.Core.ML.ModelComparisonResult? _result;
+    private CancellationTokenSource? _cts;
 
     private List<string> _mfTypes = ["Gaussian", "Triangular", "Trapezoidal", "Bell"];
     private List<int> _foldOptions = [3, 5, 10];
@@ -203,6 +204,8 @@
 
     private async Task RunComparison()
     {
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
         _isRunning = true;
         _result = null;
         _progressMessage = "Starting...";
@@ -215,6 +218,7 @@
             var selectedMethods = _availableMethods.Where(m => m.Selected).Select(m => m.Name).ToList();
             var mfType = _mfType;
             var folds = _numberOfFolds;
+            var ct = _cts.Token;
 
             var progress = new Progress<string>(msg =>
             {
@@ -223,7 +227,7 @@
             });
 
             _result = await Task.Run(() =>
-                ComparisonSvc.Compare(session, samples, mfType, selectedMethods, folds, progress));
+                ComparisonSvc.Compare(session, samples, mfType, selectedMethods, folds, progress, ct));
 
             NotificationService.Notify(new NotificationMessage
             {
@@ -232,6 +236,10 @@
                 Severity = NotificationSeverity.Success,
                 Duration = 5000
             });
+        }
+        catch (OperationCanceledException)
+        {
+            _progressMessage = "Comparison cancelled.";
         }
         catch (Exception ex)
         {

@@ -124,11 +124,11 @@ public sealed class NeuralNetClassifier : IClassifier, IDisposable
         // Stratified train/validation split
         var (trainIdx, valIdx) = StratifiedSplit(allLabels, options.ValidationSplit, rng);
 
-        // Build tensors
-        var trainFeatures = BuildFeatureTensor(allFeatures, trainIdx, featureCount);
-        var trainLabels = BuildLabelTensor(allLabels, trainIdx);
-        var valFeatures = BuildFeatureTensor(allFeatures, valIdx, featureCount);
-        var valLabels = BuildLabelTensor(allLabels, valIdx);
+        // Build tensors — all wrapped in try/finally to prevent native memory leak on cancellation
+        using var trainFeatures = BuildFeatureTensor(allFeatures, trainIdx, featureCount);
+        using var trainLabels = BuildLabelTensor(allLabels, trainIdx);
+        using var valFeatures = BuildFeatureTensor(allFeatures, valIdx, featureCount);
+        using var valLabels = BuildLabelTensor(allLabels, valIdx);
 
         // Compute class weights (inverse frequency)
         var classWeights = ComputeClassWeights(allLabels, trainIdx, numClasses);
@@ -143,51 +143,59 @@ public sealed class NeuralNetClassifier : IClassifier, IDisposable
         var patienceCounter = 0;
         byte[]? bestModelState = null;
 
-        // Training loop
-        for (var epoch = 0; epoch < options.MaxEpochs; epoch++)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // Train
-            model.train();
-            var trainLoss = TrainEpoch(model, optimizer, trainFeatures, trainLabels,
-                weightTensor, options.BatchSize, rng);
-
-            // Validate
-            model.eval();
-            double valAcc;
-            double valLoss;
-            using (var noGrad = no_grad())
+            // Training loop
+            for (var epoch = 0; epoch < options.MaxEpochs; epoch++)
             {
-                using var valOutput = model.call(valFeatures);
-                using var loss = nn.functional.nll_loss(valOutput, valLabels, weight: weightTensor);
-                valLoss = loss.item<float>();
+                cancellationToken.ThrowIfCancellationRequested();
 
-                using var predicted = valOutput.argmax(1);
-                using var correct = predicted.eq(valLabels);
-                valAcc = correct.sum().item<long>() / (double)valIdx.Count;
-            }
+                // Train
+                model.train();
+                var trainLoss = TrainEpoch(model, optimizer, trainFeatures, trainLabels,
+                    weightTensor, options.BatchSize, rng);
 
-            progress?.Report($"Epoch {epoch + 1}/{options.MaxEpochs} - Loss: {trainLoss:F4} - Val Acc: {valAcc:P1}");
-
-            // Early stopping
-            if (valLoss < bestValLoss)
-            {
-                bestValLoss = valLoss;
-                patienceCounter = 0;
-                using var ms = new MemoryStream();
-                model.save(ms);
-                bestModelState = ms.ToArray();
-            }
-            else
-            {
-                patienceCounter++;
-                if (patienceCounter >= options.PatienceEpochs)
+                // Validate
+                model.eval();
+                double valAcc;
+                double valLoss;
+                using (var noGrad = no_grad())
                 {
-                    progress?.Report($"Early stop at epoch {epoch + 1} - Best Val Loss: {bestValLoss:F4}");
-                    break;
+                    using var valOutput = model.call(valFeatures);
+                    using var loss = nn.functional.nll_loss(valOutput, valLabels, weight: weightTensor);
+                    valLoss = loss.item<float>();
+
+                    using var predicted = valOutput.argmax(1);
+                    using var correct = predicted.eq(valLabels);
+                    valAcc = correct.sum().item<long>() / (double)valIdx.Count;
+                }
+
+                progress?.Report($"Epoch {epoch + 1}/{options.MaxEpochs} - Loss: {trainLoss:F4} - Val Acc: {valAcc:P1}");
+
+                // Early stopping
+                if (valLoss < bestValLoss)
+                {
+                    bestValLoss = valLoss;
+                    patienceCounter = 0;
+                    using var ms = new MemoryStream();
+                    model.save(ms);
+                    bestModelState = ms.ToArray();
+                }
+                else
+                {
+                    patienceCounter++;
+                    if (patienceCounter >= options.PatienceEpochs)
+                    {
+                        progress?.Report($"Early stop at epoch {epoch + 1} - Best Val Loss: {bestValLoss:F4}");
+                        break;
+                    }
                 }
             }
+        }
+        catch
+        {
+            model.Dispose();
+            throw;
         }
 
         // Restore best model
@@ -196,12 +204,6 @@ public sealed class NeuralNetClassifier : IClassifier, IDisposable
             using var ms = new MemoryStream(bestModelState);
             model.load(ms);
         }
-
-        // Cleanup training tensors
-        trainFeatures.Dispose();
-        trainLabels.Dispose();
-        valFeatures.Dispose();
-        valLabels.Dispose();
 
         model.eval();
         return new NeuralNetClassifier(model, featureExtractor, classLabels);
