@@ -102,6 +102,8 @@ public sealed class HybridClassificationService
         "Random Forest" => HybridClassifier.TrainRandomForest(samples, extractor),
         "SDCA" => HybridClassifier.TrainSdca(samples, extractor),
         "LightGBM" => LightGbmClassifier.Train(samples, extractor),
+        "SVM" => SvmClassifier.Train(samples, extractor),
+        "Logistic Regression" => LogisticRegressionClassifier.Train(samples, extractor),
         _ => throw new ArgumentException($"Unknown hybrid method: '{method}'.")
     };
 }

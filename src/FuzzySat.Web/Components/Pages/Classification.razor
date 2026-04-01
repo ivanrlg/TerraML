@@ -447,7 +447,9 @@
         new("Pure Fuzzy", "functions", "var(--fs-accent-blue)", "Fuzzy Inference", "Direct fuzzy logic classification"),
         new("Random Forest", "park", "var(--fs-accent-emerald)", "ML.NET + 100 Trees", "Ensemble of decision trees with fuzzy features"),
         new("SDCA", "model_training", "var(--fs-accent-amber)", "Max Entropy", "Stochastic Dual Coordinate Ascent classifier"),
-        new("LightGBM", "bolt", "var(--fs-accent-purple)", "Gradient Boosting", "LightGBM gradient boosting with fuzzy features")
+        new("LightGBM", "bolt", "var(--fs-accent-violet)", "Gradient Boosting", "LightGBM gradient boosting with fuzzy features"),
+        new("SVM", "linear_scale", "var(--fs-accent-cyan)", "LinearSvm/OVA", "Support Vector Machine with fuzzy features"),
+        new("Logistic Regression", "query_stats", "var(--fs-accent-red)", "LbfgsMaxEntropy", "Logistic regression producing calibrated probabilities")
     ];
 
     private record MethodInfo(string Name, string Icon, string Color, string Formula, string Hint);
