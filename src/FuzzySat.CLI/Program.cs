@@ -6,5 +6,6 @@ rootCommand.Subcommands.Add(ClassifyCommand.Create());
 rootCommand.Subcommands.Add(TrainCommand.Create());
 rootCommand.Subcommands.Add(ValidateCommand.Create());
 rootCommand.Subcommands.Add(InfoCommand.Create());
+rootCommand.Subcommands.Add(VisualizeCommand.Create());
 
 return rootCommand.Parse(args).Invoke();
