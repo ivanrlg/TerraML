@@ -55,7 +55,7 @@ public static class AreaCalculator
         var stats = counts
             .Select(kv =>
             {
-                var pct = totalPixels > 0 ? (double)kv.Value / totalPixels * 100.0 : 0.0;
+                var pct = totalPixels > 0 ? Math.Round((double)kv.Value / totalPixels * 100.0, 2) : 0.0;
                 var areaM2 = kv.Value * pixelAreaM2;
                 var areaHa = areaM2 / 10_000.0;
                 return new ClassAreaStats(kv.Key, kv.Value, areaM2, areaHa, pct);

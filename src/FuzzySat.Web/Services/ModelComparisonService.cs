@@ -29,9 +29,22 @@ public sealed class ModelComparisonService
         if (trainingSamples.Count == 0)
             throw new ArgumentException("At least one training sample is required.", nameof(trainingSamples));
 
-        progress?.Report("Building fuzzy features...");
-        var ruleSet = ClassificationService.BuildRuleSet(session, membershipFunctionType);
-        var extractor = new FuzzyFeatureExtractor(ruleSet, session.BandNames.ToList());
+        progress?.Report("Building features...");
+
+        // Build both extractors — hybrid methods use fuzzy features, pure ML uses raw bands
+        var hasFuzzy = selectedMethods.Any(m => !m.StartsWith("ML: ", StringComparison.Ordinal));
+        var hasPureML = selectedMethods.Any(m => m.StartsWith("ML: ", StringComparison.Ordinal));
+
+        IFeatureExtractor? fuzzyExtractor = null;
+        if (hasFuzzy)
+        {
+            var ruleSet = ClassificationService.BuildRuleSet(session, membershipFunctionType);
+            fuzzyExtractor = new FuzzyFeatureExtractor(ruleSet, session.BandNames.ToList());
+        }
+
+        IFeatureExtractor? rawExtractor = null;
+        if (hasPureML)
+            rawExtractor = new RawFeatureExtractor(session.BandNames.ToList());
 
         var mlSamples = trainingSamples
             .Select(s => (s.ClassName, (IDictionary<string, double>)new Dictionary<string, double>(s.BandValues)))
@@ -44,11 +57,18 @@ public sealed class ModelComparisonService
         {
             factories.Add(method switch
             {
-                "Random Forest" => (method, fold => HybridClassifier.TrainRandomForest(fold, extractor)),
-                "SDCA" => (method, fold => HybridClassifier.TrainSdca(fold, extractor)),
-                "LightGBM" => (method, fold => LightGbmClassifier.Train(fold, extractor)),
-                "SVM" => (method, fold => SvmClassifier.Train(fold, extractor)),
-                "Logistic Regression" => (method, fold => LogisticRegressionClassifier.Train(fold, extractor)),
+                // Hybrid methods (fuzzy-enriched features)
+                "Random Forest" => (method, fold => HybridClassifier.TrainRandomForest(fold, fuzzyExtractor ?? throw new InvalidOperationException("Fuzzy extractor not initialized for hybrid method."))),
+                "SDCA" => (method, fold => HybridClassifier.TrainSdca(fold, fuzzyExtractor ?? throw new InvalidOperationException("Fuzzy extractor not initialized for hybrid method."))),
+                "LightGBM" => (method, fold => LightGbmClassifier.Train(fold, fuzzyExtractor ?? throw new InvalidOperationException("Fuzzy extractor not initialized for hybrid method."))),
+                "SVM" => (method, fold => SvmClassifier.Train(fold, fuzzyExtractor ?? throw new InvalidOperationException("Fuzzy extractor not initialized for hybrid method."))),
+                "Logistic Regression" => (method, fold => LogisticRegressionClassifier.Train(fold, fuzzyExtractor ?? throw new InvalidOperationException("Fuzzy extractor not initialized for hybrid method."))),
+                // Pure ML methods (raw band values only)
+                "ML: Random Forest" => (method, fold => HybridClassifier.TrainRandomForest(fold, rawExtractor ?? throw new InvalidOperationException("Raw extractor not initialized for pure ML method."))),
+                "ML: SDCA" => (method, fold => HybridClassifier.TrainSdca(fold, rawExtractor ?? throw new InvalidOperationException("Raw extractor not initialized for pure ML method."))),
+                "ML: LightGBM" => (method, fold => LightGbmClassifier.Train(fold, rawExtractor ?? throw new InvalidOperationException("Raw extractor not initialized for pure ML method."))),
+                "ML: SVM" => (method, fold => SvmClassifier.Train(fold, rawExtractor ?? throw new InvalidOperationException("Raw extractor not initialized for pure ML method."))),
+                "ML: Logistic Regression" => (method, fold => LogisticRegressionClassifier.Train(fold, rawExtractor ?? throw new InvalidOperationException("Raw extractor not initialized for pure ML method."))),
                 _ => throw new ArgumentException($"Unknown method: '{method}'.")
             });
         }

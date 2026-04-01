@@ -34,13 +34,23 @@ public sealed class HybridClassificationService
         if (trainingSamples.Count == 0)
             throw new ArgumentException("At least one training sample is required.", nameof(trainingSamples));
 
-        // Stage 1: Build fuzzy rule set (needed for feature extraction)
-        progress?.Report(new ClassificationProgress("Building membership functions", 0, image.Rows, 0));
-        var ruleSet = ClassificationService.BuildRuleSet(session, options.MembershipFunctionType);
+        // Stage 1: Create feature extractor (fuzzy-enriched or raw pass-through)
+        var isPureML = options.ClassificationMethod.StartsWith("ML: ", StringComparison.Ordinal);
+        IFeatureExtractor featureExtractor;
+        if (isPureML)
+        {
+            progress?.Report(new ClassificationProgress("Preparing features", 0, image.Rows, 0));
+            featureExtractor = new RawFeatureExtractor(session.BandNames.ToList());
+        }
+        else
+        {
+            progress?.Report(new ClassificationProgress("Building membership functions", 0, image.Rows, 0));
+            var ruleSet = ClassificationService.BuildRuleSet(session, options.MembershipFunctionType);
+            featureExtractor = new FuzzyFeatureExtractor(ruleSet, session.BandNames.ToList());
+        }
 
-        // Stage 2: Create feature extractor and train ML model
+        // Stage 2: Train ML model
         progress?.Report(new ClassificationProgress("Training ML model", 0, image.Rows, 5));
-        var featureExtractor = new FuzzyFeatureExtractor(ruleSet, session.BandNames.ToList());
 
         var mlSamples = trainingSamples
             .Select(s => (s.ClassName, (IDictionary<string, double>)new Dictionary<string, double>(s.BandValues)))
@@ -182,7 +192,14 @@ public sealed class HybridClassificationService
         "Ensemble (Voting)" => TrainVotingEnsemble(samples, extractor),
         "Ensemble (Stacking)" => StackingClassifier.Train(samples,
             GetDefaultBaseFactories(extractor), numberOfFolds: 3),
-        _ => throw new ArgumentException($"Unknown hybrid method: '{method}'.")
+        // Pure ML methods (same classifiers, but extractor is RawFeatureExtractor)
+        "ML: Random Forest" => HybridClassifier.TrainRandomForest(samples, extractor),
+        "ML: SDCA" => HybridClassifier.TrainSdca(samples, extractor),
+        "ML: LightGBM" => LightGbmClassifier.Train(samples, extractor),
+        "ML: SVM" => SvmClassifier.Train(samples, extractor),
+        "ML: Logistic Regression" => LogisticRegressionClassifier.Train(samples, extractor),
+        "ML: MLP Neural Network" => NeuralNetClassifier.Train(samples, extractor),
+        _ => throw new ArgumentException($"Unknown classification method: '{method}'.")
     };
 
     private static EnsembleClassifier TrainVotingEnsemble(

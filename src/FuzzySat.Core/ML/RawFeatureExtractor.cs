@@ -27,7 +27,12 @@ public sealed class RawFeatureExtractor : IFeatureExtractor
 
         var features = new float[FeatureNames.Count];
         for (var i = 0; i < FeatureNames.Count; i++)
-            features[i] = (float)bandValues[FeatureNames[i]];
+        {
+            if (!bandValues.TryGetValue(FeatureNames[i], out var value))
+                throw new KeyNotFoundException(
+                    $"Band '{FeatureNames[i]}' not found in pixel values. Available bands: {string.Join(", ", bandValues.Keys)}");
+            features[i] = (float)value;
+        }
 
         return features;
     }
