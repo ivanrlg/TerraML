@@ -1,6 +1,6 @@
 # EPICs Activos - FuzzySat
 
-> **Ultima actualizacion**: 2026-03-31 (post PR #30 — Epic #8 completado)
+> **Ultima actualizacion**: 2026-04-01 (post PR #35 — Issue #34 completado)
 > **Proposito**: Punto central de informacion de EPICs en desarrollo.
 > Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
 
@@ -10,11 +10,10 @@
 
 | Estado | Cantidad | EPICs |
 |--------|----------|-------|
-| Completado | 4 | #1 Core Engine MVP, #3 Advanced Features, #7 Classified Output, #8 Project Persistence |
+| Completado | 5 | #1 Core Engine MVP, #3 Advanced Features, #7 Classified Output, #8 Project Persistence, #9 Advanced ML Classifiers |
 | Casi Completado | 2 | #2 I/O & CLI (~80%), #4 ML Hybrid (~90%) |
 | Parcial | 1 | #5 Blazor Web (~85%) |
 | En Progreso | 1 | #10 Input UX Redesign & Homepage (~50%) |
-| Planificado | 1 | #9 Advanced ML Classifiers & Ensemble Methods |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 
 ---
@@ -157,27 +156,21 @@ Auto-save, auto-load, compatibilidad retroactiva con proyectos existentes.
 
 ---
 
-## Epic #9 - Advanced ML Classifiers & Ensemble Methods — PLANIFICADO
+## Epic #9 - Advanced ML Classifiers & Ensemble Methods — COMPLETADO
 
-- **Status**: **Planificado**
+- **Status**: **COMPLETADO**
 - **Priority**: P2
 - **Folder**: [epic-009-ml-advanced-classifiers/](epic-009-ml-advanced-classifiers/)
-- **GitHub Issue**: [#31](https://github.com/ivanrlg/FuzzySat/issues/31) (open)
-- **Creado**: 2026-03-31
-- **Prerequisito**: Epic #8 completado
+- **GitHub PR**: [#33](https://github.com/ivanrlg/FuzzySat/pull/33) (merged), fix [#35](https://github.com/ivanrlg/FuzzySat/pull/35) (merged)
+- **Micro-commits**: 23 (Epic) + 7 (fix #34)
+- **Tests**: 295 Core tests (289 Epic + 6 RawFeatureExtractor)
 
-**Objetivo**: Agregar clasificadores avanzados (LightGBM, SVM, Logistic Regression, MLP Neural
-Network via TorchSharp), metodos ensemble (Voting, Stacking), cross-validation k-fold, y framework
-de comparacion automatica de modelos. 6 PRs, ~24 micro-commits.
-
-**Nuevos metodos**:
-- LightGBM (gradient boosting) — `Microsoft.ML.LightGbm`
-- SVM (LinearSvm/OVA) — incluido en ML.NET
-- Logistic Regression (LbfgsMaximumEntropy) — incluido en ML.NET
-- MLP Neural Network (3 capas) — `TorchSharp`
-- Ensemble Voting (majority + weighted)
-- Ensemble Stacking (meta-learner)
-- Model Comparison Framework (k-fold CV + ranking)
+**Implementado**:
+- 7 clasificadores: Random Forest, SDCA, LightGBM, SVM, Logistic Regression, MLP Neural Network, KMeans
+- 2 ensembles: Voting (majority + weighted), Stacking (meta-learner)
+- IFeatureExtractor interface + RawFeatureExtractor (fix #34 — meta-learner degraded features)
+- CrossValidator (stratified k-fold) + ModelComparisonEngine + Blazor UI
+- MlClassifierBase abstract class (shared ML.NET pipeline)
 
 **Documentos**:
 - [00-overview.md](epic-009-ml-advanced-classifiers/00-overview.md) — Objetivo y alcance
