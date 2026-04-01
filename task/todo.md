@@ -94,6 +94,13 @@
 - [x] Removed BuildMetaRuleSet() dead code
 - [x] 6 new tests (295 Core total), 5 micro-commits
 
+### Issue #36 — Pure ML Classification Mode (COMPLETADO)
+- [x] Pure ML routing in HybridClassificationService (conditional RawFeatureExtractor)
+- [x] Pure ML routing in ModelComparisonService (mixed hybrid + pure comparison)
+- [x] 6 pure ML methods in Classification.razor (grouped by category)
+- [x] 5 pure ML methods in ModelComparison.razor (grouped checkboxes)
+- [x] 6 new tests (301 Core total), 5 micro-commits
+
 ### Epic #5 — Blazor Web (UI scaffolding)
 - [x] Blazor Server project + Radzen 10.0.6
 - [x] MainLayout + NavMenu (sidebar, breadcrumbs)
