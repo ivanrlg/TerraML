@@ -52,8 +52,8 @@ public sealed class RasterService
     public byte[] RenderBandPreview(Band band, int maxWidth = 800, int maxHeight = 600)
     {
         ArgumentNullException.ThrowIfNull(band);
-        var stats = BandStatisticsCalculator.Compute(band);
-        return RgbCompositeRenderer.RenderGrayscale(band, stats, maxWidth, maxHeight);
+        var (min, max) = BandStatisticsCalculator.ComputeMinMax(band);
+        return RgbCompositeRenderer.RenderGrayscale(band, min, max, maxWidth, maxHeight);
     }
 
     /// <summary>

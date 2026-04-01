@@ -14,6 +14,8 @@ public static class RgbCompositeRenderer
     public static byte[] RenderGrayscale(Band band, double min, double max, int maxWidth = 800, int maxHeight = 600)
     {
         ArgumentNullException.ThrowIfNull(band);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxWidth);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxHeight);
 
         var rows = band.Rows;
         var cols = band.Columns;
@@ -68,6 +70,9 @@ public static class RgbCompositeRenderer
         ArgumentNullException.ThrowIfNull(redStats);
         ArgumentNullException.ThrowIfNull(greenStats);
         ArgumentNullException.ThrowIfNull(blueStats);
+
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxWidth);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxHeight);
 
         if (greenBand.Rows != redBand.Rows || greenBand.Columns != redBand.Columns ||
             blueBand.Rows != redBand.Rows || blueBand.Columns != redBand.Columns)

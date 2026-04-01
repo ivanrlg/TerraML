@@ -8,6 +8,32 @@ namespace FuzzySat.Core.Visualization;
 public static class BandStatisticsCalculator
 {
     /// <summary>
+    /// Computes only min and max values for a band (single pass).
+    /// Use when full statistics are not needed (e.g., grayscale rendering).
+    /// </summary>
+    public static (double Min, double Max) ComputeMinMax(Band band)
+    {
+        ArgumentNullException.ThrowIfNull(band);
+
+        var rows = band.Rows;
+        var cols = band.Columns;
+        var min = double.MaxValue;
+        var max = double.MinValue;
+
+        for (var r = 0; r < rows; r++)
+        {
+            for (var c = 0; c < cols; c++)
+            {
+                var val = band[r, c];
+                if (val < min) min = val;
+                if (val > max) max = val;
+            }
+        }
+
+        return (min, max);
+    }
+
+    /// <summary>
     /// Computes basic statistics for a single band.
     /// </summary>
     public static BandStatistics Compute(Band band)

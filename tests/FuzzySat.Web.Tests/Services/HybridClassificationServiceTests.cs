@@ -145,6 +145,6 @@ public class HybridClassificationServiceTests
         var options = new ClassificationOptions(ClassificationMethod: "InvalidMethod");
 
         var act = () => _service.Classify(image, session, samples, options);
-        act.Should().Throw<ArgumentException>().WithMessage("*Unknown hybrid method*");
+        act.Should().Throw<ArgumentException>().WithMessage("*Unknown classification method*");
     }
 }

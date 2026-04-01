@@ -67,11 +67,11 @@ public static class VisualizeCommand
                     return 1;
                 }
 
-                var image = reader.Read(inputPath);
-
-                var redBand = image.GetBand(image.BandNames[red - 1]);
-                var greenBand = image.GetBand(image.BandNames[green - 1]);
-                var blueBand = image.GetBand(image.BandNames[blue - 1]);
+                // Load only the 3 requested bands (not the entire raster)
+                var bands = reader.ReadBands(inputPath, [red, green, blue]);
+                var redBand = bands[0];
+                var greenBand = bands[1];
+                var blueBand = bands[2];
 
                 // Compute statistics
                 AnsiConsole.MarkupLine("[dim]Computing band statistics...[/]");
