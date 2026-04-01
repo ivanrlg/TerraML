@@ -48,21 +48,27 @@
 
             <div style="margin-bottom: 1rem;">
                 <label class="field-label">Select Methods to Compare</label>
-                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                    @foreach (var method in _availableMethods)
-                    {
-                        <label style="display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.6rem;
-                                      border-radius: 6px; background: var(--fs-surface-alt); cursor: pointer;">
-                            <RadzenCheckBox @bind-Value="method.Selected" Disabled="@_isRunning" />
-                            <span style="font-size: 0.85rem;">@method.Name</span>
-                        </label>
-                    }
-                </div>
+                @foreach (var group in _availableMethods.GroupBy(m => m.Category))
+                {
+                    <div style="margin-top: 0.5rem;">
+                        <span style="font-size: 0.72rem; font-weight: 600; color: var(--fs-text-tertiary); text-transform: uppercase; letter-spacing: 0.05em;">@group.Key</span>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem;">
+                        @foreach (var method in group)
+                        {
+                            <label style="display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.6rem;
+                                          border-radius: 6px; background: var(--fs-surface-alt); cursor: pointer;">
+                                <RadzenCheckBox @bind-Value="method.Selected" Disabled="@_isRunning" />
+                                <span style="font-size: 0.85rem;">@method.Name</span>
+                            </label>
+                        }
+                    </div>
+                }
                 <div style="margin-top: 0.5rem; font-size: 0.78rem; color: var(--fs-text-tertiary);">
                     <span class="material-icons" style="font-size: 0.85rem; vertical-align: middle;">info_outline</span>
-                    MLP Neural Network and Ensemble methods are excluded &mdash;
-                    MLP is too slow for repeated cross-validation folds, and ensembles are meta-classifiers
-                    that combine the methods above.
+                    MLP Neural Network and Ensemble methods are excluded from both groups &mdash;
+                    MLP is too slow for repeated cross-validation, and ensembles are meta-classifiers.
+                    MF type applies to Hybrid methods only.
                 </div>
             </div>
 
@@ -180,18 +186,26 @@
 
     private List<MethodSelection> _availableMethods =
     [
-        new("Random Forest", true),
-        new("SDCA", true),
-        new("LightGBM", true),
-        new("SVM", true),
-        new("Logistic Regression", true)
+        // Hybrid (Fuzzy + ML)
+        new("Random Forest", true, "Hybrid"),
+        new("SDCA", true, "Hybrid"),
+        new("LightGBM", true, "Hybrid"),
+        new("SVM", true, "Hybrid"),
+        new("Logistic Regression", true, "Hybrid"),
+        // Pure ML (Raw Bands)
+        new("ML: Random Forest", false, "Pure ML"),
+        new("ML: SDCA", false, "Pure ML"),
+        new("ML: LightGBM", false, "Pure ML"),
+        new("ML: SVM", false, "Pure ML"),
+        new("ML: Logistic Regression", false, "Pure ML")
     ];
 
     private class MethodSelection
     {
         public string Name { get; set; }
         public bool Selected { get; set; }
-        public MethodSelection(string name, bool selected) { Name = name; Selected = selected; }
+        public string Category { get; set; }
+        public MethodSelection(string name, bool selected, string category) { Name = name; Selected = selected; Category = category; }
     }
 
     private void HighlightBest(RowRenderEventArgs<FuzzySat.Core.ML.ClassifierResult> args)
