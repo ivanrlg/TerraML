@@ -121,7 +121,7 @@ public sealed class HybridClassificationService
     private static void ClassifyBatch(
         NeuralNetClassifier neuralNet,
         MultispectralImage image,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         string[,] classMap,
         double[,] confidenceMap,
         IProgress<ClassificationProgress>? progress,
@@ -171,7 +171,7 @@ public sealed class HybridClassificationService
     private static FuzzySat.Core.FuzzyLogic.Classification.IClassifier TrainClassifier(
         string method,
         List<(string, IDictionary<string, double>)> samples,
-        FuzzyFeatureExtractor extractor) => method switch
+        IFeatureExtractor extractor) => method switch
     {
         "Random Forest" => HybridClassifier.TrainRandomForest(samples, extractor),
         "SDCA" => HybridClassifier.TrainSdca(samples, extractor),
@@ -180,14 +180,14 @@ public sealed class HybridClassificationService
         "Logistic Regression" => LogisticRegressionClassifier.Train(samples, extractor),
         "MLP Neural Network" => NeuralNetClassifier.Train(samples, extractor),
         "Ensemble (Voting)" => TrainVotingEnsemble(samples, extractor),
-        "Ensemble (Stacking)" => StackingClassifier.Train(samples, extractor,
+        "Ensemble (Stacking)" => StackingClassifier.Train(samples,
             GetDefaultBaseFactories(extractor), numberOfFolds: 3),
         _ => throw new ArgumentException($"Unknown hybrid method: '{method}'.")
     };
 
     private static EnsembleClassifier TrainVotingEnsemble(
         List<(string, IDictionary<string, double>)> samples,
-        FuzzyFeatureExtractor extractor)
+        IFeatureExtractor extractor)
     {
         var classifiers = new FuzzySat.Core.FuzzyLogic.Classification.IClassifier[]
         {
@@ -200,7 +200,7 @@ public sealed class HybridClassificationService
 
     private static List<Func<IReadOnlyList<(string Label, IDictionary<string, double> BandValues)>,
         FuzzySat.Core.FuzzyLogic.Classification.IClassifier>> GetDefaultBaseFactories(
-        FuzzyFeatureExtractor extractor) =>
+        IFeatureExtractor extractor) =>
     [
         fold => HybridClassifier.TrainRandomForest(fold, extractor, numberOfTrees: 50),
         fold => HybridClassifier.TrainSdca(fold, extractor),

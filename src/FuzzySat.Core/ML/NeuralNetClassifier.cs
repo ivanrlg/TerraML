@@ -13,13 +13,13 @@ public sealed class NeuralNetClassifier : IClassifier, IDisposable
 {
     private readonly object _lock = new();
     private readonly SpectralMLP _model;
-    private readonly FuzzyFeatureExtractor _featureExtractor;
+    private readonly IFeatureExtractor _featureExtractor;
     private readonly string[] _classLabels;
     private bool _disposed;
 
     private NeuralNetClassifier(
         SpectralMLP model,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         string[] classLabels)
     {
         _model = model;
@@ -90,7 +90,7 @@ public sealed class NeuralNetClassifier : IClassifier, IDisposable
     /// <param name="cancellationToken">Cancellation token.</param>
     public static NeuralNetClassifier Train(
         IReadOnlyList<(string Label, IDictionary<string, double> BandValues)> trainingSamples,
-        FuzzyFeatureExtractor featureExtractor,
+        IFeatureExtractor featureExtractor,
         NeuralNetTrainingOptions? options = null,
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
