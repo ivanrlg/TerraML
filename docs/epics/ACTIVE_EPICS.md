@@ -1,6 +1,6 @@
 # EPICs Activos - FuzzySat
 
-> **Ultima actualizacion**: 2026-04-01 (post PR #42 — History page + Epic #5 closure)
+> **Ultima actualizacion**: 2026-04-01 (Epic #12 — Class Rename Support)
 > **Proposito**: Punto central de informacion de EPICs en desarrollo.
 > Para EPICs completados ver [EPIC_HISTORY.md](EPIC_HISTORY.md)
 
@@ -11,6 +11,7 @@
 | Estado | Cantidad | EPICs |
 |--------|----------|-------|
 | Completado | 10 | #1 Core, #2 CLI, #3 Advanced, #4 ML Hybrid, #5 Blazor Web, #7 Classified Output, #8 Persistence, #9 ML Advanced, #10 Input UX, #11 History |
+| En Desarrollo | 1 | #12 Class Rename |
 | Documentacion | 1 | #6 Gap Analysis: Road to 100% |
 
 ---
@@ -219,3 +220,24 @@ ProjectSummary record with status detection (Configured/Trained/Classified/Valid
 artifact files. GetProjectSummaries() and DeleteProject() in ProjectLoaderService. Card-based
 UI with accuracy metrics, classification method, relative timestamps. Confirmation dialog for
 delete. NavMenu TOOLS section. Closes Epic #5 by marking Leaflet as deferred.
+
+---
+
+## Epic #12 - Class Rename Support — EN DESARROLLO
+
+- **Status**: **EN DESARROLLO**
+- **Priority**: P2
+- **Folder**: [epic-012-class-rename/](epic-012-class-rename/)
+- **Branch**: `feature/epic-012-class-rename`
+- **Creado**: 2026-04-01
+- **Tests**: 11 nuevos (rename cascading + validacion), 495 total
+
+**Implementado**: RenameClass() en ProjectStateService con rename cascading atomico
+(configuration, training samples, training regions, training session statistics, class
+colors). UI inline edit en LandCoverClassPanel (edit button + double-click, Enter/Escape/blur).
+Validacion: nombre unico, no vacio, clase existente. Auto-persist via debounce existente.
+
+**Documentos**:
+- [00-overview.md](epic-012-class-rename/00-overview.md) — Objetivo y alcance
+- [01-plan.md](epic-012-class-rename/01-plan.md) — Plan de implementacion por fases
+- [02-technical-design.md](epic-012-class-rename/02-technical-design.md) — Decisiones tecnicas

@@ -152,6 +152,110 @@ public sealed class ProjectStateService
     /// <summary>Whether a classification has been run.</summary>
     public bool HasClassificationResult => _classificationResult is not null;
 
+    /// <summary>
+    /// Renames a land cover class across all state: configuration, training samples,
+    /// training regions, training session statistics, and class colors.
+    /// Throws if the old name doesn't exist or the new name is invalid/duplicate.
+    /// </summary>
+    public void RenameClass(string oldName, string newName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newName);
+
+        if (oldName == newName)
+            return;
+
+        var config = _configuration;
+        if (config?.Classes is null)
+            throw new InvalidOperationException("No configuration loaded.");
+
+        var classList = config.Classes.ToList();
+        var classIndex = classList.FindIndex(c => c.Name == oldName);
+        if (classIndex < 0)
+            throw new ArgumentException($"Class '{oldName}' not found.", nameof(oldName));
+
+        if (config.Classes.Any(c => c.Name == newName))
+            throw new ArgumentException($"Class '{newName}' already exists.", nameof(newName));
+
+        BeginBatch();
+        try
+        {
+            // 1. Update configuration classes
+            var old = classList[classIndex];
+            classList[classIndex] = new LandCoverClass { Name = newName, Code = old.Code, Color = old.Color };
+            _configuration = new ClassifierConfiguration
+            {
+                ProjectName = config.ProjectName,
+                Bands = config.Bands,
+                Classes = classList,
+                TrainingDataPath = config.TrainingDataPath,
+                InputRasterPath = config.InputRasterPath,
+                OutputRasterPath = config.OutputRasterPath,
+                ImportFolderPath = config.ImportFolderPath,
+                InputMode = config.InputMode
+            };
+
+            // 2. Update training samples
+            if (_trainingSamples is { Count: > 0 })
+            {
+                _trainingSamples = _trainingSamples
+                    .Select(s => s.ClassName == oldName ? s with { ClassName = newName } : s)
+                    .ToList();
+            }
+
+            // 3. Update training regions
+            if (_trainingRegions is { Count: > 0 })
+            {
+                _trainingRegions = _trainingRegions
+                    .Select(r => r.ClassName == oldName ? r with { ClassName = newName } : r)
+                    .ToList();
+            }
+
+            // 4. Update training session (immutable — must rebuild)
+            if (_trainingSession is not null && _trainingSession.Statistics.ContainsKey(oldName))
+            {
+                var newStats = new Dictionary<string, SpectralStatistics>();
+                foreach (var (key, value) in _trainingSession.Statistics)
+                {
+                    if (key == oldName)
+                    {
+                        newStats[newName] = new SpectralStatistics(newName,
+                            value.MeanPerBand.ToDictionary(b => b.Key, b => b.Value),
+                            value.StdDevPerBand.ToDictionary(b => b.Key, b => b.Value));
+                    }
+                    else
+                    {
+                        newStats[key] = value;
+                    }
+                }
+
+                var newClassNames = _trainingSession.ClassNames
+                    .Select(n => n == oldName ? newName : n).ToList();
+
+                _trainingSession = TrainingSession.CreateFromStatistics(
+                    newStats, newClassNames, _trainingSession.BandNames,
+                    _trainingSession.Id, _trainingSession.CreatedAt);
+            }
+
+            // 5. Update class colors
+            if (_classColors is not null && _classColors.Remove(oldName, out var color))
+            {
+                _classColors[newName] = color;
+                _classColors = new Dictionary<string, string>(_classColors);
+            }
+
+            // 6. Invalidate stale classification/validation results
+            // These contain class names in _classMap arrays and _classIndex dictionaries
+            // that would become inconsistent. Safer to invalidate than re-map in-place.
+            _classificationResult = null;
+            _confusionMatrix = null;
+        }
+        finally
+        {
+            EndBatch();
+        }
+    }
+
     /// <summary>Resets all state (new project).</summary>
     public void Reset()
     {

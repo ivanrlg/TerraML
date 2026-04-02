@@ -85,7 +85,8 @@
             @* Classes *@
             <LandCoverClassPanel
                 Classes="@_classes"
-                ClassesChanged="@(c => _classes = c)" />
+                ClassesChanged="@(c => _classes = c)"
+                OnClassRenamed="@OnClassRenamed" />
         </div>
 
         @* Summary Panel *@
@@ -446,6 +447,36 @@
         finally
         {
             _isSaving = false;
+        }
+    }
+
+    private async Task OnClassRenamed((string OldName, string NewName) args)
+    {
+        if (!ProjectState.HasProject) return;
+
+        try
+        {
+            ProjectState.RenameClass(args.OldName, args.NewName);
+
+            // Re-save configuration to persist the rename
+            var projectName = ProjectState.Configuration!.ProjectName;
+            var safeName = string.Join("_", projectName.Trim().Split(Path.GetInvalidFileNameChars()))
+                .Trim('_').Trim('.');
+            await ProjectLoader.SaveProjectAsync(safeName, ProjectState.Configuration);
+
+            NotificationService.Notify(NotificationSeverity.Success, "Class Renamed",
+                $"'{args.OldName}' renamed to '{args.NewName}'.", duration: 3000);
+        }
+        catch (ArgumentException ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Rename Failed",
+                ex.Message, duration: 4000);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to rename class '{OldName}' to '{NewName}'", args.OldName, args.NewName);
+            NotificationService.Notify(NotificationSeverity.Error, "Rename Failed",
+                "An unexpected error occurred while renaming the class.", duration: 5000);
         }
     }
 

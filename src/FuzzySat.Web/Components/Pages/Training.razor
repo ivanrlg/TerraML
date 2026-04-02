@@ -201,11 +201,29 @@
                     @foreach (var cls in _classCards)
                     {
                         var isSelected = _selectedClass == cls.Name;
-                        <button type="button" class="class-card @(isSelected ? "class-selected" : "")" @onclick="() => SelectClass(cls.Name)">
-                            <span class="class-dot" style="background: @cls.Color;"></span>
-                            <span class="class-name">@cls.Name</span>
-                            <span class="class-samples mono-text">@cls.Samples pts</span>
-                        </button>
+                        <div class="class-card @(isSelected ? "class-selected" : "")" style="display: flex; align-items: center; gap: 0;">
+                            <button type="button" style="flex: 1; display: flex; align-items: center; gap: 0.5rem; background: none; border: none; padding: 0; color: inherit; cursor: pointer;" @onclick="() => SelectClass(cls.Name)">
+                                <span class="class-dot" style="background: @cls.Color;"></span>
+                                @if (_editingClassName == cls.Name)
+                                {
+                                    <input type="text" @bind="_editingClassValue" @bind:event="oninput"
+                                        @onkeydown="@(e => OnClassEditKeyDown(e, cls.Name))"
+                                        @onblur="@(() => ConfirmClassRename(cls.Name))"
+                                        @onclick:stopPropagation="true"
+                                        style="background: rgba(255,255,255,0.1); border: 1px solid var(--fs-accent-blue); border-radius: 4px; color: inherit; padding: 0.1rem 0.3rem; width: 100%; font-size: inherit;" />
+                                }
+                                else
+                                {
+                                    <span class="class-name">@cls.Name</span>
+                                }
+                                <span class="class-samples mono-text">@cls.Samples pts</span>
+                            </button>
+                            <button type="button" class="rename-class-btn" title="Rename class"
+                                @onclick="() => StartClassRename(cls)" @onclick:stopPropagation="true"
+                                style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; padding: 0.2rem; display: flex; align-items: center;">
+                                <span class="material-icons" style="font-size: 0.85rem;">edit</span>
+                            </button>
+                        </div>
                     }
                     <button type="button" class="add-class-btn" @onclick="AddClassInline">
                         <span class="material-icons" style="font-size: 0.9rem;">add</span>
@@ -383,6 +401,10 @@
     private List<BandOption> _bandOptions = [];
     private List<ClassOption> _classOptions = [];
     private List<string> _viewModes = ["Single", "RGB"];
+
+    // Class rename state
+    private string? _editingClassName;
+    private string _editingClassValue = "";
 
     private int _zoomPercent = 100;
 
@@ -932,6 +954,74 @@
 
         if (_canvasInitialized)
             await JSRuntime.InvokeVoidAsync("trainingSelection.setActiveClass", name, color);
+    }
+
+    private void StartClassRename(ClassCard cls)
+    {
+        _editingClassName = cls.Name;
+        _editingClassValue = cls.Name;
+    }
+
+    private async Task OnClassEditKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e, string originalName)
+    {
+        if (e.Key == "Enter")
+            await ConfirmClassRename(originalName);
+        else if (e.Key == "Escape")
+            _editingClassName = null;
+    }
+
+    private async Task ConfirmClassRename(string originalName)
+    {
+        if (_editingClassName is null) return;
+
+        var newName = _editingClassValue?.Trim() ?? "";
+        _editingClassName = null;
+
+        if (string.IsNullOrWhiteSpace(newName) || newName == originalName)
+            return;
+
+        try
+        {
+            ProjectState.RenameClass(originalName, newName);
+
+            // Update local UI lists
+            var optIdx = _classOptions.FindIndex(c => c.Name == originalName);
+            if (optIdx >= 0)
+                _classOptions[optIdx] = new ClassOption(newName, _classOptions[optIdx].Color);
+
+            var cardIdx = _classCards.FindIndex(c => c.Name == originalName);
+            if (cardIdx >= 0)
+                _classCards[cardIdx] = new ClassCard(newName, _classCards[cardIdx].Color, _classCards[cardIdx].Samples);
+
+            // Update local samples list
+            _samples = _samples.Select(s => s.ClassName == originalName ? s with { ClassName = newName } : s).ToList();
+
+            // Update local regions list
+            _regions = _regions.Select(r => r.ClassName == originalName ? r with { ClassName = newName } : r).ToList();
+
+            if (_selectedClass == originalName)
+                _selectedClass = newName;
+
+            // Re-save config
+            var projectName = ProjectState.Configuration!.ProjectName;
+            var safeName = string.Join("_", projectName.Trim().Split(Path.GetInvalidFileNameChars()))
+                .Trim('_').Trim('.');
+            await ProjectLoader.SaveProjectAsync(safeName, ProjectState.Configuration);
+
+            NotificationService.Notify(NotificationSeverity.Success, "Class Renamed",
+                $"'{originalName}' renamed to '{newName}'.", duration: 3000);
+        }
+        catch (ArgumentException ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Rename Failed",
+                ex.Message, duration: 4000);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to rename class '{OldName}' to '{NewName}'", originalName, newName);
+            NotificationService.Notify(NotificationSeverity.Error, "Rename Failed",
+                "An unexpected error occurred while renaming the class.", duration: 5000);
+        }
     }
 
     private void PersistExploreState()
