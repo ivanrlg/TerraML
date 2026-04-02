@@ -73,12 +73,16 @@
         var newName = _editingName?.Trim() ?? "";
         _editingClass = null;
 
+        // No-op if unchanged or empty
         if (string.IsNullOrWhiteSpace(newName) || newName == originalName)
             return;
 
-        // Check for duplicates locally
+        // Check for duplicates locally — notify parent on failure
         if (Classes.Any(c => c.Name == newName))
+        {
+            await OnClassRenamed.InvokeAsync((originalName, newName));
             return;
+        }
 
         // Update the local list
         var index = Classes.FindIndex(c => c.Name == originalName);
@@ -86,7 +90,7 @@
 
         var old = Classes[index];
         Classes[index] = new ClassEntry(newName, old.Code, old.Color);
-        Classes = [.. Classes]; // Force new reference for change detection
+        Classes = [.. Classes];
 
         await ClassesChanged.InvokeAsync(Classes);
         await OnClassRenamed.InvokeAsync((originalName, newName));

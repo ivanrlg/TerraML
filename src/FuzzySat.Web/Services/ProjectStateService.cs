@@ -216,7 +216,18 @@ public sealed class ProjectStateService
             {
                 var newStats = new Dictionary<string, SpectralStatistics>();
                 foreach (var (key, value) in _trainingSession.Statistics)
-                    newStats[key == oldName ? newName : key] = value;
+                {
+                    if (key == oldName)
+                    {
+                        newStats[newName] = new SpectralStatistics(newName,
+                            value.MeanPerBand.ToDictionary(b => b.Key, b => b.Value),
+                            value.StdDevPerBand.ToDictionary(b => b.Key, b => b.Value));
+                    }
+                    else
+                    {
+                        newStats[key] = value;
+                    }
+                }
 
                 var newClassNames = _trainingSession.ClassNames
                     .Select(n => n == oldName ? newName : n).ToList();

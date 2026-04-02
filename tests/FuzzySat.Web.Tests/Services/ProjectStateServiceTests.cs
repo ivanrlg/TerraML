@@ -214,6 +214,7 @@ public class ProjectStateServiceTests
         _service.TrainingSession!.Statistics.Should().ContainKey("Lake");
         _service.TrainingSession.Statistics.Should().NotContainKey("Water");
         _service.TrainingSession.ClassNames.Should().Contain("Lake");
+        _service.TrainingSession.Statistics["Lake"].ClassName.Should().Be("Lake");
     }
 
     [Fact]

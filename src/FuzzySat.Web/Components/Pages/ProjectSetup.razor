@@ -472,6 +472,12 @@
             NotificationService.Notify(NotificationSeverity.Warning, "Rename Failed",
                 ex.Message, duration: 4000);
         }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to rename class '{OldName}' to '{NewName}'", args.OldName, args.NewName);
+            NotificationService.Notify(NotificationSeverity.Error, "Rename Failed",
+                "An unexpected error occurred while renaming the class.", duration: 5000);
+        }
     }
 
     private void ResetConfiguration()
