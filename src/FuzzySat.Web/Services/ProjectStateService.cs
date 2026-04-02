@@ -243,6 +243,12 @@ public sealed class ProjectStateService
                 _classColors[newName] = color;
                 _classColors = new Dictionary<string, string>(_classColors);
             }
+
+            // 6. Invalidate stale classification/validation results
+            // These contain class names in _classMap arrays and _classIndex dictionaries
+            // that would become inconsistent. Safer to invalidate than re-map in-place.
+            _classificationResult = null;
+            _confusionMatrix = null;
         }
         finally
         {

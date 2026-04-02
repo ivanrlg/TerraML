@@ -2,6 +2,7 @@ using FluentAssertions;
 using FuzzySat.Core.Classification;
 using FuzzySat.Core.Configuration;
 using FuzzySat.Core.Training;
+using FuzzySat.Core.Validation;
 using FuzzySat.Web.Services;
 
 namespace FuzzySat.Web.Tests.Services;
@@ -282,6 +283,38 @@ public class ProjectStateServiceTests
         var act = () => _service.RenameClass("Water", "Lake");
 
         act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void RenameClass_InvalidatesClassificationResult()
+    {
+        _service.Configuration = MakeConfig("Urban", "Water");
+        var classMap = new string[,] { { "Urban", "Water" } };
+        var confMap = new double[,] { { 0.9, 0.8 } };
+        var classes = new List<LandCoverClass>
+        {
+            new() { Name = "Urban", Code = 1 },
+            new() { Name = "Water", Code = 2 }
+        };
+        _service.ClassificationResult = new ClassificationResult(classMap, confMap, classes);
+
+        _service.RenameClass("Water", "Lake");
+
+        _service.ClassificationResult.Should().BeNull(
+            "stale classification results with old class names must be invalidated");
+    }
+
+    [Fact]
+    public void RenameClass_InvalidatesConfusionMatrix()
+    {
+        _service.Configuration = MakeConfig("Urban", "Water");
+        _service.ConfusionMatrix = ConfusionMatrix.FromPersistedData(
+            ["Urban", "Water"], new int[,] { { 10, 2 }, { 1, 8 } });
+
+        _service.RenameClass("Water", "Lake");
+
+        _service.ConfusionMatrix.Should().BeNull(
+            "stale confusion matrix with old class names must be invalidated");
     }
 
     [Fact]
