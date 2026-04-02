@@ -10,7 +10,16 @@
                 <Template Context="item">
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <span style="width: 12px; height: 12px; border-radius: 50%; background: @item.Color; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1);"></span>
-                        @item.Name
+                        @if (_editingClass == item.Name)
+                        {
+                            <RadzenTextBox @bind-Value="@_editingName" Style="width: 100%; min-width: 80px;"
+                                @onkeydown="@(e => OnEditKeyDown(e, item.Name))"
+                                @onblur="@(() => ConfirmRename(item.Name))" />
+                        }
+                        else
+                        {
+                            <span @ondblclick="@(() => StartEditing(item))">@item.Name</span>
+                        }
                     </div>
                 </Template>
             </RadzenDataGridColumn>
@@ -24,6 +33,12 @@
                     <span class="mono-text" style="color: @item.Color;">@item.Color</span>
                 </Template>
             </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="ClassEntry" Title="" Width="40px" Sortable="false" Filterable="false">
+                <Template Context="item">
+                    <RadzenButton Icon="edit" Size="ButtonSize.ExtraSmall" ButtonStyle="ButtonStyle.Light"
+                        Click="@(() => StartEditing(item))" title="Rename class" />
+                </Template>
+            </RadzenDataGridColumn>
         </Columns>
     </RadzenDataGrid>
     <RadzenButton Text="Add Class" Icon="add" Click="@AddClass" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" class="rz-mt-2" />
@@ -32,6 +47,50 @@
 @code {
     [Parameter] public List<ClassEntry> Classes { get; set; } = [];
     [Parameter] public EventCallback<List<ClassEntry>> ClassesChanged { get; set; }
+    [Parameter] public EventCallback<(string OldName, string NewName)> OnClassRenamed { get; set; }
+
+    private string? _editingClass;
+    private string _editingName = "";
+
+    private void StartEditing(ClassEntry item)
+    {
+        _editingClass = item.Name;
+        _editingName = item.Name;
+    }
+
+    private async Task OnEditKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e, string originalName)
+    {
+        if (e.Key == "Enter")
+            await ConfirmRename(originalName);
+        else if (e.Key == "Escape")
+            _editingClass = null;
+    }
+
+    private async Task ConfirmRename(string originalName)
+    {
+        if (_editingClass is null) return;
+
+        var newName = _editingName?.Trim() ?? "";
+        _editingClass = null;
+
+        if (string.IsNullOrWhiteSpace(newName) || newName == originalName)
+            return;
+
+        // Check for duplicates locally
+        if (Classes.Any(c => c.Name == newName))
+            return;
+
+        // Update the local list
+        var index = Classes.FindIndex(c => c.Name == originalName);
+        if (index < 0) return;
+
+        var old = Classes[index];
+        Classes[index] = new ClassEntry(newName, old.Code, old.Color);
+        Classes = [.. Classes]; // Force new reference for change detection
+
+        await ClassesChanged.InvokeAsync(Classes);
+        await OnClassRenamed.InvokeAsync((originalName, newName));
+    }
 
     private async Task AddClass()
     {
