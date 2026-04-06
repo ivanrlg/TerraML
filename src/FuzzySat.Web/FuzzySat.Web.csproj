@@ -7,7 +7,7 @@
   <ItemGroup>
     <PackageReference Include="Radzen.Blazor" Version="10.1.0" />
     <PackageReference Include="SkiaSharp" Version="3.119.0" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.2" />
   </ItemGroup>
 
   <PropertyGroup>
